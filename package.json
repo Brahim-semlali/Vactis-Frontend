@@ -1,0 +1,17 @@
+{
+  "name": "stagelabo-front",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "start": "parcel index.html --port 5173",
+    "dev": "parcel index.html --port 5173",
+    "build": "parcel build index.html --dist-dir dist",
+    "preview": "npm run build && serve dist -l 4173"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "parcel": "^2.15.4",
+    "serve": "^14.2.4"
