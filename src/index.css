@@ -185,6 +185,23 @@ input {
   border: 1px solid #fecaca;
 }
 
+.alert-warning {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.lock-countdown {
+  margin: 0.5rem 0 0;
+  font-weight: 600;
+}
+
+.attempts-info {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
 .home-page {
   min-height: 100vh;
   color: #e2e8f0;

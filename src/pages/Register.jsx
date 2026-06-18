@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import AuthLayout from '../components/AuthLayout.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { logger } from '../utils/logger.js';
 
 export default function Register({ onShowLogin }) {
   const { register } = useAuth();
 
   const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
@@ -20,17 +25,25 @@ export default function Register({ onShowLogin }) {
       return;
     }
 
-    if (password.length < 4) {
-      setError('Le mot de passe doit contenir au moins 4 caractères');
+    if (password.length < 6) {
+      setError('Le mot de passe doit contenir au moins 6 caractères');
       return;
     }
 
     setLoading(true);
 
     try {
-      await register(username.trim(), password);
+      await register({
+        username: username.trim(),
+        password,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        phone: phone.trim() || null,
+      });
     } catch (err) {
       setError(err.message || 'Impossible de créer le compte');
+      logger.warn('Inscription échouée', { username: username.trim(), message: err.message });
     } finally {
       setLoading(false);
     }
@@ -53,6 +66,57 @@ export default function Register({ onShowLogin }) {
         {error && <div className="alert alert-error" role="alert">{error}</div>}
 
         <label className="field">
+          <span>Prénom</span>
+          <input
+            type="text"
+            name="firstName"
+            autoComplete="given-name"
+            required
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="Jean"
+          />
+        </label>
+
+        <label className="field">
+          <span>Nom</span>
+          <input
+            type="text"
+            name="lastName"
+            autoComplete="family-name"
+            required
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            placeholder="Dupont"
+          />
+        </label>
+
+        <label className="field">
+          <span>Email</span>
+          <input
+            type="email"
+            name="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="jean.dupont@exemple.fr"
+          />
+        </label>
+
+        <label className="field">
+          <span>Téléphone (optionnel)</span>
+          <input
+            type="tel"
+            name="phone"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="06 12 34 56 78"
+          />
+        </label>
+
+        <label className="field">
           <span>Nom d&apos;utilisateur</span>
           <input
             type="text"
@@ -72,7 +136,7 @@ export default function Register({ onShowLogin }) {
             name="password"
             autoComplete="new-password"
             required
-            minLength={4}
+            minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
@@ -86,7 +150,7 @@ export default function Register({ onShowLogin }) {
             name="confirmPassword"
             autoComplete="new-password"
             required
-            minLength={4}
+            minLength={6}
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="••••••••"
