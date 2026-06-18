@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import AuthLayout from '../components/AuthLayout.jsx';
+import AuthField from '../components/AuthField.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { AuthError, getAccountStatus } from '../api/auth.js';
 import { formatLockedUntil, logger } from '../utils/logger.js';
@@ -181,7 +182,7 @@ export default function Login({ onShowRegister }) {
   return (
     <AuthLayout
       title="Connexion"
-      subtitle="Accédez à votre espace"
+      subtitle="Accédez à votre espace personnel"
       footer={
         <p>
           Pas encore de compte ?{' '}
@@ -191,56 +192,60 @@ export default function Login({ onShowRegister }) {
         </p>
       }
     >
-      <form className="auth-form" onSubmit={handleSubmit}>
+      <form className="auth-form" onSubmit={handleSubmit} noValidate>
         {error && (
           <div
             className={`alert ${isLocked ? 'alert-warning' : 'alert-error'}`}
             role="alert"
           >
-            {error}
-            {isLocked && countdown > 0 && (
-              <p className="lock-countdown">Temps restant : {formatCountdown(countdown)}</p>
-            )}
+            <span className="alert-icon" aria-hidden="true">
+              {isLocked ? '⏳' : '⚠'}
+            </span>
+            <div>
+              {error}
+              {isLocked && countdown > 0 && (
+                <p className="lock-countdown">Temps restant : {formatCountdown(countdown)}</p>
+              )}
+            </div>
           </div>
         )}
 
         {!isLocked && remainingAttempts != null && maxAttempts != null && error && (
           <p className="attempts-info">
-            Tentatives restantes : {remainingAttempts} / {maxAttempts}
+            Tentatives restantes : <strong>{remainingAttempts}</strong> / {maxAttempts}
           </p>
         )}
 
-        <label className="field">
-          <span>Nom d&apos;utilisateur</span>
-          <input
-            type="text"
-            name="username"
-            autoComplete="username"
-            required
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            onBlur={(e) => refreshAccountStatus(e.target.value)}
-            placeholder="votre_nom"
-            disabled={formDisabled}
-          />
-        </label>
+        <AuthField
+          label="Nom d'utilisateur"
+          icon="user"
+          type="text"
+          name="username"
+          autoComplete="username"
+          required
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          onBlur={(e) => refreshAccountStatus(e.target.value)}
+          placeholder="votre_nom"
+          disabled={formDisabled}
+        />
 
-        <label className="field">
-          <span>Mot de passe</span>
-          <input
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            disabled={formDisabled}
-          />
-        </label>
+        <AuthField
+          label="Mot de passe"
+          icon="lock"
+          type="password"
+          name="password"
+          autoComplete="current-password"
+          required
+          minLength={6}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+          disabled={formDisabled}
+        />
 
-        <button type="submit" className="btn btn-primary" disabled={formDisabled}>
+        <button type="submit" className="btn btn-primary btn-block" disabled={formDisabled}>
+          {loading && <span className="btn-spinner" aria-hidden="true" />}
           {loading ? 'Connexion…' : isLocked ? 'Compte suspendu' : 'Se connecter'}
         </button>
       </form>

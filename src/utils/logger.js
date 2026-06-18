@@ -11,17 +11,17 @@ function formatArgs(args) {
 
 export const logger = {
   info(...args) {
-    console.info('[StageLabo]', ...formatArgs(args));
+    console.info('[Vactis]', ...formatArgs(args));
   },
   warn(...args) {
-    console.warn('[StageLabo]', ...formatArgs(args));
+    console.warn('[Vactis]', ...formatArgs(args));
   },
   error(...args) {
-    console.error('[StageLabo]', ...formatArgs(args));
+    console.error('[Vactis]', ...formatArgs(args));
   },
   debug(...args) {
     if (isDev) {
-      console.debug('[StageLabo]', ...formatArgs(args));
+      console.debug('[Vactis]', ...formatArgs(args));
     }
   },
 };
