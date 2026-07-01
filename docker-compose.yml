@@ -1,0 +1,12 @@
+services:
+  frontend:
+    build: .
+    container_name: stagelabo-front
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    environment:
+      BACKEND_HOST: ${BACKEND_HOST:-host.docker.internal}
+      BACKEND_PORT: ${BACKEND_PORT:-8083}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -1,0 +1,15 @@
+# Utiliser avec le backend déjà lancé via StageLabo-back/docker-compose.yml :
+#   docker compose -f docker-compose.yml -f docker-compose.backend-network.yml up -d --build
+services:
+  frontend:
+    environment:
+      BACKEND_HOST: backend
+      BACKEND_PORT: 8082
+    networks:
+      - stagelabo-network
+    extra_hosts: []
+
+networks:
+  stagelabo-network:
+    external: true
+    name: stagelabo-network
