@@ -73,3 +73,39 @@ export async function getMedecinById(token, id) {
 
   return response.json();
 }
+
+export async function getMedecinByCode(token, code) {
+  const normalizedCode = String(code ?? '').trim().toUpperCase();
+  logger.info('Recherche médecin par code', { code: normalizedCode });
+
+  const response = await fetch(
+    `${API_BASE}/api/medecins/code/${encodeURIComponent(normalizedCode)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const error = await parseError(response);
+    logger.warn('Échec recherche médecin par code', {
+      status: error.status,
+      code: normalizedCode,
+    });
+    throw error;
+  }
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+
+  const data = JSON.parse(text);
+  logger.info('Médecin trouvé par code', { code: normalizedCode, id: data?.id });
+  return data;
+}

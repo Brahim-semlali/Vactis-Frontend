@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getMedecins } from '../../api/medecins.js';
+import { getMedecinByCode, getMedecins } from '../../api/medecins.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 
 const FILTER_DEFAULTS = {
   search: '',
+  codeMedecin: '',
   statutPilotage: '',
   segment: '',
   specialite: '',
@@ -222,7 +223,35 @@ export default function MedecinsPage() {
     setError(null);
 
     try {
-      const data = await getMedecins(token, filters);
+      const code = filters.codeMedecin.trim().toUpperCase();
+      const { codeMedecin: _codeMedecin, ...listFilters } = filters;
+
+      if (code) {
+        const medecin = await getMedecinByCode(token, code);
+
+        if (medecin) {
+          setPageData((current) => ({
+            items: [medecin],
+            kpis: current?.kpis ?? {},
+            meta: { affiches: 1, charges: 1 },
+            filters: current?.filters ?? {},
+          }));
+          setSelectedMedecin(medecin);
+          return;
+        }
+
+        const data = await getMedecins(token, { ...listFilters, search: code });
+        setPageData(data);
+        setSelectedMedecin(data.items?.[0] ?? null);
+
+        if ((data.items?.length ?? 0) === 0) {
+          setError(`Aucun médecin trouvé pour le code « ${code} ».`);
+        }
+
+        return;
+      }
+
+      const data = await getMedecins(token, listFilters);
       setPageData(data);
 
       setSelectedMedecin((current) => {
@@ -332,6 +361,17 @@ export default function MedecinsPage() {
         </div>
 
         <div className="medecins-filter-group">
+          <label className="medecins-filter">
+            <span className="medecins-filter-label">Code médecin</span>
+            <input
+              type="text"
+              className="medecins-filter-input"
+              placeholder="MED001"
+              value={filters.codeMedecin}
+              onChange={updateFilter('codeMedecin')}
+              aria-label="Rechercher par code médecin"
+            />
+          </label>
           <FilterSelect
             label="Statut"
             value={filters.statutPilotage}
