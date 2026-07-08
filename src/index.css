@@ -1500,3 +1500,48 @@ input {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Actions page overrides ── */
+
+.actions-kpi-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.actions-filter-group {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.actions-table-wrap {
+  overflow-x: auto;
+}
+
+.actions-table-wrap .medecins-table {
+  min-width: 960px;
+}
+
+@media (max-width: 1280px) {
+  .actions-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .actions-filter-group {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .actions-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .actions-filter-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .actions-kpi-grid,
+  .actions-filter-group {
+    grid-template-columns: 1fr;
+  }
+}

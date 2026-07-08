@@ -3,6 +3,7 @@ import { getAllMenu } from '../api/menu.js';
 import AppLayout from '../components/AppLayout.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import MedecinsPage from './Medecins/MedecinsPage.jsx';
+import ActionsPage from './Actions/ActionsPage.jsx';
 import PlaceholderPage from './PlaceholderPage.jsx';
 
 function isPublicRoute(route) {
@@ -20,6 +21,10 @@ function isRouteAllowed(route, allowedRoutes) {
 function resolvePageContent(activeRoute, username) {
   if (activeRoute === '/medecins') {
     return <MedecinsPage />;
+  }
+
+  if (activeRoute === '/actions') {
+    return <ActionsPage />;
   }
 
   if (isPublicRoute(activeRoute)) {
