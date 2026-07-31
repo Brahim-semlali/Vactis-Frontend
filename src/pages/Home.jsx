@@ -4,6 +4,7 @@ import AppLayout from '../components/AppLayout.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import MedecinsPage from './Medecins/MedecinsPage.jsx';
 import ActionsPage from './Actions/ActionsPage.jsx';
+import Controle from './Controle/Controle.jsx';
 import PlaceholderPage from './PlaceholderPage.jsx';
 
 function isPublicRoute(route) {
@@ -18,13 +19,17 @@ function isRouteAllowed(route, allowedRoutes) {
   return allowedRoutes.includes(route);
 }
 
-function resolvePageContent(activeRoute, username) {
+function resolvePageContent(activeRoute, username, navigate) {
   if (activeRoute === '/medecins') {
     return <MedecinsPage />;
   }
 
   if (activeRoute === '/actions') {
     return <ActionsPage />;
+  }
+
+  if (activeRoute === '/controle') {
+    return <Controle navigate={navigate} />;
   }
 
   if (isPublicRoute(activeRoute)) {
@@ -70,7 +75,7 @@ function HomeContent({ activeRoute, navigate, username, allowedRoutes, menuLoade
     return null;
   }
 
-  return resolvePageContent(activeRoute, username);
+  return resolvePageContent(activeRoute, username, navigate);
 }
 
 export default function Home() {

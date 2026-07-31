@@ -43,8 +43,6 @@ const TABLE_COLUMNS = [
   'Urgence',
   'État',
   'Date visite',
-  'Commercial',
-  'Lieu / organisme',
 ];
 
 const STATUT_OPTIONS = [
@@ -150,6 +148,34 @@ function ActionsIcon({ name, size = 18 }) {
         <svg {...props}>
           <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z" />
           <circle cx="12" cy="10" r="3" />
+        </svg>
+      );
+    case 'antenna':
+      return (
+        <svg {...props}>
+          <path d="M2 12h4l2-2m4 0l2 2h4M12 2v8M9.5 5.5l5 5m-5 0l5-5" stroke="currentColor"/>
+          <circle cx="12" cy="10" r="2" fill="currentColor"/>
+        </svg>
+      );
+    case 'target':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="6" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      );
+    case 'clock':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+      );
+    case 'heartbeat':
+      return (
+        <svg {...props}>
+          <path d="M3 12h3l3 -9l6 18l3 -9h3" />
         </svg>
       );
     default:
@@ -380,14 +406,14 @@ export default function ActionsPage() {
             value={filters.statut}
             onChange={updateFilter('statut')}
             placeholder="Tous"
-            options={STATUT_OPTIONS}
+            options={filterOptions.statuts ?? []}
           />
           <FilterSelect
             label="Segment"
             value={filters.segment}
             onChange={updateFilter('segment')}
             placeholder="Tous"
-            options={SEGMENT_OPTIONS}
+            options={filterOptions.segments ?? []}
           />
           <FilterSelect
             label="Action"
@@ -521,29 +547,36 @@ export default function ActionsPage() {
                         <div className="medecins-cell-sub">{action.medecin?.specialite ?? '—'}</div>
                       </td>
                       <td>
-                        <span className={getBadgeClass('statut', action.statut)}>
+                        <span className="badge-outline badge-yellow">
                           {formatEnumLabel(action.statut)}
                         </span>
                       </td>
                       <td>
-                        <span className={getBadgeClass('segment', action.segment)}>
+                        <span className="badge-outline badge-yellow">
                           {action.segment ? `SEGMENT ${action.segment}` : '—'}
                         </span>
                       </td>
-                      <td>{action.actionRecommandee ?? '—'}</td>
                       <td>
-                        <span className={getBadgeClass('urgence', action.urgence)}>
+                        <div className="table-action-recommandee">
+                          {action.actionRecommandee ?? '—'}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="badge-text badge-red">
+                          <ActionsIcon name="heartbeat" size={14} />
                           {formatEnumLabel(action.urgence)}
                         </span>
                       </td>
                       <td>
-                        <span className={getBadgeClass('etat', action.etatAction)}>
+                        <span className="badge-outline badge-grey">
                           {formatEnumLabel(action.etatAction)}
                         </span>
                       </td>
-                      <td>{formatDate(action.dateVisite)}</td>
-                      <td>{action.commercial ?? '—'}</td>
-                      <td>{action.lieuOrganisme ?? '—'}</td>
+                      <td>
+                        <div className="table-date">
+                          {formatDate(action.dateVisite)}
+                        </div>
+                      </td>
                     </tr>
                   ))}
               </tbody>
@@ -580,78 +613,103 @@ export default function ActionsPage() {
           )}
 
           {selectedAction && (
-            <div className="medecins-detail-content">
-              <span className="medecins-detail-avatar" aria-hidden="true">
-                <MenuIcon name="actions" />
-              </span>
-              <p className="medecins-detail-name">{formatMedecinName(selectedMedecin)}</p>
-              <p className="medecins-detail-specialty">{selectedMedecin?.specialite ?? '—'}</p>
-
-              <div className="medecins-detail-badges">
-                <span className={getBadgeClass('segment', selectedAction.segment)}>
-                  {selectedAction.segment ? `SEGMENT ${selectedAction.segment}` : '—'}
-                </span>
-                <span className={getBadgeClass('statut', selectedAction.statut)}>
-                  {formatEnumLabel(selectedAction.statut)}
-                </span>
-                <span className={getBadgeClass('urgence', selectedAction.urgence)}>
-                  {formatEnumLabel(selectedAction.urgence)}
-                </span>
-                <span className={getBadgeClass('etat', selectedAction.etatAction)}>
-                  {formatEnumLabel(selectedAction.etatAction)}
-                </span>
+            <div className="fiche-panel">
+              {/* Nom + spécialité */}
+              <div className="fiche-identity">
+                <p className="fiche-name">{formatMedecinName(selectedMedecin)}</p>
+                <p className="fiche-specialty">{selectedMedecin?.specialite ?? '—'}</p>
               </div>
 
-              <div className="medecins-detail-section">
-                <h4>Lieu &amp; organisme</h4>
-                <ul className="medecins-detail-list">
-                  <li className="medecins-detail-list-item">
-                    <ActionsIcon name="map-pin" size={16} />
-                    <div>
-                      <span className="medecins-detail-list-label">Lieu principal</span>
-                      <span>{selectedAction.lieuOrganisme ?? '—'}</span>
-                      {selectedMedecin?.ville && (
-                        <span className="medecins-detail-list-meta">{selectedMedecin.ville}</span>
-                      )}
-                    </div>
-                  </li>
-                </ul>
+              {/* Ligne 1 de badges : Segment + Statut */}
+              <div className="fiche-badges-row">
+                {selectedAction.segment && (
+                  <span className={`fiche-badge fiche-badge--segment-${selectedAction.segment.toLowerCase()}`}>
+                    SEGMENT {selectedAction.segment}
+                  </span>
+                )}
+                {selectedAction.statut && (
+                  <span className={`fiche-badge fiche-badge--statut fiche-badge--statut-${selectedAction.statut.toLowerCase()}`}>
+                    {formatEnumLabel(selectedAction.statut)}
+                  </span>
+                )}
               </div>
 
-              <div className="medecins-detail-section">
-                <h4>Informations action</h4>
-                <ul className="medecins-detail-info">
-                  <li>
-                    <span>Action recommandée</span>
-                    <strong>{selectedAction.actionRecommandee ?? '—'}</strong>
-                  </li>
-                  <li>
-                    <span>Date visite</span>
-                    <strong>{formatDate(selectedAction.dateVisite)}</strong>
-                  </li>
-                  <li>
-                    <span>Commercial</span>
-                    <strong>{selectedAction.commercial ?? '—'}</strong>
-                  </li>
-                  <li>
-                    <span>Cycle mensuel</span>
-                    <strong>{selectedAction.cycleMensuel ?? '—'}</strong>
-                  </li>
-                  <li>
-                    <span>Backlog</span>
-                    <strong>{selectedAction.backlog ? 'Oui' : 'Non'}</strong>
-                  </li>
-                  <li>
-                    <span>Urgence silence</span>
-                    <strong>{selectedAction.urgenceSilence ? 'Oui' : 'Non'}</strong>
-                  </li>
-                  {selectedAction.commentaire && (
-                    <li>
-                      <span>Commentaire</span>
-                      <strong>{selectedAction.commentaire}</strong>
-                    </li>
-                  )}
-                </ul>
+              {/* Ligne 2 de badges : Urgence + Etat */}
+              <div className="fiche-badges-row fiche-badges-row--sm">
+                {selectedAction.urgence && (
+                  <span className={`fiche-badge fiche-badge--urgence fiche-badge--urgence-${selectedAction.urgence.toLowerCase()}`}>
+                    <ActionsIcon name="heartbeat" size={12} />
+                    {formatEnumLabel(selectedAction.urgence)}
+                  </span>
+                )}
+                {selectedAction.etatAction && (
+                  <span className={`fiche-badge fiche-badge--etat fiche-badge--etat-${selectedAction.etatAction.toLowerCase()}`}>
+                    {formatEnumLabel(selectedAction.etatAction)}
+                  </span>
+                )}
+              </div>
+
+              {/* ACTION RECOMMANDEE */}
+              <div className="fiche-ar-card">
+                <div className="fiche-ar-label">ACTION RECOMMANDÉE</div>
+                <div className="fiche-ar-title">{selectedAction.actionRecommandee ?? '—'}</div>
+                <div className="fiche-ar-desc">
+                  Silence stratégique confirmé : médecin à valeur/potentiel élevé avec rupture de rythme nécessitant une visite urgente.
+                </div>
+              </div>
+
+              {/* MÉTRIQUES */}
+              <div className="fiche-metrics-grid">
+                <div className="fiche-metric">
+                  <div className="fiche-metric-header">
+                    <span className="fiche-metric-label">DEADLINE</span>
+                    <span className="fiche-metric-icon fiche-metric-icon--yellow">
+                      <ActionsIcon name="calendar" size={14} />
+                    </span>
+                  </div>
+                  <div className="fiche-metric-value">{formatDate(selectedAction.dateVisite)}</div>
+                </div>
+                <div className="fiche-metric">
+                  <div className="fiche-metric-header">
+                    <span className="fiche-metric-label">JOURS RESTANTS</span>
+                    <span className="fiche-metric-icon fiche-metric-icon--grey">
+                      <ActionsIcon name="clock" size={14} />
+                    </span>
+                  </div>
+                  <div className="fiche-metric-value">0</div>
+                </div>
+                <div className="fiche-metric">
+                  <div className="fiche-metric-header">
+                    <span className="fiche-metric-label">CA MOIS</span>
+                    <span className="fiche-metric-icon fiche-metric-icon--blue">
+                      <ActionsIcon name="target" size={14} />
+                    </span>
+                  </div>
+                  <div className="fiche-metric-value">0 MAD</div>
+                </div>
+                <div className="fiche-metric">
+                  <div className="fiche-metric-header">
+                    <span className="fiche-metric-label">BASELINE</span>
+                    <span className="fiche-metric-icon fiche-metric-icon--green">
+                      <ActionsIcon name="target" size={14} />
+                    </span>
+                  </div>
+                  <div className="fiche-metric-value">3 987 MAD</div>
+                </div>
+              </div>
+
+              {/* SILENCE RADIO */}
+              <div className="fiche-silence-card">
+                <div className="fiche-silence-header">
+                  <ActionsIcon name="heartbeat" size={14} />
+                  <span>SILENCE RADIO</span>
+                </div>
+                <span className="fiche-badge fiche-badge--silence-critique">SILENCE CRITIQUE</span>
+                <p className="fiche-silence-desc">
+                  44 jours sans activité<br />
+                  FRÉQUENCE DÉTECTÉE<br />
+                  1 sur tous les 10 jours
+                </p>
               </div>
             </div>
           )}

@@ -374,17 +374,17 @@ export default function MedecinsPage() {
           </label>
           <FilterSelect
             label="Statut"
-            value={filters.statutPilotage}
-            onChange={updateFilter('statutPilotage')}
+            value={filters.statut}
+            onChange={updateFilter('statut')}
             placeholder="Tous"
-            options={STATUT_OPTIONS}
+            options={filterOptions.statuts ?? []}
           />
           <FilterSelect
             label="Segment"
             value={filters.segment}
             onChange={updateFilter('segment')}
             placeholder="Tous"
-            options={SEGMENT_OPTIONS}
+            options={filterOptions.segments ?? []}
           />
           <FilterSelect
             label="Spécialité"
@@ -497,12 +497,12 @@ export default function MedecinsPage() {
                       <td>{medecin.organisme ?? '—'}</td>
                       <td>
                         <span className={getBadgeClass('segment', medecin.segment)}>
-                          {medecin.segment ? `SEGMENT ${medecin.segment}` : '—'}
+                          {medecin.segment ?? '—'}
                         </span>
                       </td>
                       <td>
-                        <span className={getBadgeClass('statut', medecin.statutPilotage)}>
-                          {formatEnumLabel(medecin.statutPilotage)}
+                        <span className={getBadgeClass('statut', medecin.statut || medecin.statutPilotage)}>
+                          {medecin.statut ? medecin.statut : formatEnumLabel(medecin.statutPilotage)}
                         </span>
                       </td>
                       <td className="medecins-cell-ca">{formatCaMois(medecin.caMois)}</td>
@@ -551,10 +551,10 @@ export default function MedecinsPage() {
 
               <div className="medecins-detail-badges">
                 <span className={getBadgeClass('segment', selectedMedecin.segment)}>
-                  {selectedMedecin.segment ? `SEGMENT ${selectedMedecin.segment}` : '—'}
+                  {selectedMedecin.segment ?? '—'}
                 </span>
-                <span className={getBadgeClass('statut', selectedMedecin.statutPilotage)}>
-                  {formatEnumLabel(selectedMedecin.statutPilotage)}
+                <span className={getBadgeClass('statut', selectedMedecin.statut || selectedMedecin.statutPilotage)}>
+                  {selectedMedecin.statut ? selectedMedecin.statut : formatEnumLabel(selectedMedecin.statutPilotage)}
                 </span>
               </div>
 
