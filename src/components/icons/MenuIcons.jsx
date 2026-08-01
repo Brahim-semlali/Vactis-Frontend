@@ -108,6 +108,12 @@ const icons = {
       <path d="M12 17v4" />
     </svg>
   ),
+  controle: (
+    <svg {...iconProps}>
+      <path d="M12 2 3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  ),
   default: (
     <svg {...iconProps}>
       <circle cx="12" cy="12" r="9" />
@@ -149,7 +155,11 @@ const iconAliases = {
   download: 'export',
   statut: 'monitor',
   api: 'monitor',
-  shield: 'monitor',
+  shield: 'controle',
+  controle: 'controle',
+  'shield-check': 'controle',
+  regle: 'controle',
+  regles: 'controle',
 };
 
 function normalizeIconKey(icon) {
