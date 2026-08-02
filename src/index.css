@@ -1912,65 +1912,126 @@ input {
 .fiche-silence-desc {
   margin: 0.6rem 0 0;
   font-size: 0.75rem;
-  color: #9f1239;
   line-height: 1.5;
 }
 
 /* ══════════════════════════════════════════════
-   CONTRÔLE CA — styles
+   CONTRÔLE CA — styles (redesigned)
 ══════════════════════════════════════════════ */
 
 /* ── Layout page ── */
 
 .controle-page {
   display: grid;
-  gap: 1.25rem;
-  padding: 1.5rem;
-  max-width: 900px;
+  gap: 1.5rem;
+  padding: 1.75rem;
+  max-width: 960px;
   margin: 0 auto;
+}
+
+/* ── Hero banner override for Contrôle ── */
+
+.controle-page .medecins-hero {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 45%, #14b8a6 100%);
+  border: none;
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(15, 118, 110, 0.28);
+  position: relative;
+  overflow: hidden;
+}
+
+.controle-page .medecins-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+  pointer-events: none;
+}
+
+.controle-page .medecins-hero .medecins-eyebrow {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.controle-page .medecins-hero .medecins-title {
+  color: #fff;
+}
+
+.controle-page .medecins-hero .medecins-description {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.controle-page .medecins-hero .medecins-meta {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.controle-page .medecins-hero .medecins-meta span {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.controle-page .medecins-hero .medecins-hero-icon {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.controle-page .medecins-hero .medecins-refresh-btn,
+.controle-page .medecins-hero .btn-primary {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(6px);
+}
+
+.controle-page .medecins-refresh-btn:hover:not(:disabled),
+.controle-page .medecins-hero .btn-primary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.55);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 /* ── Tabs navigation ── */
 
 .controle-tabs {
   display: flex;
-  gap: 0.5rem;
-  border-bottom: 2px solid var(--border);
-  padding-bottom: 0;
+  gap: 0;
+  background: #f1f5f9;
+  border-radius: 0.85rem;
+  padding: 0.3rem;
+  border: none;
 }
 
 .controle-tab {
   position: relative;
-  padding: 0.6rem 1.2rem;
+  flex: 1;
+  padding: 0.6rem 1.4rem;
   border: none;
   background: transparent;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  border-radius: 0.5rem 0.5rem 0 0;
-  transition: color 0.15s ease, background 0.15s ease;
+  border-radius: 0.6rem;
+  transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  letter-spacing: 0.01em;
 }
 
-.controle-tab:hover {
+.controle-tab:hover:not(.controle-tab--active) {
   color: var(--text);
-  background: #f8fafc;
+  background: rgba(255, 255, 255, 0.65);
 }
 
 .controle-tab--active {
+  background: #fff;
   color: var(--primary);
-  background: transparent;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.1), 0 1px 3px rgba(15, 23, 42, 0.08);
 }
 
 .controle-tab--active::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--primary);
-  border-radius: 2px 2px 0 0;
+  display: none;
 }
 
 /* ── Rule form ── */
@@ -1978,13 +2039,13 @@ input {
 .controle-form {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.85rem;
+  gap: 1rem;
   align-items: end;
 }
 
 .controle-field {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .controle-field span {
@@ -1997,22 +2058,28 @@ input {
 
 .controle-field input[type='text'],
 .controle-field input[type='number'] {
-  padding: 0.55rem 0.75rem;
-  border: 1px solid var(--border);
+  padding: 0.6rem 0.8rem;
+  border: 1.5px solid #e2e8f0;
   border-radius: 0.65rem;
   background: #f8fafc;
   color: var(--text);
-  font-size: 0.88rem;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  font-size: 0.875rem;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
   outline: none;
   width: 100%;
+}
+
+.controle-field input[type='text']:hover,
+.controle-field input[type='number']:hover {
+  border-color: #cbd5e1;
+  background: #fff;
 }
 
 .controle-field input[type='text']:focus,
 .controle-field input[type='number']:focus {
   border-color: var(--primary);
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
 }
 
 .controle-field--checkbox {
@@ -2044,13 +2111,16 @@ input {
   align-items: center;
   justify-content: flex-end;
   grid-column: 1 / -1;
-  padding-top: 0.25rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 0.1rem;
 }
 
 /* ── Cards ── */
 
 .controle-create-card {
-  border-left: 3px solid var(--primary);
+  border-left: 4px solid var(--primary);
+  background: linear-gradient(to right, rgba(15, 118, 110, 0.03) 0%, #fff 35%);
 }
 
 .controle-table-card {
@@ -2059,47 +2129,68 @@ input {
 
 /* ── Table specifics ── */
 
-.controle-table th,
-.controle-table td {
-  /* inherits from medecins-table */
+.controle-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.controle-table tbody tr:hover {
+  background: #f8fafc;
 }
 
 .controle-empty {
   text-align: center;
-  padding: 2.5rem 1rem !important;
+  padding: 3rem 1rem !important;
   color: #94a3b8;
-  font-size: 0.88rem;
+  font-size: 0.875rem;
 }
 
 .controle-edit-row td {
-  background: #f0fdf4;
-  padding: 1rem !important;
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5) !important;
+  padding: 1.1rem !important;
+  border-top: 2px solid #bbf7d0;
+  border-bottom: 2px solid #bbf7d0;
 }
 
 /* ── État badge ── */
 
 .controle-etat-badge {
-  display: inline-block;
-  padding: 0.25rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.7rem;
   border-radius: 0.5rem;
-  background: #f1f5f9;
-  color: #334155;
-  font-size: 0.82rem;
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  color: #1e293b;
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+  border: 1px solid #e2e8f0;
+  text-transform: uppercase;
 }
 
 /* ── Status pill ── */
 
 .controle-status-pill {
-  display: inline-block;
-  padding: 0.25rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.7rem;
   border-radius: 999px;
   background: #fee2e2;
   color: #b91c1c;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.controle-status-pill::before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .controle-status-pill--active {
@@ -2111,27 +2202,43 @@ input {
 
 .controle-row-actions {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.4rem;
   align-items: center;
 }
 
 .controle-delete-btn {
   color: #dc2626;
-  border-color: #fecaca;
+  border-color: transparent;
+  background: #fef2f2;
 }
 
 .controle-delete-btn:hover:not(:disabled) {
-  background: #fef2f2;
+  background: #fee2e2;
   border-color: #fca5a5;
   color: #b91c1c;
+  transform: translateY(-1px);
 }
 
 /* ── btn-sm ── */
 
 .btn-sm {
-  padding: 0.35rem 0.65rem;
+  padding: 0.38rem 0.7rem;
   font-size: 0.78rem;
   border-radius: 0.5rem;
+}
+
+/* ── Subheader override for Contrôle ── */
+
+.controle-page .medecins-subheader {
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.06) 0%, rgba(255,255,255,0) 60%);
+  border-bottom: 1px solid rgba(15, 118, 110, 0.12);
+}
+
+.controle-page .medecins-api-badge {
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  color: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.3);
 }
 
 /* ── Responsive ── */
@@ -2152,5 +2259,9 @@ input {
 
   .controle-form-actions .btn {
     width: 100%;
+  }
+
+  .controle-tabs {
+    border-radius: 0.6rem;
   }
 }

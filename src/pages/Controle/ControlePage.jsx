@@ -284,7 +284,7 @@ export default function ControlePage({ navigate }) {
         <div className="medecins-hero-main">
           <div className="medecins-hero-heading">
             <span className="medecins-hero-icon" aria-hidden="true">
-              <MenuIcon name="monitor" />
+              <MenuIcon name="controle" />
             </span>
             <div>
               <p className="medecins-eyebrow">Table controle</p>
