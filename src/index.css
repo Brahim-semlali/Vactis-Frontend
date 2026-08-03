@@ -407,6 +407,7 @@ input {
     opacity: 0;
     transform: translateY(12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -788,7 +789,7 @@ input {
   color: #cbd5e1;
 }
 
-.status-card li + li {
+.status-card li+li {
   margin-top: 0.35rem;
 }
 
@@ -1472,6 +1473,7 @@ input {
 }
 
 @media (max-width: 960px) {
+
   .medecins-subheader,
   .medecins-hero {
     flex-direction: column;
@@ -1495,6 +1497,7 @@ input {
 }
 
 @media (max-width: 640px) {
+
   .medecins-kpi-grid,
   .medecins-filter-group {
     grid-template-columns: 1fr;
@@ -1540,6 +1543,7 @@ input {
 }
 
 @media (max-width: 640px) {
+
   .actions-kpi-grid,
   .actions-filter-group {
     grid-template-columns: 1fr;
@@ -1559,14 +1563,17 @@ input {
   background: transparent;
   border: 1px solid;
 }
+
 .badge-yellow {
   color: #d97706;
   border-color: #fcd34d;
 }
+
 .badge-grey {
   color: #64748b;
   border-color: #cbd5e1;
 }
+
 .badge-red {
   color: #dc2626;
   border-color: #fca5a5;
@@ -1581,6 +1588,7 @@ input {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
 .badge-text.badge-red {
   color: #dc2626;
   border: none;
@@ -1590,7 +1598,7 @@ input {
 .new-design.medecins-detail-content {
   background: #ffffff;
   border: none;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   padding: 1.5rem;
 }
 
@@ -1688,10 +1696,25 @@ input {
   border-radius: 0.35rem;
 }
 
-.icon-wrap.yellow { background: #fef3c7; color: #d97706; }
-.icon-wrap.grey { background: #f1f5f9; color: #64748b; }
-.icon-wrap.blue { background: #e0f2fe; color: #0284c7; }
-.icon-wrap.green { background: #dcfce7; color: #16a34a; }
+.icon-wrap.yellow {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.icon-wrap.grey {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.icon-wrap.blue {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.icon-wrap.green {
+  background: #dcfce7;
+  color: #16a34a;
+}
 
 .silence-radio-card {
   background: #fff1f2;
@@ -1779,30 +1802,85 @@ input {
 }
 
 /* Segments */
-.fiche-badge--segment-a { background: #ffedd5; color: #c2410c; }
-.fiche-badge--segment-b { background: #dbeafe; color: #1d4ed8; }
-.fiche-badge--segment-c { background: #e2e8f0; color: #475569; }
+.fiche-badge--segment-a {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.fiche-badge--segment-b {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.fiche-badge--segment-c {
+  background: #e2e8f0;
+  color: #475569;
+}
 
 /* Statuts */
-.fiche-badge--statut-surveillance { background: #fef3c7; color: #b45309; }
-.fiche-badge--statut-actif { background: #ecfdf5; color: #0f766e; }
-.fiche-badge--statut-progression { background: #dcfce7; color: #15803d; }
-.fiche-badge--statut-onboarding { background: #dbeafe; color: #1d4ed8; }
-.fiche-badge--statut-silence_critique { background: #fee2e2; color: #b91c1c; }
+.fiche-badge--statut-surveillance {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.fiche-badge--statut-actif {
+  background: #ecfdf5;
+  color: #0f766e;
+}
+
+.fiche-badge--statut-progression {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.fiche-badge--statut-onboarding {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.fiche-badge--statut-silence_critique {
+  background: #fee2e2;
+  color: #b91c1c;
+}
 
 /* Urgences */
 .fiche-badge--urgence-silence_critique,
-.fiche-badge--urgence-urgent { background: #fee2e2; color: #b91c1c; }
-.fiche-badge--urgence-eleve { background: #fef3c7; color: #b45309; }
-.fiche-badge--urgence-moyen { background: #dbeafe; color: #1d4ed8; }
-.fiche-badge--urgence-faible { background: #ecfdf5; color: #0f766e; }
+.fiche-badge--urgence-urgent {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.fiche-badge--urgence-eleve {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.fiche-badge--urgence-moyen {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.fiche-badge--urgence-faible {
+  background: #ecfdf5;
+  color: #0f766e;
+}
 
 /* États */
-.fiche-badge--etat-realisee { background: #dcfce7; color: #15803d; }
-.fiche-badge--etat-planifiee { background: #e0f2fe; color: #0369a1; }
+.fiche-badge--etat-realisee {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.fiche-badge--etat-planifiee {
+  background: #e0f2fe;
+  color: #0369a1;
+}
 
 /* Silence Critique standalone */
-.fiche-badge--silence-critique { background: #fee2e2; color: #b91c1c; }
+.fiche-badge--silence-critique {
+  background: #fee2e2;
+  color: #b91c1c;
+}
 
 /* ── Action recommandée card ── */
 
@@ -1876,10 +1954,25 @@ input {
   flex-shrink: 0;
 }
 
-.fiche-metric-icon--yellow { background: #fef3c7; color: #d97706; }
-.fiche-metric-icon--grey { background: #f1f5f9; color: #64748b; }
-.fiche-metric-icon--blue { background: #e0f2fe; color: #0284c7; }
-.fiche-metric-icon--green { background: #dcfce7; color: #16a34a; }
+.fiche-metric-icon--yellow {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.fiche-metric-icon--grey {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.fiche-metric-icon--blue {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.fiche-metric-icon--green {
+  background: #dcfce7;
+  color: #16a34a;
+}
 
 .fiche-metric-value {
   font-size: 1rem;
@@ -2230,7 +2323,7 @@ input {
 /* ── Subheader override for Contrôle ── */
 
 .controle-page .medecins-subheader {
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.06) 0%, rgba(255,255,255,0) 60%);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.06) 0%, rgba(255, 255, 255, 0) 60%);
   border-bottom: 1px solid rgba(15, 118, 110, 0.12);
 }
 
