@@ -247,38 +247,6 @@ export default function ControlePage({ navigate }) {
 
   return (
     <div className="medecins-page controle-page">
-      <header className="medecins-subheader">
-        <div className="medecins-subheader-left">
-          <div className="medecins-breadcrumbs">
-            <span>CONFIGURATION</span>
-            <span className="medecins-breadcrumbs-sep" aria-hidden="true">
-              /
-            </span>
-            <span className="medecins-breadcrumbs-muted">RÈGLES MÉTIER</span>
-          </div>
-          <div className="medecins-subheader-title">
-            <h1>Contrôle CA</h1>
-            <p>Configurez dynamiquement les statuts et segments médecins.</p>
-          </div>
-        </div>
-
-        <div className="medecins-subheader-right">
-          <span className="medecins-api-badge">DYNAMIQUE</span>
-          <div className="medecins-api-url">
-            <span className="medecins-api-url-label">Endpoint</span>
-            <input type="text" readOnly value="/api/controle" aria-label="URL API" />
-          </div>
-          {navigate && (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              onClick={() => navigate('/medecins')}
-            >
-              Retour médecins
-            </button>
-          )}
-        </div>
-      </header>
 
       <section className="medecins-card medecins-hero">
         <div className="medecins-hero-main">
