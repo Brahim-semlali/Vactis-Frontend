@@ -153,8 +153,8 @@ function ActionsIcon({ name, size = 18 }) {
     case 'antenna':
       return (
         <svg {...props}>
-          <path d="M2 12h4l2-2m4 0l2 2h4M12 2v8M9.5 5.5l5 5m-5 0l5-5" stroke="currentColor"/>
-          <circle cx="12" cy="10" r="2" fill="currentColor"/>
+          <path d="M2 12h4l2-2m4 0l2 2h4M12 2v8M9.5 5.5l5 5m-5 0l5-5" stroke="currentColor" />
+          <circle cx="12" cy="10" r="2" fill="currentColor" />
         </svg>
       );
     case 'target':
@@ -326,32 +326,7 @@ export default function ActionsPage() {
 
   return (
     <div className="medecins-page">
-      <header className="medecins-subheader">
-        <div className="medecins-subheader-left">
-          <div className="medecins-breadcrumbs">
-            <span>LOT 2.A — SHELL FRONTEND</span>
-            <span className="medecins-breadcrumbs-sep" aria-hidden="true">
-              /
-            </span>
-            <span className="medecins-breadcrumbs-muted">PRODUIT LOCAL</span>
-          </div>
-          <div className="medecins-subheader-title">
-            <h1>Actions</h1>
-            <p>Espace actions préparé pour les données métier.</p>
-          </div>
-        </div>
 
-        <div className="medecins-subheader-right">
-          <span className="medecins-api-badge">API PRÊTE</span>
-          <div className="medecins-api-url">
-            <span className="medecins-api-url-label">Endpoint</span>
-            <input type="text" readOnly value="/api/actions" aria-label="URL API" />
-          </div>
-          <button type="button" className="medecins-settings-btn" aria-label="Paramètres">
-            <ActionsIcon name="settings" />
-          </button>
-        </div>
-      </header>
 
       <section className="medecins-card medecins-hero">
         <div className="medecins-hero-main">
@@ -535,9 +510,8 @@ export default function ActionsPage() {
                   actions.map((action) => (
                     <tr
                       key={action.id}
-                      className={`medecins-table-row${
-                        selectedAction?.id === action.id ? ' medecins-table-row--active' : ''
-                      }`}
+                      className={`medecins-table-row${selectedAction?.id === action.id ? ' medecins-table-row--active' : ''
+                        }`}
                       onClick={() => setSelectedAction(action)}
                     >
                       <td>
