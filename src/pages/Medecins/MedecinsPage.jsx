@@ -286,33 +286,6 @@ export default function MedecinsPage() {
 
   return (
     <div className="medecins-page">
-      <header className="medecins-subheader">
-        <div className="medecins-subheader-left">
-          <div className="medecins-breadcrumbs">
-            <span>LOT 2.A — SHELL FRONTEND</span>
-            <span className="medecins-breadcrumbs-sep" aria-hidden="true">
-              /
-            </span>
-            <span className="medecins-breadcrumbs-muted">PRODUIT LOCAL</span>
-          </div>
-          <div className="medecins-subheader-title">
-            <h1>Médecins</h1>
-            <p>Espace médecins préparé pour les données métier.</p>
-          </div>
-        </div>
-
-        <div className="medecins-subheader-right">
-          <span className="medecins-api-badge">API PRÊTE</span>
-          <div className="medecins-api-url">
-            <span className="medecins-api-url-label">Endpoint</span>
-            <input type="text" readOnly value="/api/medecins" aria-label="URL API" />
-          </div>
-          <button type="button" className="medecins-settings-btn" aria-label="Paramètres">
-            <MedecinsIcon name="settings" />
-          </button>
-        </div>
-      </header>
-
       <section className="medecins-card medecins-hero">
         <div className="medecins-hero-main">
           <div className="medecins-hero-heading">
