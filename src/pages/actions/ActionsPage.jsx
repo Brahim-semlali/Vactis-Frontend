@@ -53,8 +53,6 @@ const STATUT_OPTIONS = [
   'SILENCE_CRITIQUE',
 ];
 
-const SEGMENT_OPTIONS = ['A', 'B', 'C'];
-
 const URGENCE_OPTIONS = ['SILENCE_CRITIQUE', 'FAIBLE', 'MOYEN', 'ELEVE', 'URGENT'];
 
 const ETAT_OPTIONS = ['PLANIFIEE', 'REALISEE'];
@@ -208,7 +206,9 @@ function getBadgeClass(type, value) {
   if (type === 'segment') {
     if (normalized === 'A') return 'medecins-badge medecins-badge--segment-a';
     if (normalized === 'B') return 'medecins-badge medecins-badge--segment-b';
-    return 'medecins-badge medecins-badge--segment-c';
+    if (normalized === 'C') return 'medecins-badge medecins-badge--segment-c';
+    if (normalized === 'D') return 'medecins-badge medecins-badge--segment-d';
+    return 'medecins-badge medecins-badge--muted';
   }
 
   if (type === 'etat') {

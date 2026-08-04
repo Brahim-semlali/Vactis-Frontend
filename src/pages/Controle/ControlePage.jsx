@@ -10,7 +10,12 @@ import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 
 const TABS = [
   { id: 'STATUT', label: 'Statuts', description: 'Règles de statut médecin selon le CA' },
-  { id: 'SEGEMENTS', label: 'Segments', description: 'Règles de segmentation selon le CA' },
+  {
+    id: 'SEGEMENTS',
+    label: 'Segments',
+    description:
+      'Règles de segmentation selon le score de valeur (Potentiel 40%, Performance 40%, Poids éco 20%)',
+  },
 ];
 
 const EMPTY_FORM = {
@@ -20,9 +25,11 @@ const EMPTY_FORM = {
   actif: true,
 };
 
-function formatCa(value) {
+function formatRuleVal(value, isSegmentTab) {
   if (value === null || value === undefined || value === '') return '—';
-  return `${Number(value).toLocaleString('fr-FR')} MAD`;
+  return isSegmentTab
+    ? `${Number(value).toLocaleString('fr-FR')} pts`
+    : `${Number(value).toLocaleString('fr-FR')} MAD`;
 }
 
 function ControleIcon({ name, size = 18 }) {
@@ -74,7 +81,7 @@ function ControleIcon({ name, size = 18 }) {
   }
 }
 
-function RuleForm({ form, onChange, onSubmit, onCancel, submitLabel, loading }) {
+function RuleForm({ form, onChange, onSubmit, onCancel, submitLabel, loading, isSegmentTab }) {
   return (
     <form
       className="controle-form"
@@ -89,25 +96,27 @@ function RuleForm({ form, onChange, onSubmit, onCancel, submitLabel, loading }) 
           type="text"
           value={form.etat}
           onChange={(e) => onChange({ ...form, etat: e.target.value })}
-          placeholder="Ex. A, PREMIUM, ACTIF…"
+          placeholder={isSegmentTab ? 'Ex. A, B, C, D…' : 'Ex. ACTIF, NOUVEAU…'}
           required
         />
       </label>
       <label className="controle-field">
-        <span>CA min (MAD)</span>
+        <span>{isSegmentTab ? 'Score min (sur 100)' : 'CA min (MAD)'}</span>
         <input
           type="number"
           min="0"
+          max={isSegmentTab ? '100' : undefined}
           value={form.minCA}
           onChange={(e) => onChange({ ...form, minCA: e.target.value })}
           required
         />
       </label>
       <label className="controle-field">
-        <span>CA max (MAD)</span>
+        <span>{isSegmentTab ? 'Score max (sur 100)' : 'CA max (MAD)'}</span>
         <input
           type="number"
           min="0"
+          max={isSegmentTab ? '100' : undefined}
           value={form.maxCA}
           onChange={(e) => onChange({ ...form, maxCA: e.target.value })}
           required
@@ -309,6 +318,7 @@ export default function ControlePage({ navigate }) {
           onSubmit={handleCreate}
           submitLabel={saving ? 'Enregistrement…' : 'Ajouter'}
           loading={saving}
+          isSegmentTab={activeTab === 'SEGEMENTS'}
         />
       </section>
 
@@ -325,8 +335,8 @@ export default function ControlePage({ navigate }) {
             <thead>
               <tr>
                 <th scope="col">État</th>
-                <th scope="col">CA min</th>
-                <th scope="col">CA max</th>
+                <th scope="col">{activeTab === 'SEGEMENTS' ? 'Score min' : 'CA min'}</th>
+                <th scope="col">{activeTab === 'SEGEMENTS' ? 'Score max' : 'CA max'}</th>
                 <th scope="col">Actif</th>
                 <th scope="col">Actions</th>
               </tr>
@@ -363,6 +373,7 @@ export default function ControlePage({ navigate }) {
                           }}
                           submitLabel={saving ? 'Enregistrement…' : 'Enregistrer'}
                           loading={saving}
+                          isSegmentTab={activeTab === 'SEGEMENTS'}
                         />
                       </td>
                     </tr>
@@ -371,8 +382,8 @@ export default function ControlePage({ navigate }) {
                       <td>
                         <span className="controle-etat-badge">{rule.etat}</span>
                       </td>
-                      <td>{formatCa(rule.minCA)}</td>
-                      <td>{formatCa(rule.maxCA)}</td>
+                      <td>{formatRuleVal(rule.minCA, activeTab === 'SEGEMENTS')}</td>
+                      <td>{formatRuleVal(rule.maxCA, activeTab === 'SEGEMENTS')}</td>
                       <td>
                         <span
                           className={`controle-status-pill${

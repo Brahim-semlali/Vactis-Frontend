@@ -1360,6 +1360,11 @@ input {
   color: #475569;
 }
 
+.medecins-badge--segment-d {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+
 .medecins-badge--surveillance {
   background: #fef3c7;
   color: #b45309;
@@ -1815,6 +1820,11 @@ input {
 .fiche-badge--segment-c {
   background: #e2e8f0;
   color: #475569;
+}
+
+.fiche-badge--segment-d {
+  background: #f1f5f9;
+  color: #94a3b8;
 }
 
 /* Statuts */
