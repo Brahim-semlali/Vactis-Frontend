@@ -132,3 +132,50 @@ export async function patchNoteInput(token, id, noteInput) {
   logger.info('Note input mise à jour', { id, noteInput: data?.noteInput });
   return data;
 }
+
+export async function getRetoursTerrain(token, medecinId) {
+  logger.info('Chargement des retours terrain', { medecinId });
+
+  const response = await fetch(`${API_BASE}/api/medecins/${medecinId}/retours-terrain`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await parseError(response);
+    logger.warn('Échec chargement retours terrain', { status: error.status, medecinId });
+    throw error;
+  }
+
+  return response.json();
+}
+
+export async function postRetourTerrain(token, medecinId, { note, dateVisite, visiteur, commentaire }) {
+  logger.info('Ajout retour terrain', { medecinId, note, dateVisite, visiteur });
+
+  const response = await fetch(`${API_BASE}/api/medecins/${medecinId}/retours-terrain`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      note,
+      dateVisite,
+      visiteur: visiteur || null,
+      commentaire: commentaire || null,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await parseError(response);
+    logger.warn('Échec ajout retour terrain', { status: error.status, medecinId });
+    throw error;
+  }
+
+  const data = await response.json();
+  logger.info('Retour terrain créé', { id: data?.id, medecinId });
+  return data;
+}
+

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getMedecinByCode, getMedecins, patchNoteInput } from '../../api/medecins.js';
+import { getMedecinByCode, getMedecins, getRetoursTerrain, patchNoteInput, postRetourTerrain } from '../../api/medecins.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 
@@ -150,6 +150,16 @@ function formatCaMois(value) {
   return `${Number(value).toLocaleString('fr-FR')} MAD`;
 }
 
+function getTodayString() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function formatDateFr(dateStr) {
+  if (!dateStr) return '';
+  const [year, month, day] = String(dateStr).split('T')[0].split('-');
+  return `${day}/${month}/${year}`;
+}
+
 function getBadgeClass(type, value) {
   if (!value) return 'medecins-badge medecins-badge--muted';
 
@@ -209,7 +219,7 @@ function KpiCard({ label, icon, variant, tone, value }) {
 }
 
 export default function MedecinsPage() {
-  const { token } = useAuth();
+  const { token, username } = useAuth();
   const [filters, setFilters] = useState(FILTER_DEFAULTS);
   const [pageData, setPageData] = useState(null);
   const [selectedMedecin, setSelectedMedecin] = useState(null);
@@ -312,6 +322,99 @@ export default function MedecinsPage() {
     }
   };
 
+  // — Note terrain (RetourTerrain) —
+  const [retoursTerrain, setRetoursTerrain] = useState([]);
+  const [loadingRetours, setLoadingRetours] = useState(false);
+  const [terrainNote, setTerrainNote] = useState(null);
+  const [terrainDate, setTerrainDate] = useState(getTodayString());
+  const [terrainVisiteur, setTerrainVisiteur] = useState(username || '');
+  const [terrainCommentaire, setTerrainCommentaire] = useState('');
+  const [terrainSaving, setTerrainSaving] = useState(false);
+  const [terrainError, setTerrainError] = useState(null);
+  const [terrainSaved, setTerrainSaved] = useState(false);
+  const terrainSavedTimer = useRef(null);
+
+  // Charge l'historique des retours terrain du médecin sélectionné
+  useEffect(() => {
+    if (!selectedMedecin?.id || !token) {
+      setRetoursTerrain([]);
+      return;
+    }
+    let isMounted = true;
+    setLoadingRetours(true);
+    getRetoursTerrain(token, selectedMedecin.id)
+      .then((data) => {
+        if (isMounted) setRetoursTerrain(data || []);
+      })
+      .catch((err) => {
+        console.error('Erreur chargement retours terrain:', err);
+        if (isMounted) setRetoursTerrain([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingRetours(false);
+      });
+
+    // Reset formulaire de saisie
+    setTerrainNote(null);
+    setTerrainDate(getTodayString());
+    setTerrainVisiteur(username || '');
+    setTerrainCommentaire('');
+    setTerrainError(null);
+    setTerrainSaved(false);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedMedecin?.id, token, username]);
+
+  const handleSaveRetourTerrain = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedMedecin) return;
+    setTerrainError(null);
+    setTerrainSaved(false);
+
+    if (!terrainNote) {
+      setTerrainError('Veuillez sélectionner une note (entre 1 et 5).');
+      return;
+    }
+    if (!terrainDate) {
+      setTerrainError('Veuillez sélectionner la date de la visite.');
+      return;
+    }
+    const today = getTodayString();
+    if (terrainDate > today) {
+      setTerrainError('La date de visite ne peut pas être dans le futur.');
+      return;
+    }
+
+    setTerrainSaving(true);
+    try {
+      const newRetour = await postRetourTerrain(token, selectedMedecin.id, {
+        note: Number(terrainNote),
+        dateVisite: terrainDate,
+        visiteur: terrainVisiteur,
+        commentaire: terrainCommentaire,
+      });
+
+      // Mettre à jour l'affichage de la dernière visite (historisée) sans tout recharger
+      setRetoursTerrain((prev) => [newRetour, ...prev]);
+
+      // Re-initialiser le formulaire pour une saisie ultérieure
+      setTerrainNote(null);
+      setTerrainDate(getTodayString());
+      setTerrainVisiteur(username || '');
+      setTerrainCommentaire('');
+
+      setTerrainSaved(true);
+      clearTimeout(terrainSavedTimer.current);
+      terrainSavedTimer.current = setTimeout(() => setTerrainSaved(false), 3000);
+    } catch (err) {
+      setTerrainError(err.message ?? "Erreur lors de l'enregistrement de la visite.");
+    } finally {
+      setTerrainSaving(false);
+    }
+  };
+
   const updateFilter = (key) => (event) => {
     setFilters((current) => ({ ...current, [key]: event.target.value }));
   };
@@ -325,6 +428,7 @@ export default function MedecinsPage() {
   const kpis = pageData?.kpis ?? {};
   const meta = pageData?.meta ?? {};
   const filterOptions = pageData?.filters ?? {};
+  const derniereVisite = retoursTerrain && retoursTerrain.length > 0 ? retoursTerrain[0] : null;
 
   return (
     <div className="medecins-page">
@@ -665,6 +769,115 @@ export default function MedecinsPage() {
                 >
                   {noteSaving ? 'Enregistrement…' : 'Enregistrer'}
                 </button>
+              </div>
+
+              {/* ── Note terrain (Visites terrain historisées) ── */}
+              <div className="medecins-detail-section medecins-terrain-section">
+                <h4>Note terrain</h4>
+
+                {/* Dernier retour terrain enregistré */}
+                <div className="medecins-note-current medecins-terrain-current">
+                  <span className="medecins-note-label">Dernière visite :</span>
+                  {loadingRetours ? (
+                    <span className="medecins-terrain-loading">Chargement…</span>
+                  ) : derniereVisite ? (
+                    <div className="medecins-terrain-value-group">
+                      <span className="medecins-note-value">{derniereVisite.note} / 5</span>
+                      <span className="medecins-terrain-date">
+                        ({formatDateFr(derniereVisite.dateVisite)}
+                        {derniereVisite.visiteur ? ` — ${derniereVisite.visiteur}` : ''})
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="medecins-terrain-empty">Aucune visite enregistrée</span>
+                  )}
+                </div>
+
+                {/* Formulaire d'ajout d'une visite */}
+                <form onSubmit={handleSaveRetourTerrain} className="medecins-terrain-form">
+                  <div className="medecins-terrain-field">
+                    <label className="medecins-terrain-field-label">Note de la visite (1-5)</label>
+                    <div className="medecins-note-buttons" role="group" aria-label="Choisir une note terrain">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          id={`terrain-note-btn-${n}`}
+                          type="button"
+                          className={`medecins-note-btn${
+                            terrainNote === n ? ' medecins-note-btn--active' : ''
+                          }`}
+                          onClick={() => setTerrainNote(n)}
+                          aria-pressed={terrainNote === n}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="medecins-terrain-field">
+                    <label htmlFor="terrain-date-input" className="medecins-terrain-field-label">
+                      Date de visite
+                    </label>
+                    <input
+                      id="terrain-date-input"
+                      type="date"
+                      className="medecins-terrain-input"
+                      value={terrainDate}
+                      max={getTodayString()}
+                      onChange={(e) => setTerrainDate(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="medecins-terrain-field">
+                    <label htmlFor="terrain-visiteur-input" className="medecins-terrain-field-label">
+                      Visiteur / Intervenant (optionnel)
+                    </label>
+                    <input
+                      id="terrain-visiteur-input"
+                      type="text"
+                      className="medecins-terrain-input"
+                      placeholder="Nom du visiteur..."
+                      value={terrainVisiteur}
+                      onChange={(e) => setTerrainVisiteur(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="medecins-terrain-field">
+                    <label htmlFor="terrain-comment-input" className="medecins-terrain-field-label">
+                      Commentaire (optionnel)
+                    </label>
+                    <textarea
+                      id="terrain-comment-input"
+                      rows="2"
+                      className="medecins-terrain-textarea"
+                      placeholder="Remarques du visiteur..."
+                      value={terrainCommentaire}
+                      onChange={(e) => setTerrainCommentaire(e.target.value)}
+                    />
+                  </div>
+
+                  {terrainError && (
+                    <p className="medecins-note-error" role="alert">{terrainError}</p>
+                  )}
+                  {terrainSaved && (
+                    <p className="medecins-note-success" role="status">Visite enregistrée ✓</p>
+                  )}
+
+                  <button
+                    id="terrain-save-btn"
+                    type="submit"
+                    className="btn btn-primary medecins-note-save-btn"
+                    disabled={terrainSaving}
+                  >
+                    {terrainSaving ? 'Enregistrement…' : 'Enregistrer la visite'}
+                  </button>
+                </form>
+
+                <p className="medecins-terrain-batch-notice">
+                  * Le score et le segment ne seront recalculés qu'au prochain batch mensuel.
+                </p>
               </div>
             </div>
           )}

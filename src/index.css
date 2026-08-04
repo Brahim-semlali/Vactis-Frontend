@@ -1576,6 +1576,93 @@ input {
   justify-content: center;
 }
 
+/* ── Section Note Terrain (RetourTerrain) ── */
+
+.medecins-terrain-section {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.medecins-terrain-current {
+  justify-content: space-between;
+}
+
+.medecins-terrain-value-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.medecins-terrain-date {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.medecins-terrain-empty {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.medecins-terrain-loading {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.medecins-terrain-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.medecins-terrain-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.medecins-terrain-field-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.medecins-terrain-input,
+.medecins-terrain-textarea {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.medecins-terrain-input:focus,
+.medecins-terrain-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+}
+
+.medecins-terrain-textarea {
+  resize: vertical;
+  min-height: 52px;
+}
+
+.medecins-terrain-batch-notice {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-style: italic;
+  line-height: 1.35;
+}
+
 
 @media (max-width: 1280px) {
   .medecins-kpi-grid {
