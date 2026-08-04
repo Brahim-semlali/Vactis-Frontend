@@ -1463,6 +1463,120 @@ input {
   color: var(--muted);
 }
 
+/* ── Section Potentiel commercial (noteInput) ── */
+
+.medecins-note-section {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.medecins-note-current {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.65rem;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.medecins-note-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.medecins-note-value {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.medecins-note-buttons {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.85rem;
+}
+
+.medecins-note-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.65rem;
+  border: 1.5px solid var(--border);
+  background: #ffffff;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.12s ease;
+}
+
+.medecins-note-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.medecins-note-btn--active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(15, 118, 110, 0.3);
+}
+
+.medecins-note-btn--active:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: #ffffff;
+}
+
+.medecins-note-btn--clear {
+  color: var(--muted);
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.medecins-note-btn--clear.medecins-note-btn--active {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.medecins-note-error {
+  margin: 0 0 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.55rem;
+  background: var(--error-bg);
+  color: var(--error-text);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.medecins-note-success {
+  margin: 0 0 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.55rem;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.medecins-note-save-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+
 @media (max-width: 1280px) {
   .medecins-kpi-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));

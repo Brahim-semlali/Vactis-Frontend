@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { getMedecinByCode, getMedecins } from '../../api/medecins.js';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { getMedecinByCode, getMedecins, patchNoteInput } from '../../api/medecins.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 
@@ -216,6 +216,13 @@ export default function MedecinsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // — Potentiel commercial (noteInput) —
+  const [noteInputDraft, setNoteInputDraft] = useState(null); // valeur en cours d'édition
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteError, setNoteError] = useState(null);
+  const [noteSaved, setNoteSaved] = useState(false);
+  const noteSavedTimer = useRef(null);
+
   const loadMedecins = useCallback(async () => {
     if (!token) return;
 
@@ -269,6 +276,41 @@ export default function MedecinsPage() {
   useEffect(() => {
     loadMedecins();
   }, [loadMedecins]);
+
+  // Synchronise le draft quand le médecin sélectionné change
+  useEffect(() => {
+    setNoteInputDraft(selectedMedecin?.noteInput ?? null);
+    setNoteError(null);
+    setNoteSaved(false);
+  }, [selectedMedecin?.id]);
+
+  const handleSaveNote = async () => {
+    if (!selectedMedecin) return;
+    setNoteSaving(true);
+    setNoteError(null);
+    setNoteSaved(false);
+    try {
+      const updated = await patchNoteInput(token, selectedMedecin.id, noteInputDraft);
+      setSelectedMedecin((prev) => ({ ...prev, noteInput: updated.noteInput }));
+      setPageData((prev) =>
+        prev
+          ? {
+              ...prev,
+              items: prev.items.map((m) =>
+                m.id === updated.id ? { ...m, noteInput: updated.noteInput } : m
+              ),
+            }
+          : prev
+      );
+      setNoteSaved(true);
+      clearTimeout(noteSavedTimer.current);
+      noteSavedTimer.current = setTimeout(() => setNoteSaved(false), 3000);
+    } catch (err) {
+      setNoteError(err.message ?? 'Erreur lors de l\'enregistrement.');
+    } finally {
+      setNoteSaving(false);
+    }
+  };
 
   const updateFilter = (key) => (event) => {
     setFilters((current) => ({ ...current, [key]: event.target.value }));
@@ -567,6 +609,62 @@ export default function MedecinsPage() {
                     <strong>{selectedMedecin.commercialReferent ?? '—'}</strong>
                   </li>
                 </ul>
+              </div>
+
+              {/* ── Potentiel commercial ── */}
+              <div className="medecins-detail-section medecins-note-section">
+                <h4>Potentiel commercial</h4>
+                <div className="medecins-note-current">
+                  <span className="medecins-note-label">Note actuelle :</span>
+                  <span className="medecins-note-value">
+                    {selectedMedecin.noteInput != null
+                      ? `${selectedMedecin.noteInput} / 5`
+                      : 'Non renseignée'}
+                  </span>
+                </div>
+                <div className="medecins-note-buttons" role="group" aria-label="Choisir une note de potentiel">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      id={`note-btn-${n}`}
+                      type="button"
+                      className={`medecins-note-btn${
+                        noteInputDraft === n ? ' medecins-note-btn--active' : ''
+                      }`}
+                      onClick={() => setNoteInputDraft(n)}
+                      aria-pressed={noteInputDraft === n}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                  <button
+                    id="note-btn-clear"
+                    type="button"
+                    className={`medecins-note-btn medecins-note-btn--clear${
+                      noteInputDraft == null ? ' medecins-note-btn--active' : ''
+                    }`}
+                    onClick={() => setNoteInputDraft(null)}
+                    aria-pressed={noteInputDraft == null}
+                    title="Effacer la note"
+                  >
+                    —
+                  </button>
+                </div>
+                {noteError && (
+                  <p className="medecins-note-error" role="alert">{noteError}</p>
+                )}
+                {noteSaved && (
+                  <p className="medecins-note-success" role="status">Note enregistrée ✓</p>
+                )}
+                <button
+                  id="note-save-btn"
+                  type="button"
+                  className="btn btn-primary medecins-note-save-btn"
+                  onClick={handleSaveNote}
+                  disabled={noteSaving}
+                >
+                  {noteSaving ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
               </div>
             </div>
           )}

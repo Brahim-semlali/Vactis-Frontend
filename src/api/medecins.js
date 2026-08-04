@@ -109,3 +109,26 @@ export async function getMedecinByCode(token, code) {
   logger.info('Médecin trouvé par code', { code: normalizedCode, id: data?.id });
   return data;
 }
+
+export async function patchNoteInput(token, id, noteInput) {
+  logger.info('Mise à jour note input médecin', { id, noteInput });
+
+  const response = await fetch(`${API_BASE}/api/medecins/${id}/note-input`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ noteInput: noteInput ?? null }),
+  });
+
+  if (!response.ok) {
+    const error = await parseError(response);
+    logger.warn('Échec mise à jour note input', { status: error.status, id });
+    throw error;
+  }
+
+  const data = await response.json();
+  logger.info('Note input mise à jour', { id, noteInput: data?.noteInput });
+  return data;
+}
