@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import MedecinsPage from './Medecins/MedecinsPage.jsx';
 import ActionsPage from './Actions/ActionsPage.jsx';
 import Controle from './Controle/Controle.jsx';
+import LectureActivitePage from './LectureActivite/LectureActivitePage.jsx';
 import PlaceholderPage from './PlaceholderPage.jsx';
 
 function isPublicRoute(route) {
@@ -31,6 +32,11 @@ function resolvePageContent(activeRoute, username, navigate) {
   if (activeRoute === '/controle') {
     return <Controle navigate={navigate} />;
   }
+
+  if (activeRoute === '/lecture-activite') {
+    return <LectureActivitePage />;
+  }
+
 
   if (isPublicRoute(activeRoute)) {
     return (
