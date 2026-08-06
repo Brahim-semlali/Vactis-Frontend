@@ -23,6 +23,38 @@ function formatCurrency(val) {
   return `${formatNumber(val)} MAD`;
 }
 
+const RANG_STATUT_MAP = {
+  progression: 1,
+  actif_stable: 2,
+  actif: 2,
+  surveillance: 3,
+  retention: 4,
+  silence_critique: 5,
+  activite_irreguliere: 5,
+  onboarding: 6,
+  a_reactiver: 7,
+  exclu: 8,
+  inactif: 8,
+};
+
+function getCouleurFlux(item) {
+  if (item.couleurFlux) return item.couleurFlux;
+
+  const statM = item.statutCourant || '';
+  const statMm1 = item.statutPrecedent || '';
+
+  if (statM === 'onboarding' && (statMm1 === 'exclu' || statMm1 === 'inactif' || !statMm1)) {
+    return 'blue';
+  }
+
+  const rangM = RANG_STATUT_MAP[statM] ?? 8;
+  const rangMm1 = RANG_STATUT_MAP[statMm1] ?? 8;
+
+  if (rangM > rangMm1) return 'red';    // Statut fort -> statut moins fort (Défavorable)
+  if (rangM < rangMm1) return 'green';  // Statut moins fort -> statut plus fort (Favorable)
+  return 'gray';                        // Statut identique / inchangé
+}
+
 function ActiviteIcon({ name, size = 18 }) {
   const props = {
     width: size,
@@ -206,6 +238,8 @@ export default function LectureActivitePage() {
 
   // État modal pour afficher les médecins au clic sur un statut ou un flux
   const [selectedModalData, setSelectedModalData] = useState(null);
+  const [modalPage, setModalPage] = useState(1);
+  const MODAL_PAGE_SIZE = 15;
 
   // Charger la liste des mois disponibles
   useEffect(() => {
@@ -674,6 +708,7 @@ export default function LectureActivitePage() {
                   }`}
                   onClick={() => {
                     if (hasMedecins) {
+                      setModalPage(1);
                       setSelectedModalData({
                         title: `Médecins — Statut : ${s.statut.replace('_', ' ').toUpperCase()}`,
                         subtitle: s.libelle,
@@ -882,12 +917,14 @@ export default function LectureActivitePage() {
               const hasMedecins = item.nombreMedecins > 0 && item.medecins?.length > 0;
               const prevStr = item.statutPrecedent ? item.statutPrecedent.replace(/_/g, ' ') : '—';
               const currStr = item.statutCourant ? item.statutCourant.replace(/_/g, ' ') : '—';
+              const colorType = getCouleurFlux(item);
               return (
                 <div
                   key={i}
-                  className={`activite-flux-row${hasMedecins ? ' activite-flux-row--clickable' : ''}`}
+                  className={`activite-flux-row activite-flux-row--${colorType}${hasMedecins ? ' activite-flux-row--clickable' : ''}`}
                   onClick={() => {
                     if (hasMedecins) {
+                      setModalPage(1);
                       setSelectedModalData({
                         title: `Médecins du flux : ${prevStr} → ${currStr}`,
                         subtitle: `${item.nombreMedecins} médecin(s) ayant effectué cette transition M-1 vers M`,
@@ -900,14 +937,9 @@ export default function LectureActivitePage() {
                   title={hasMedecins ? 'Cliquer pour afficher la liste des médecins concernés' : ''}
                 >
                   <div className="activite-flux-transition">
-                    <span className={`activite-flux-chip activite-flux-chip--${item.statutPrecedent || 'exclu'}`}>
-                      <span className={`activite-statut-dot activite-statut-dot--${item.couleurPrecedent}`} />
-                      {prevStr}
-                    </span>
-                    <span className="activite-flux-arrow">→</span>
-                    <span className={`activite-flux-chip activite-flux-chip--${item.statutCourant}`}>
-                      <span className={`activite-statut-dot activite-statut-dot--${item.couleurCourant}`} />
-                      {currStr}
+                    <span className="activite-statut-dot" />
+                    <span className="activite-flux-statut">
+                      {prevStr} <span className="activite-flux-arrow">→</span> {currStr}
                     </span>
                   </div>
                   <span className="activite-flux-count-badge">
@@ -921,59 +953,120 @@ export default function LectureActivitePage() {
       </section>
 
       {/* Modal d'affichage de la liste des médecins */}
-      {selectedModalData && (
-        <div className="activite-modal-overlay" onClick={() => setSelectedModalData(null)}>
-          <div className="activite-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="activite-modal-header">
-              <div>
-                <div className="activite-modal-title-row">
-                  <span className={`activite-statut-dot activite-statut-dot--${selectedModalData.couleur}`} />
-                  <h3 className="activite-modal-title">{selectedModalData.title}</h3>
-                  <span className="activite-modal-count-badge">
-                    {selectedModalData.count} médecin{selectedModalData.count > 1 ? 's' : ''}
-                  </span>
-                </div>
-                {selectedModalData.subtitle && (
-                  <p className="activite-modal-subtitle">{selectedModalData.subtitle}</p>
-                )}
-              </div>
-              <button
-                type="button"
-                className="activite-modal-close"
-                onClick={() => setSelectedModalData(null)}
-                aria-label="Fermer"
-              >
-                ✕
-              </button>
-            </div>
+      {selectedModalData && (() => {
+        const totalPages = Math.ceil(selectedModalData.medecins.length / MODAL_PAGE_SIZE);
+        const pageStart = (modalPage - 1) * MODAL_PAGE_SIZE;
+        const pageEnd = pageStart + MODAL_PAGE_SIZE;
+        const pageMedecins = selectedModalData.medecins.slice(pageStart, pageEnd);
+        const hasPrev = modalPage > 1;
+        const hasNext = modalPage < totalPages;
 
-            <div className="activite-modal-body">
-              <table className="activite-modal-table">
-                <thead>
-                  <tr>
-                    <th>Code</th>
-                    <th>Médecin</th>
-                    <th>Spécialité</th>
-                    <th className="text-right">Volume cas (M)</th>
-                    <th className="text-right">CA (M)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedModalData.medecins.map((m) => (
-                    <tr key={m.id || m.codeMedecin}>
-                      <td className="activite-modal-code">{m.codeMedecin || '—'}</td>
-                      <td className="activite-modal-nom">{m.nom}</td>
-                      <td className="activite-modal-specialite">{m.specialite || '—'}</td>
-                      <td className="text-right">{formatNumber(m.casM)}</td>
-                      <td className="text-right activite-modal-ca">{formatCurrency(m.caM)}</td>
+        return (
+          <div className="activite-modal-overlay" onClick={() => setSelectedModalData(null)}>
+            <div className="activite-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="activite-modal-header">
+                <div>
+                  <div className="activite-modal-title-row">
+                    <span className={`activite-statut-dot activite-statut-dot--${selectedModalData.couleur}`} />
+                    <h3 className="activite-modal-title">{selectedModalData.title}</h3>
+                    <span className="activite-modal-count-badge">
+                      {selectedModalData.count} médecin{selectedModalData.count > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  {selectedModalData.subtitle && (
+                    <p className="activite-modal-subtitle">{selectedModalData.subtitle}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="activite-modal-close"
+                  onClick={() => setSelectedModalData(null)}
+                  aria-label="Fermer"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="activite-modal-body">
+                <table className="activite-modal-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Code</th>
+                      <th>Médecin</th>
+                      <th>Spécialité</th>
+                      <th className="text-right">Cas (M)</th>
+                      <th className="text-right">CA (M)</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {pageMedecins.map((m, idx) => (
+                      <tr key={m.id || m.codeMedecin}>
+                        <td className="activite-modal-rank">{pageStart + idx + 1}</td>
+                        <td className="activite-modal-code">{m.codeMedecin || '—'}</td>
+                        <td className="activite-modal-nom">{m.nom}</td>
+                        <td className="activite-modal-specialite">{m.specialite || '—'}</td>
+                        <td className="text-right">{formatNumber(m.casM)}</td>
+                        <td className="text-right activite-modal-ca">{formatCurrency(m.caM)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {totalPages > 1 && (
+                <div className="activite-modal-pagination">
+                  <span className="activite-modal-pag-info">
+                    {pageStart + 1}–{Math.min(pageEnd, selectedModalData.medecins.length)} sur {selectedModalData.medecins.length}
+                  </span>
+                  <div className="activite-modal-pag-controls">
+                    <button
+                      type="button"
+                      className="activite-modal-pag-btn"
+                      disabled={!hasPrev}
+                      onClick={() => setModalPage((p) => p - 1)}
+                      aria-label="Page précédente"
+                    >
+                      ‹
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalPages || Math.abs(p - modalPage) <= 1)
+                      .reduce((acc, p, i, arr) => {
+                        if (i > 0 && p - arr[i - 1] > 1) acc.push('...');
+                        acc.push(p);
+                        return acc;
+                      }, [])
+                      .map((p, i) =>
+                        p === '...' ? (
+                          <span key={`ellipsis-${i}`} className="activite-modal-pag-ellipsis">…</span>
+                        ) : (
+                          <button
+                            key={p}
+                            type="button"
+                            className={`activite-modal-pag-btn${p === modalPage ? ' activite-modal-pag-btn--active' : ''}`}
+                            onClick={() => setModalPage(p)}
+                          >
+                            {p}
+                          </button>
+                        )
+                      )
+                    }
+                    <button
+                      type="button"
+                      className="activite-modal-pag-btn"
+                      disabled={!hasNext}
+                      onClick={() => setModalPage((p) => p + 1)}
+                      aria-label="Page suivante"
+                    >
+                      ›
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
