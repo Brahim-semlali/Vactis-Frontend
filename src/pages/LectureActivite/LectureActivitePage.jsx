@@ -202,6 +202,7 @@ export default function LectureActivitePage() {
   const [topMouvements, setTopMouvements] = useState(null);
   const [metriqueTop, setMetriqueTop] = useState('ca');
   const [loadingN2, setLoadingN2] = useState(false);
+  const [loadingTop, setLoadingTop] = useState(false);
 
   // État modal pour afficher les médecins au clic sur un statut ou un flux
   const [selectedModalData, setSelectedModalData] = useState(null);
@@ -248,25 +249,37 @@ export default function LectureActivitePage() {
     }
   }, [token, selectedMois]);
 
-  // Chargement Niveau 2 séparé pour ne pas bloquer le Niveau 1
+  // Chargement Niveau 2 (statuts, transitions, flux) — dépendant uniquement de selectedMois
   const loadDataN2 = useCallback(async () => {
     if (!token || !selectedMois) return;
     setLoadingN2(true);
     try {
-      const [statutsRes, transitionsRes, fluxRes, topRes] = await Promise.all([
+      const [statutsRes, transitionsRes, fluxRes] = await Promise.all([
         getStatutsRepartition(token, selectedMois),
         getTransitionsStatuts(token, selectedMois),
         getFluxAgreges(token, selectedMois),
-        getTopMouvements(token, selectedMois, metriqueTop, 10),
       ]);
       setStatuts(statutsRes);
       setTransitions(transitionsRes);
       setFlux(fluxRes);
-      setTopMouvements(topRes);
     } catch (err) {
       console.error('Erreur Niveau 2:', err);
     } finally {
       setLoadingN2(false);
+    }
+  }, [token, selectedMois]);
+
+  // Chargement spécifique Top Mouvements — totalement isolé des statuts/flux
+  const loadTopMouvements = useCallback(async () => {
+    if (!token || !selectedMois) return;
+    setLoadingTop(true);
+    try {
+      const topRes = await getTopMouvements(token, selectedMois, metriqueTop, 10);
+      setTopMouvements(topRes);
+    } catch (err) {
+      console.error('Erreur Top mouvements:', err);
+    } finally {
+      setLoadingTop(false);
     }
   }, [token, selectedMois, metriqueTop]);
 
@@ -277,6 +290,10 @@ export default function LectureActivitePage() {
   useEffect(() => {
     loadDataN2();
   }, [loadDataN2]);
+
+  useEffect(() => {
+    loadTopMouvements();
+  }, [loadTopMouvements]);
 
   function logError(err) {
     console.error('Erreur Activite:', err);
@@ -475,149 +492,157 @@ export default function LectureActivitePage() {
             </p>
           </div>
 
-          <div className="activite-tab-group">
+          <div className="activite-tab-group" role="tablist" aria-label="Sélection métrique temporelle">
             <button
               type="button"
-              className={`activite-tab-btn${metriqueTab === 'cas' ? ' activite-tab-btn--active' : ''}`}
-              onClick={() => setMetriqueTab('cas')}
-            >
-              Volume Cas
-            </button>
-            <button
-              type="button"
+              role="tab"
+              aria-selected={metriqueTab === 'ca'}
               className={`activite-tab-btn${metriqueTab === 'ca' ? ' activite-tab-btn--active' : ''}`}
               onClick={() => setMetriqueTab('ca')}
             >
-              Chiffre d&apos;affaires
+              <ActiviteIcon name="dollar" size={14} />
+              <span>Chiffre d&apos;affaires</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={metriqueTab === 'cas'}
+              className={`activite-tab-btn${metriqueTab === 'cas' ? ' activite-tab-btn--active' : ''}`}
+              onClick={() => setMetriqueTab('cas')}
+            >
+              <ActiviteIcon name="chart" size={14} />
+              <span>Volume Cas</span>
             </button>
           </div>
         </div>
 
-        {/* 5 Cards ANAPAT AMANA Style */}
-        <div className="activite-comparison-cards">
-          {/* Card M (Dark background) */}
-          <div className="activite-comp-card activite-comp-card--dark">
-            <div className="activite-comp-card-header">
-              <span className="activite-comp-card-title">
-                {metriqueTab === 'ca' ? 'CA MOIS M' : 'CAS MOIS M'}
-              </span>
-              <span className="activite-comp-card-icon">
-                <ActiviteIcon name="pulse" />
-              </span>
-            </div>
-            <div className="activite-comp-card-value">
-              {loading ? '…' : isCurrency ? formatCurrency(activeCompData?.moisCourant) : formatNumber(activeCompData?.moisCourant)}
-            </div>
-            <div className="activite-comp-card-sub">Volume lu depuis l&apos;endpoint.</div>
-          </div>
-
-          {/* Card M-1 */}
-          <div className="activite-comp-card">
-            <div className="activite-comp-card-header">
-              <span className="activite-comp-card-title">
-                {metriqueTab === 'ca' ? 'CA MOIS M-1' : 'CAS MOIS M-1'}
-              </span>
-              <span className="activite-comp-card-icon activite-comp-card-icon--light">
-                <ActiviteIcon name="calendar" />
-              </span>
-            </div>
-            <div className="activite-comp-card-value">
-              {loading ? '…' : isCurrency ? formatCurrency(activeCompData?.moisPrecedent) : formatNumber(activeCompData?.moisPrecedent)}
-            </div>
-            <div className="activite-comp-card-sub">N/A si non exposé.</div>
-          </div>
-
-          {/* Card Référence Récente */}
-          <div className="activite-comp-card activite-comp-card--ref">
-            <div className="activite-comp-card-header">
-              <span className="activite-comp-card-title">
-                {metriqueTab === 'ca' ? 'RÉFÉRENCE RÉCENTE — CA' : 'RÉFÉRENCE RÉCENTE — CAS'}
-              </span>
-              <span className="activite-comp-card-icon activite-comp-card-icon--green">
-                <ActiviteIcon name="clipboard" />
-              </span>
-            </div>
-            <div className="activite-comp-card-value">
-              {loading ? '…' : isCurrency ? formatCurrency(activeCompData?.referenceRecente) : formatNumber(activeCompData?.referenceRecente, 2)}
-            </div>
-            <div className="activite-comp-card-sub">
-              Moyenne des mois précédents (3 mois) utilisée comme point de comparaison.
-            </div>
-          </div>
-
-          {/* Card Variation M vs M-1 */}
-          {(() => {
-            const val = activeCompData?.variationVsMPrecedentVal ?? 0;
-            const pct = activeCompData?.variationVsMPrecedentPct ?? 0;
-            const isNegative = val < 0;
-
-            return (
-              <div
-                className={`activite-comp-card activite-comp-card--variation ${
-                  isNegative ? 'activite-comp-card--negative' : 'activite-comp-card--positive'
-                }`}
-              >
-                <div className="activite-comp-card-header">
-                  <span className="activite-comp-card-title">
-                    {isNegative ? '↘' : '↗'} M VS M-1
-                  </span>
-                </div>
-                <div className="activite-comp-card-value">
-                  {loading ? '…' : isCurrency ? `${val >= 0 ? '+' : ''}${formatNumber(val)} MAD` : `${val >= 0 ? '+' : ''}${formatNumber(val, 2)}`}
-                </div>
-                <div className="activite-comp-card-sub">
-                  {loading ? '…' : `${pct >= 0 ? '+' : ''}${pct}%`}
-                </div>
+        {/* 5 Cards ANAPAT AMANA Style + Chart enveloppés avec animation au changement */}
+        <div key={metriqueTab} className="activite-animated-container">
+          <div className="activite-comparison-cards">
+            {/* Card M (Dark background) */}
+            <div className="activite-comp-card activite-comp-card--dark">
+              <div className="activite-comp-card-header">
+                <span className="activite-comp-card-title">
+                  {metriqueTab === 'ca' ? 'CA MOIS M' : 'CAS MOIS M'}
+                </span>
+                <span className="activite-comp-card-icon">
+                  <ActiviteIcon name="pulse" />
+                </span>
               </div>
-            );
-          })()}
-
-          {/* Card Variation Mois vs Référence récente */}
-          {(() => {
-            const val = activeCompData?.variationVsRefVal ?? 0;
-            const pct = activeCompData?.variationVsRefPct ?? 0;
-            const isNegative = val < 0;
-
-            return (
-              <div
-                className={`activite-comp-card activite-comp-card--variation ${
-                  isNegative ? 'activite-comp-card--negative' : 'activite-comp-card--positive'
-                }`}
-              >
-                <div className="activite-comp-card-header">
-                  <span className="activite-comp-card-title">
-                    {isNegative ? '↘' : '↗'} MOIS VS RÉFÉRENCE RÉCENTE
-                  </span>
-                </div>
-                <div className="activite-comp-card-value">
-                  {loading ? '…' : isCurrency ? `${val >= 0 ? '+' : ''}${formatNumber(val)} MAD` : `${val >= 0 ? '+' : ''}${formatNumber(val, 2)}`}
-                </div>
-                <div className="activite-comp-card-sub">
-                  {loading ? '…' : `${pct >= 0 ? '+' : ''}${pct}%`}
-                </div>
+              <div className="activite-comp-card-value">
+                {loading ? '…' : isCurrency ? formatCurrency(activeCompData?.moisCourant) : formatNumber(activeCompData?.moisCourant)}
               </div>
-            );
-          })()}
-        </div>
+              <div className="activite-comp-card-sub">Volume lu depuis l&apos;endpoint.</div>
+            </div>
 
-        {/* Graphique Comparatif */}
-        <div className="activite-chart-section">
-          <div className="activite-chart-header">
-            <span className="activite-chart-eyebrow">GRAPHIQUE COMPARATIF</span>
-            <h3 className="activite-chart-title">
-              {metriqueTab === 'ca' ? 'CA comparés' : 'Cas comparés'}
-            </h3>
-            <p className="activite-chart-subtitle">
-              Comparaison du mois précédent, du mois courant et de la référence récente : une valeur absente est indiquée comme non disponible.
-            </p>
+            {/* Card M-1 */}
+            <div className="activite-comp-card">
+              <div className="activite-comp-card-header">
+                <span className="activite-comp-card-title">
+                  {metriqueTab === 'ca' ? 'CA MOIS M-1' : 'CAS MOIS M-1'}
+                </span>
+                <span className="activite-comp-card-icon activite-comp-card-icon--light">
+                  <ActiviteIcon name="calendar" />
+                </span>
+              </div>
+              <div className="activite-comp-card-value">
+                {loading ? '…' : isCurrency ? formatCurrency(activeCompData?.moisPrecedent) : formatNumber(activeCompData?.moisPrecedent)}
+              </div>
+              <div className="activite-comp-card-sub">N/A si non exposé.</div>
+            </div>
+
+            {/* Card Référence Récente */}
+            <div className="activite-comp-card activite-comp-card--ref">
+              <div className="activite-comp-card-header">
+                <span className="activite-comp-card-title">
+                  {metriqueTab === 'ca' ? 'RÉFÉRENCE RÉCENTE — CA' : 'RÉFÉRENCE RÉCENTE — CAS'}
+                </span>
+                <span className="activite-comp-card-icon activite-comp-card-icon--green">
+                  <ActiviteIcon name="clipboard" />
+                </span>
+              </div>
+              <div className="activite-comp-card-value">
+                {loading ? '…' : isCurrency ? formatCurrency(activeCompData?.referenceRecente) : formatNumber(activeCompData?.referenceRecente, 2)}
+              </div>
+              <div className="activite-comp-card-sub">
+                Moyenne des mois précédents (3 mois) utilisée comme point de comparaison.
+              </div>
+            </div>
+
+            {/* Card Variation M vs M-1 */}
+            {(() => {
+              const val = activeCompData?.variationVsMPrecedentVal ?? 0;
+              const pct = activeCompData?.variationVsMPrecedentPct ?? 0;
+              const isNegative = val < 0;
+
+              return (
+                <div
+                  className={`activite-comp-card activite-comp-card--variation ${
+                    isNegative ? 'activite-comp-card--negative' : 'activite-comp-card--positive'
+                  }`}
+                >
+                  <div className="activite-comp-card-header">
+                    <span className="activite-comp-card-title">
+                      {isNegative ? '↘' : '↗'} M VS M-1
+                    </span>
+                  </div>
+                  <div className="activite-comp-card-value">
+                    {loading ? '…' : isCurrency ? `${val >= 0 ? '+' : ''}${formatNumber(val)} MAD` : `${val >= 0 ? '+' : ''}${formatNumber(val, 2)}`}
+                  </div>
+                  <div className="activite-comp-card-sub">
+                    {loading ? '…' : `${pct >= 0 ? '+' : ''}${pct}%`}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Card Variation Mois vs Référence récente */}
+            {(() => {
+              const val = activeCompData?.variationVsRefVal ?? 0;
+              const pct = activeCompData?.variationVsRefPct ?? 0;
+              const isNegative = val < 0;
+
+              return (
+                <div
+                  className={`activite-comp-card activite-comp-card--variation ${
+                    isNegative ? 'activite-comp-card--negative' : 'activite-comp-card--positive'
+                  }`}
+                >
+                  <div className="activite-comp-card-header">
+                    <span className="activite-comp-card-title">
+                      {isNegative ? '↘' : '↗'} MOIS VS RÉFÉRENCE RÉCENTE
+                    </span>
+                  </div>
+                  <div className="activite-comp-card-value">
+                    {loading ? '…' : isCurrency ? `${val >= 0 ? '+' : ''}${formatNumber(val)} MAD` : `${val >= 0 ? '+' : ''}${formatNumber(val, 2)}`}
+                  </div>
+                  <div className="activite-comp-card-sub">
+                    {loading ? '…' : `${pct >= 0 ? '+' : ''}${pct}%`}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
-          <ComparisonBarChart
-            mMinus1={activeCompData?.moisPrecedent}
-            m={activeCompData?.moisCourant}
-            refRecente={activeCompData?.referenceRecente}
-            isCurrency={isCurrency}
-          />
+          {/* Graphique Comparatif */}
+          <div className="activite-chart-section">
+            <div className="activite-chart-header">
+              <span className="activite-chart-eyebrow">GRAPHIQUE COMPARATIF</span>
+              <h3 className="activite-chart-title">
+                {metriqueTab === 'ca' ? 'CA comparés' : 'Cas comparés'}
+              </h3>
+              <p className="activite-chart-subtitle">
+                Comparaison du mois précédent, du mois courant et de la référence récente : une valeur absente est indiquée comme non disponible.
+              </p>
+            </div>
+
+            <ComparisonBarChart
+              mMinus1={activeCompData?.moisPrecedent}
+              m={activeCompData?.moisCourant}
+              refRecente={activeCompData?.referenceRecente}
+              isCurrency={isCurrency}
+            />
+          </div>
         </div>
       </section>
 
@@ -725,15 +750,125 @@ export default function LectureActivitePage() {
         )}
       </section>
 
-      {/* Bloc 4 — Flux agrégés */}
+      {/* Bloc 4 — Top mouvements */}
+      <section className="activite-card-section">
+        <div className="activite-comparison-header">
+          <div>
+            <h2 className="activite-section-title">Top mouvements</h2>
+            <p className="activite-section-subtitle">
+              Progressions et baisses de chiffre d&apos;affaires ou de cas observées entre M-1 et M.
+            </p>
+          </div>
+          <div className="activite-tab-group" role="tablist" aria-label="Sélection métrique">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={metriqueTop === 'ca'}
+              className={`activite-tab-btn${metriqueTop === 'ca' ? ' activite-tab-btn--active' : ''}`}
+              onClick={() => setMetriqueTop('ca')}
+            >
+              <ActiviteIcon name="dollar" size={14} />
+              <span>CA</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={metriqueTop === 'cas'}
+              className={`activite-tab-btn${metriqueTop === 'cas' ? ' activite-tab-btn--active' : ''}`}
+              onClick={() => setMetriqueTop('cas')}
+            >
+              <ActiviteIcon name="chart" size={14} />
+              <span>Cas</span>
+            </button>
+          </div>
+        </div>
+
+        {loadingTop ? (
+          <div className="activite-n2-loading">Chargement des mouvements…</div>
+        ) : !topMouvements ? (
+          <div className="activite-n2-empty">Données non disponibles.</div>
+        ) : (
+          <div key={metriqueTop} className="activite-top-grid activite-animated-container">
+            {/* Top progressions */}
+            <div className="activite-top-col activite-top-col--pos">
+              <div className="activite-top-col-header">
+                <span className="activite-top-col-icon activite-top-col-icon--pos">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="18 15 12 9 6 15" />
+                  </svg>
+                </span>
+                <h3 className="activite-top-col-title">
+                  Top progressions {metriqueTop === 'ca' ? 'CA' : 'cas'}
+                </h3>
+              </div>
+              {topMouvements.progressions.length === 0 ? (
+                <p className="activite-n2-empty">Aucune progression ce mois.</p>
+              ) : (
+                topMouvements.progressions.map((item, i) => (
+                  <div
+                    key={`${metriqueTop}-pos-${item.nomMedecin || i}-${i}`}
+                    className="activite-top-row activite-top-row-animated"
+                    style={{ animationDelay: `${i * 35}ms` }}
+                  >
+                    <div className="activite-top-rank activite-top-rank--pos">{i + 1}</div>
+                    <div className="activite-top-info">
+                      <span className="activite-top-nom">{item.nomMedecin}</span>
+                      <span className="activite-top-specialite">{item.specialite || 'Non renseigné'}</span>
+                    </div>
+                    <span className="activite-top-delta activite-top-delta--pos">
+                      +{formatNumber(item.delta)}{metriqueTop === 'ca' ? ' MAD' : ''}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Top baisses */}
+            <div className="activite-top-col activite-top-col--neg">
+              <div className="activite-top-col-header">
+                <span className="activite-top-col-icon activite-top-col-icon--neg">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </span>
+                <h3 className="activite-top-col-title">
+                  Top baisses {metriqueTop === 'ca' ? 'CA' : 'cas'}
+                </h3>
+              </div>
+              {topMouvements.baisses.length === 0 ? (
+                <p className="activite-n2-empty">Aucune baisse ce mois.</p>
+              ) : (
+                topMouvements.baisses.map((item, i) => (
+                  <div
+                    key={`${metriqueTop}-neg-${item.nomMedecin || i}-${i}`}
+                    className="activite-top-row activite-top-row-animated"
+                    style={{ animationDelay: `${i * 35}ms` }}
+                  >
+                    <div className="activite-top-rank activite-top-rank--neg">{i + 1}</div>
+                    <div className="activite-top-info">
+                      <span className="activite-top-nom">{item.nomMedecin}</span>
+                      <span className="activite-top-specialite">{item.specialite || 'Non renseigné'}</span>
+                    </div>
+                    <span className="activite-top-delta activite-top-delta--neg">
+                      {formatNumber(item.delta)}{metriqueTop === 'ca' ? ' MAD' : ''}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Bloc 5 — Flux agrégés */}
       <section className="activite-card-section">
         <div className="activite-flux-header">
           <div>
             <h2 className="activite-section-title">Flux agrégés</h2>
-            <p className="activite-section-subtitle">Triés par nombre de médecins décroissant.</p>
+            <p className="activite-section-subtitle">Transitions de statuts observées (M-1 → M), triées par effectif.</p>
           </div>
           {flux && (
-            <span className="activite-flux-badge">{flux.totalFlux} flux</span>
+            <span className="activite-flux-badge">{flux.totalFlux} flux identifiés</span>
           )}
         </div>
 
@@ -745,8 +880,8 @@ export default function LectureActivitePage() {
           <div className="activite-flux-grid">
             {flux.flux.map((item, i) => {
               const hasMedecins = item.nombreMedecins > 0 && item.medecins?.length > 0;
-              const prevStr = item.statutPrecedent ? item.statutPrecedent.replace('_', ' ') : '—';
-              const currStr = item.statutCourant.replace('_', ' ');
+              const prevStr = item.statutPrecedent ? item.statutPrecedent.replace(/_/g, ' ') : '—';
+              const currStr = item.statutCourant ? item.statutCourant.replace(/_/g, ' ') : '—';
               return (
                 <div
                   key={i}
@@ -762,101 +897,25 @@ export default function LectureActivitePage() {
                       });
                     }
                   }}
-                  title={hasMedecins ? 'Cliquer pour voir la liste des médecins' : ''}
+                  title={hasMedecins ? 'Cliquer pour afficher la liste des médecins concernés' : ''}
                 >
                   <div className="activite-flux-transition">
-                    <span className={`activite-flux-dot activite-statut-dot--${item.couleurPrecedent}`} />
-                    <span className="activite-flux-statut activite-flux-statut--prev">
-                      {item.statutPrecedent ?? '—'}
+                    <span className={`activite-flux-chip activite-flux-chip--${item.statutPrecedent || 'exclu'}`}>
+                      <span className={`activite-statut-dot activite-statut-dot--${item.couleurPrecedent}`} />
+                      {prevStr}
                     </span>
                     <span className="activite-flux-arrow">→</span>
-                    <span className={`activite-flux-dot activite-statut-dot--${item.couleurCourant}`} />
-                    <span className="activite-flux-statut">{item.statutCourant}</span>
+                    <span className={`activite-flux-chip activite-flux-chip--${item.statutCourant}`}>
+                      <span className={`activite-statut-dot activite-statut-dot--${item.couleurCourant}`} />
+                      {currStr}
+                    </span>
                   </div>
-                  <span className="activite-flux-count">{item.nombreMedecins} médecins</span>
+                  <span className="activite-flux-count-badge">
+                    {item.nombreMedecins} médecin{item.nombreMedecins > 1 ? 's' : ''}
+                  </span>
                 </div>
               );
             })}
-          </div>
-        )}
-      </section>
-
-      {/* Bloc 5 — Top mouvements */}
-      <section className="activite-card-section">
-        <div className="activite-comparison-header">
-          <div>
-            <h2 className="activite-section-title">Top mouvements</h2>
-            <p className="activite-section-subtitle">
-              Progressions et baisses lues depuis CALCULS_MENSUELS si exposées par l&apos;endpoint.
-            </p>
-          </div>
-          <div className="activite-tab-group">
-            <button
-              type="button"
-              className={`activite-tab-btn${metriqueTop === 'ca' ? ' activite-tab-btn--active' : ''}`}
-              onClick={() => setMetriqueTop('ca')}
-            >
-              CA
-            </button>
-            <button
-              type="button"
-              className={`activite-tab-btn${metriqueTop === 'cas' ? ' activite-tab-btn--active' : ''}`}
-              onClick={() => setMetriqueTop('cas')}
-            >
-              Cas
-            </button>
-          </div>
-        </div>
-
-        {loadingN2 ? (
-          <div className="activite-n2-loading">Chargement des mouvements…</div>
-        ) : !topMouvements ? (
-          <div className="activite-n2-empty">Données non disponibles.</div>
-        ) : (
-          <div className="activite-top-grid">
-            {/* Top progressions */}
-            <div className="activite-top-col">
-              <h3 className="activite-top-col-title">
-                Top progressions {metriqueTop === 'ca' ? 'CA' : 'cas'}
-              </h3>
-              {topMouvements.progressions.length === 0 ? (
-                <p className="activite-n2-empty">Aucune progression ce mois.</p>
-              ) : (
-                topMouvements.progressions.map((item, i) => (
-                  <div key={i} className="activite-top-row">
-                    <div className="activite-top-info">
-                      <span className="activite-top-nom">{item.nomMedecin}</span>
-                      <span className="activite-top-specialite">{item.specialite}</span>
-                    </div>
-                    <span className="activite-top-delta activite-top-delta--pos">
-                      +{formatNumber(item.delta)}{metriqueTop === 'ca' ? ' MAD' : ''}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Top baisses */}
-            <div className="activite-top-col">
-              <h3 className="activite-top-col-title">
-                Top baisses {metriqueTop === 'ca' ? 'CA' : 'cas'}
-              </h3>
-              {topMouvements.baisses.length === 0 ? (
-                <p className="activite-n2-empty">Aucune baisse ce mois.</p>
-              ) : (
-                topMouvements.baisses.map((item, i) => (
-                  <div key={i} className="activite-top-row">
-                    <div className="activite-top-info">
-                      <span className="activite-top-nom">{item.nomMedecin}</span>
-                      <span className="activite-top-specialite">{item.specialite}</span>
-                    </div>
-                    <span className="activite-top-delta activite-top-delta--neg">
-                      {formatNumber(item.delta)}{metriqueTop === 'ca' ? ' MAD' : ''}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
           </div>
         )}
       </section>
