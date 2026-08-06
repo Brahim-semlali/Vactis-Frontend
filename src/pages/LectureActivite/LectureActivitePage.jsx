@@ -203,6 +203,9 @@ export default function LectureActivitePage() {
   const [metriqueTop, setMetriqueTop] = useState('ca');
   const [loadingN2, setLoadingN2] = useState(false);
 
+  // État modal pour afficher les médecins au clic sur un statut ou un flux
+  const [selectedModalData, setSelectedModalData] = useState(null);
+
   // Charger la liste des mois disponibles
   useEffect(() => {
     let cancelled = false;
@@ -636,18 +639,41 @@ export default function LectureActivitePage() {
           <div className="activite-n2-loading">Chargement des statuts…</div>
         ) : (
           <div className="activite-statuts-grid">
-            {(statuts?.statuts ?? []).map((s) => (
-              <div key={s.statut} className={`activite-statut-card activite-statut-card--${s.couleur}`}>
-                <div className="activite-statut-card-header">
-                  <span className="activite-statut-label">{s.statut.replace('_', ' ').toUpperCase()}</span>
-                  <span className={`activite-statut-dot activite-statut-dot--${s.couleur}`} />
+            {(statuts?.statuts ?? []).map((s) => {
+              const hasMedecins = s.count > 0 && s.medecins?.length > 0;
+              return (
+                <div
+                  key={s.statut}
+                  className={`activite-statut-card activite-statut-card--${s.couleur}${
+                    hasMedecins ? ' activite-statut-card--clickable' : ''
+                  }`}
+                  onClick={() => {
+                    if (hasMedecins) {
+                      setSelectedModalData({
+                        title: `Médecins — Statut : ${s.statut.replace('_', ' ').toUpperCase()}`,
+                        subtitle: s.libelle,
+                        couleur: s.couleur,
+                        count: s.count,
+                        medecins: s.medecins,
+                      });
+                    }
+                  }}
+                  title={hasMedecins ? 'Cliquer pour voir la liste des médecins' : ''}
+                >
+                  <div className="activite-statut-card-header">
+                    <span className="activite-statut-label">{s.statut.replace('_', ' ').toUpperCase()}</span>
+                    <span className={`activite-statut-dot activite-statut-dot--${s.couleur}`} />
+                  </div>
+                  <div className="activite-statut-count">
+                    {s.count > 0 ? s.count : '—'}
+                  </div>
+                  <div className="activite-statut-libelle">
+                    {s.libelle}
+                    {hasMedecins && <span className="activite-click-hint"> · Cliquer pour voir ({s.count})</span>}
+                  </div>
                 </div>
-                <div className="activite-statut-count">
-                  {s.count > 0 ? s.count : '—'}
-                </div>
-                <div className="activite-statut-libelle">{s.libelle}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -717,20 +743,40 @@ export default function LectureActivitePage() {
           <div className="activite-n2-empty">Aucun flux disponible pour ce mois.</div>
         ) : (
           <div className="activite-flux-grid">
-            {flux.flux.map((item, i) => (
-              <div key={i} className="activite-flux-row">
-                <div className="activite-flux-transition">
-                  <span className={`activite-flux-dot activite-statut-dot--${item.couleurPrecedent}`} />
-                  <span className="activite-flux-statut activite-flux-statut--prev">
-                    {item.statutPrecedent ?? '—'}
-                  </span>
-                  <span className="activite-flux-arrow">→</span>
-                  <span className={`activite-flux-dot activite-statut-dot--${item.couleurCourant}`} />
-                  <span className="activite-flux-statut">{item.statutCourant}</span>
+            {flux.flux.map((item, i) => {
+              const hasMedecins = item.nombreMedecins > 0 && item.medecins?.length > 0;
+              const prevStr = item.statutPrecedent ? item.statutPrecedent.replace('_', ' ') : '—';
+              const currStr = item.statutCourant.replace('_', ' ');
+              return (
+                <div
+                  key={i}
+                  className={`activite-flux-row${hasMedecins ? ' activite-flux-row--clickable' : ''}`}
+                  onClick={() => {
+                    if (hasMedecins) {
+                      setSelectedModalData({
+                        title: `Médecins du flux : ${prevStr} → ${currStr}`,
+                        subtitle: `${item.nombreMedecins} médecin(s) ayant effectué cette transition M-1 vers M`,
+                        couleur: item.couleurCourant,
+                        count: item.nombreMedecins,
+                        medecins: item.medecins,
+                      });
+                    }
+                  }}
+                  title={hasMedecins ? 'Cliquer pour voir la liste des médecins' : ''}
+                >
+                  <div className="activite-flux-transition">
+                    <span className={`activite-flux-dot activite-statut-dot--${item.couleurPrecedent}`} />
+                    <span className="activite-flux-statut activite-flux-statut--prev">
+                      {item.statutPrecedent ?? '—'}
+                    </span>
+                    <span className="activite-flux-arrow">→</span>
+                    <span className={`activite-flux-dot activite-statut-dot--${item.couleurCourant}`} />
+                    <span className="activite-flux-statut">{item.statutCourant}</span>
+                  </div>
+                  <span className="activite-flux-count">{item.nombreMedecins} médecins</span>
                 </div>
-                <span className="activite-flux-count">{item.nombreMedecins} médecins</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -814,6 +860,61 @@ export default function LectureActivitePage() {
           </div>
         )}
       </section>
+
+      {/* Modal d'affichage de la liste des médecins */}
+      {selectedModalData && (
+        <div className="activite-modal-overlay" onClick={() => setSelectedModalData(null)}>
+          <div className="activite-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="activite-modal-header">
+              <div>
+                <div className="activite-modal-title-row">
+                  <span className={`activite-statut-dot activite-statut-dot--${selectedModalData.couleur}`} />
+                  <h3 className="activite-modal-title">{selectedModalData.title}</h3>
+                  <span className="activite-modal-count-badge">
+                    {selectedModalData.count} médecin{selectedModalData.count > 1 ? 's' : ''}
+                  </span>
+                </div>
+                {selectedModalData.subtitle && (
+                  <p className="activite-modal-subtitle">{selectedModalData.subtitle}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                className="activite-modal-close"
+                onClick={() => setSelectedModalData(null)}
+                aria-label="Fermer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="activite-modal-body">
+              <table className="activite-modal-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Médecin</th>
+                    <th>Spécialité</th>
+                    <th className="text-right">Volume cas (M)</th>
+                    <th className="text-right">CA (M)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedModalData.medecins.map((m) => (
+                    <tr key={m.id || m.codeMedecin}>
+                      <td className="activite-modal-code">{m.codeMedecin || '—'}</td>
+                      <td className="activite-modal-nom">{m.nom}</td>
+                      <td className="activite-modal-specialite">{m.specialite || '—'}</td>
+                      <td className="text-right">{formatNumber(m.casM)}</td>
+                      <td className="text-right activite-modal-ca">{formatCurrency(m.caM)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
