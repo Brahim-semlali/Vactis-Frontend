@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getComparaison, getKpisMensuels, getMoisDisponibles } from '../../api/activite.js';
+import {
+  getComparaison,
+  getFluxAgreges,
+  getKpisMensuels,
+  getMoisDisponibles,
+  getStatutsRepartition,
+  getTopMouvements,
+  getTransitionsStatuts,
+} from '../../api/activite.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 
@@ -183,9 +191,17 @@ export default function LectureActivitePage() {
   const [selectedMois, setSelectedMois] = useState('');
   const [kpis, setKpis] = useState(null);
   const [comparaison, setComparaison] = useState(null);
-  const [metriqueTab, setMetriqueTab] = useState('cas'); // 'cas' ou 'ca'
+  const [metriqueTab, setMetriqueTab] = useState('cas');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Niveau 2 — états
+  const [statuts, setStatuts] = useState(null);
+  const [transitions, setTransitions] = useState(null);
+  const [flux, setFlux] = useState(null);
+  const [topMouvements, setTopMouvements] = useState(null);
+  const [metriqueTop, setMetriqueTop] = useState('ca');
+  const [loadingN2, setLoadingN2] = useState(false);
 
   // Charger la liste des mois disponibles
   useEffect(() => {
@@ -229,9 +245,35 @@ export default function LectureActivitePage() {
     }
   }, [token, selectedMois]);
 
+  // Chargement Niveau 2 séparé pour ne pas bloquer le Niveau 1
+  const loadDataN2 = useCallback(async () => {
+    if (!token || !selectedMois) return;
+    setLoadingN2(true);
+    try {
+      const [statutsRes, transitionsRes, fluxRes, topRes] = await Promise.all([
+        getStatutsRepartition(token, selectedMois),
+        getTransitionsStatuts(token, selectedMois),
+        getFluxAgreges(token, selectedMois),
+        getTopMouvements(token, selectedMois, metriqueTop, 10),
+      ]);
+      setStatuts(statutsRes);
+      setTransitions(transitionsRes);
+      setFlux(fluxRes);
+      setTopMouvements(topRes);
+    } catch (err) {
+      console.error('Erreur Niveau 2:', err);
+    } finally {
+      setLoadingN2(false);
+    }
+  }, [token, selectedMois, metriqueTop]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    loadDataN2();
+  }, [loadDataN2]);
 
   function logError(err) {
     console.error('Erreur Activite:', err);
@@ -574,6 +616,203 @@ export default function LectureActivitePage() {
             isCurrency={isCurrency}
           />
         </div>
+      </section>
+
+      {/* ================================================================ */}
+      {/* NIVEAU 2 — Dynamique du portefeuille médecins                    */}
+      {/* ================================================================ */}
+
+      {/* Bloc 3 — Lecture statuts VACTIS */}
+      <section className="activite-card-section">
+        <div className="activite-section-header">
+          <h2 className="activite-section-title">Lecture statuts VACTIS</h2>
+          <p className="activite-section-subtitle">
+            Répartition des statuts du mois M et transitions M-1 vers M si exposées.
+          </p>
+        </div>
+
+        {/* Grille 4×2 des 8 statuts */}
+        {loadingN2 ? (
+          <div className="activite-n2-loading">Chargement des statuts…</div>
+        ) : (
+          <div className="activite-statuts-grid">
+            {(statuts?.statuts ?? []).map((s) => (
+              <div key={s.statut} className={`activite-statut-card activite-statut-card--${s.couleur}`}>
+                <div className="activite-statut-card-header">
+                  <span className="activite-statut-label">{s.statut.replace('_', ' ').toUpperCase()}</span>
+                  <span className={`activite-statut-dot activite-statut-dot--${s.couleur}`} />
+                </div>
+                <div className="activite-statut-count">
+                  {s.count > 0 ? s.count : '—'}
+                </div>
+                <div className="activite-statut-libelle">{s.libelle}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Sous-bloc Transitions statuts */}
+        {transitions && (
+          <div className="activite-transitions-bloc">
+            <div className="activite-transitions-header">
+              <span className="activite-transitions-title">TRANSITIONS STATUTS</span>
+            </div>
+            <p className="activite-transitions-subtitle">
+              Comparaison {transitions.moisPrecedent} — {transitions.moisCourant}
+            </p>
+            <p className="activite-transitions-note">
+              {transitions.totalEtudies} médecins suivis avec un statut précédent.
+            </p>
+            <div className="activite-transitions-grid">
+              <div className="activite-transition-item">
+                <span className="activite-transition-label">TOTAL MÉDECINS ÉTUDIÉS</span>
+                <span className="activite-transition-dot activite-statut-dot--blue" />
+                <div className="activite-transition-value">{transitions.totalEtudies} médecins</div>
+                <div className="activite-transition-sub">Base de comparaison statuts M-1 vers M.</div>
+              </div>
+              <div className="activite-transition-item">
+                <span className="activite-transition-label">TRANSITIONS FAVORABLES</span>
+                <span className="activite-transition-dot activite-statut-dot--green" />
+                <div className="activite-transition-value">{transitions.favorables} médecins</div>
+                <div className="activite-transition-sub">Montée dans la hiérarchie de statut.</div>
+              </div>
+              <div className="activite-transition-item">
+                <span className="activite-transition-label">TRANSITIONS STABLES</span>
+                <span className="activite-transition-dot activite-statut-dot--blue" />
+                <div className="activite-transition-value">{transitions.stables} médecins</div>
+                <div className="activite-transition-sub">Statut conservé ou transition neutre.</div>
+              </div>
+              <div className="activite-transition-item">
+                <span className="activite-transition-label">TRANSITIONS DÉFAVORABLES</span>
+                <span className="activite-transition-dot activite-statut-dot--red" />
+                <div className="activite-transition-value">{transitions.defavorables} médecins</div>
+                <div className="activite-transition-sub">Descente dans la hiérarchie de statut.</div>
+              </div>
+              <div className="activite-transition-item">
+                <span className="activite-transition-label">NOUVEAUX MÉDECINS</span>
+                <span className="activite-transition-dot activite-statut-dot--blue" />
+                <div className="activite-transition-value">{transitions.nouveauxMedecins} médecins</div>
+                <div className="activite-transition-sub">Entrées onboarding observées.</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Bloc 4 — Flux agrégés */}
+      <section className="activite-card-section">
+        <div className="activite-flux-header">
+          <div>
+            <h2 className="activite-section-title">Flux agrégés</h2>
+            <p className="activite-section-subtitle">Triés par nombre de médecins décroissant.</p>
+          </div>
+          {flux && (
+            <span className="activite-flux-badge">{flux.totalFlux} flux</span>
+          )}
+        </div>
+
+        {loadingN2 ? (
+          <div className="activite-n2-loading">Chargement des flux…</div>
+        ) : !flux || flux.flux.length === 0 ? (
+          <div className="activite-n2-empty">Aucun flux disponible pour ce mois.</div>
+        ) : (
+          <div className="activite-flux-grid">
+            {flux.flux.map((item, i) => (
+              <div key={i} className="activite-flux-row">
+                <div className="activite-flux-transition">
+                  <span className={`activite-flux-dot activite-statut-dot--${item.couleurPrecedent}`} />
+                  <span className="activite-flux-statut activite-flux-statut--prev">
+                    {item.statutPrecedent ?? '—'}
+                  </span>
+                  <span className="activite-flux-arrow">→</span>
+                  <span className={`activite-flux-dot activite-statut-dot--${item.couleurCourant}`} />
+                  <span className="activite-flux-statut">{item.statutCourant}</span>
+                </div>
+                <span className="activite-flux-count">{item.nombreMedecins} médecins</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Bloc 5 — Top mouvements */}
+      <section className="activite-card-section">
+        <div className="activite-comparison-header">
+          <div>
+            <h2 className="activite-section-title">Top mouvements</h2>
+            <p className="activite-section-subtitle">
+              Progressions et baisses lues depuis CALCULS_MENSUELS si exposées par l&apos;endpoint.
+            </p>
+          </div>
+          <div className="activite-tab-group">
+            <button
+              type="button"
+              className={`activite-tab-btn${metriqueTop === 'ca' ? ' activite-tab-btn--active' : ''}`}
+              onClick={() => setMetriqueTop('ca')}
+            >
+              CA
+            </button>
+            <button
+              type="button"
+              className={`activite-tab-btn${metriqueTop === 'cas' ? ' activite-tab-btn--active' : ''}`}
+              onClick={() => setMetriqueTop('cas')}
+            >
+              Cas
+            </button>
+          </div>
+        </div>
+
+        {loadingN2 ? (
+          <div className="activite-n2-loading">Chargement des mouvements…</div>
+        ) : !topMouvements ? (
+          <div className="activite-n2-empty">Données non disponibles.</div>
+        ) : (
+          <div className="activite-top-grid">
+            {/* Top progressions */}
+            <div className="activite-top-col">
+              <h3 className="activite-top-col-title">
+                Top progressions {metriqueTop === 'ca' ? 'CA' : 'cas'}
+              </h3>
+              {topMouvements.progressions.length === 0 ? (
+                <p className="activite-n2-empty">Aucune progression ce mois.</p>
+              ) : (
+                topMouvements.progressions.map((item, i) => (
+                  <div key={i} className="activite-top-row">
+                    <div className="activite-top-info">
+                      <span className="activite-top-nom">{item.nomMedecin}</span>
+                      <span className="activite-top-specialite">{item.specialite}</span>
+                    </div>
+                    <span className="activite-top-delta activite-top-delta--pos">
+                      +{formatNumber(item.delta)}{metriqueTop === 'ca' ? ' MAD' : ''}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Top baisses */}
+            <div className="activite-top-col">
+              <h3 className="activite-top-col-title">
+                Top baisses {metriqueTop === 'ca' ? 'CA' : 'cas'}
+              </h3>
+              {topMouvements.baisses.length === 0 ? (
+                <p className="activite-n2-empty">Aucune baisse ce mois.</p>
+              ) : (
+                topMouvements.baisses.map((item, i) => (
+                  <div key={i} className="activite-top-row">
+                    <div className="activite-top-info">
+                      <span className="activite-top-nom">{item.nomMedecin}</span>
+                      <span className="activite-top-specialite">{item.specialite}</span>
+                    </div>
+                    <span className="activite-top-delta activite-top-delta--neg">
+                      {formatNumber(item.delta)}{metriqueTop === 'ca' ? ' MAD' : ''}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

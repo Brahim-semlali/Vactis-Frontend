@@ -3366,3 +3366,342 @@ input {
     align-items: flex-start;
   }
 }
+
+/* ==========================================================================
+   NIVEAU 2 — Dynamique du portefeuille médecins (Statuts, Flux, Top mouvements)
+   ========================================================================== */
+
+.activite-n2-loading,
+.activite-n2-empty {
+  padding: 2rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.88rem;
+  font-weight: 500;
+  background: #f8fafc;
+  border-radius: 0.75rem;
+  border: 1px dashed #e2e8f0;
+}
+
+/* ── 1. Statuts VACTIS (Grille 4x2) ── */
+.activite-statuts-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .activite-statuts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .activite-statuts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.activite-statut-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+    border-color: #cbd5e1;
+  }
+}
+
+.activite-statut-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.activite-statut-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.activite-statut-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+
+  &--green { background-color: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.4); }
+  &--orange { background-color: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); }
+  &--red { background-color: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
+  &--blue { background-color: #3b82f6; box-shadow: 0 0 6px rgba(59, 130, 246, 0.4); }
+  &--gray { background-color: #64748b; }
+}
+
+.activite-statut-count {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.activite-statut-libelle {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+/* ── Transitions statuts sous-bloc ── */
+.activite-transitions-bloc {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  padding: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.activite-transitions-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.activite-transitions-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #3b82f6;
+  text-transform: uppercase;
+}
+
+.activite-transitions-subtitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.2rem 0;
+}
+
+.activite-transitions-note {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0 0 1rem 0;
+}
+
+.activite-transitions-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.85rem;
+}
+
+@media (max-width: 1024px) {
+  .activite-transitions-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .activite-transitions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.activite-transition-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 0.9rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.activite-transition-item .activite-transition-dot {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+}
+
+.activite-transition-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  text-transform: uppercase;
+  padding-right: 1.2rem;
+}
+
+.activite-transition-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.activite-transition-sub {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+/* ── 2. Flux agrégés ── */
+.activite-flux-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.activite-flux-badge {
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  border-radius: 2rem;
+  border: 1px solid #e2e8f0;
+}
+
+.activite-flux-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .activite-flux-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.activite-flux-row {
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+  }
+}
+
+.activite-flux-transition {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+}
+
+.activite-flux-statut {
+  font-weight: 600;
+  color: #334155;
+
+  &--prev {
+    color: #64748b;
+  }
+}
+
+.activite-flux-arrow {
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.activite-flux-count {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+/* ── 3. Top mouvements ── */
+.activite-top-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .activite-top-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.activite-top-col {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  padding: 1.25rem;
+
+  &--title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 1rem 0;
+  }
+}
+
+.activite-top-col-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 1rem 0;
+}
+
+.activite-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #f1f5f9;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.activite-top-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.activite-top-nom {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: 0.01em;
+}
+
+.activite-top-specialite {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.activite-top-delta {
+  font-size: 0.85rem;
+  font-weight: 800;
+  white-space: nowrap;
+
+  &--pos {
+    color: #10b981;
+  }
+
+  &--neg {
+    color: #ef4444;
+  }
+}

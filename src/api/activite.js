@@ -39,3 +39,26 @@ export async function getComparaison(token, mois, metrique, fenetreRef) {
 export async function getMoisDisponibles(token) {
   return activiteRequest('/api/activite/mois-disponibles', token);
 }
+
+export async function getStatutsRepartition(token, mois) {
+  const query = mois ? `?mois=${encodeURIComponent(mois)}` : '';
+  return activiteRequest(`/api/activite/statuts${query}`, token);
+}
+
+export async function getTransitionsStatuts(token, mois) {
+  const query = mois ? `?mois=${encodeURIComponent(mois)}` : '';
+  return activiteRequest(`/api/activite/statuts/transitions${query}`, token);
+}
+
+export async function getFluxAgreges(token, mois) {
+  const query = mois ? `?mois=${encodeURIComponent(mois)}` : '';
+  return activiteRequest(`/api/activite/statuts/flux${query}`, token);
+}
+
+export async function getTopMouvements(token, mois, metrique = 'ca', limite = 10) {
+  const params = new URLSearchParams();
+  if (mois) params.append('mois', mois);
+  params.append('metrique', metrique);
+  params.append('limite', limite);
+  return activiteRequest(`/api/activite/top-mouvements?${params.toString()}`, token);
+}
