@@ -329,6 +329,9 @@ export default function MedecinsPage() {
   const [terrainDate, setTerrainDate] = useState(getTodayString());
   const [terrainVisiteur, setTerrainVisiteur] = useState(username || '');
   const [terrainCommentaire, setTerrainCommentaire] = useState('');
+  const [terrainStatutVisite, setTerrainStatutVisite] = useState('REALISEE');
+  const [terrainQualification, setTerrainQualification] = useState('NON_RENSEIGNE');
+  const [terrainReclamation, setTerrainReclamation] = useState(false);
   const [terrainSaving, setTerrainSaving] = useState(false);
   const [terrainError, setTerrainError] = useState(null);
   const [terrainSaved, setTerrainSaved] = useState(false);
@@ -359,6 +362,9 @@ export default function MedecinsPage() {
     setTerrainDate(getTodayString());
     setTerrainVisiteur(username || '');
     setTerrainCommentaire('');
+    setTerrainStatutVisite('REALISEE');
+    setTerrainQualification('NON_RENSEIGNE');
+    setTerrainReclamation(false);
     setTerrainError(null);
     setTerrainSaved(false);
 
@@ -394,6 +400,9 @@ export default function MedecinsPage() {
         dateVisite: terrainDate,
         visiteur: terrainVisiteur,
         commentaire: terrainCommentaire,
+        statutVisite: terrainStatutVisite,
+        qualification: terrainQualification,
+        reclamation: terrainReclamation,
       });
 
       // Mettre à jour l'affichage de la dernière visite (historisée) sans tout recharger
@@ -404,6 +413,9 @@ export default function MedecinsPage() {
       setTerrainDate(getTodayString());
       setTerrainVisiteur(username || '');
       setTerrainCommentaire('');
+      setTerrainStatutVisite('REALISEE');
+      setTerrainQualification('NON_RENSEIGNE');
+      setTerrainReclamation(false);
 
       setTerrainSaved(true);
       clearTimeout(terrainSavedTimer.current);
@@ -842,6 +854,51 @@ export default function MedecinsPage() {
                       value={terrainVisiteur}
                       onChange={(e) => setTerrainVisiteur(e.target.value)}
                     />
+                  </div>
+
+                  <div className="medecins-terrain-field">
+                    <label htmlFor="terrain-statut-select" className="medecins-terrain-field-label">
+                      Statut de la visite
+                    </label>
+                    <select
+                      id="terrain-statut-select"
+                      className="medecins-terrain-input"
+                      value={terrainStatutVisite}
+                      onChange={(e) => setTerrainStatutVisite(e.target.value)}
+                    >
+                      <option value="REALISEE">Réalisée</option>
+                      <option value="NON_REALISEE">Non réalisée</option>
+                      <option value="NON_RENSEIGNE">Non renseigné</option>
+                    </select>
+                  </div>
+
+                  <div className="medecins-terrain-field">
+                    <label htmlFor="terrain-qualif-select" className="medecins-terrain-field-label">
+                      Qualification du retour
+                    </label>
+                    <select
+                      id="terrain-qualif-select"
+                      className="medecins-terrain-input"
+                      value={terrainQualification}
+                      onChange={(e) => setTerrainQualification(e.target.value)}
+                    >
+                      <option value="NON_RENSEIGNE">Non renseigné</option>
+                      <option value="FAVORABLE">Favorable</option>
+                      <option value="DEFAVORABLE">Défavorable / Refus</option>
+                      <option value="NEUTRE">Neutre</option>
+                    </select>
+                  </div>
+
+                  <div className="medecins-terrain-field" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      id="terrain-reclamation-checkbox"
+                      type="checkbox"
+                      checked={terrainReclamation}
+                      onChange={(e) => setTerrainReclamation(e.target.checked)}
+                    />
+                    <label htmlFor="terrain-reclamation-checkbox" className="medecins-terrain-field-label" style={{ margin: 0, cursor: 'pointer' }}>
+                      Visite avec réclamation médecin
+                    </label>
                   </div>
 
                   <div className="medecins-terrain-field">

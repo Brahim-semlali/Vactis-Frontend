@@ -4271,3 +4271,247 @@ input {
     transform: translateY(0) scale(1);
   }
 }
+
+/* ── Level 3 — Exécution terrain styles ── */
+
+.activite-subblock {
+  margin-top: 1.5rem;
+}
+
+.activite-subblock-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 0.85rem;
+}
+
+.activite-commercial-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.85rem;
+}
+
+.activite-commercial-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  padding: 0.9rem 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.activite-commercial-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #0f172a;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.02em;
+}
+
+.activite-commercial-stat {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+.activite-commercial-stat span {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* 4 compteurs CR terrain */
+.activite-cr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+}
+
+.activite-cr-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.activite-cr-card--green {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.activite-cr-card--amber {
+  background: #fffbeb;
+  border-color: #fef3c7;
+}
+
+.activite-cr-card--gray {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.activite-cr-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.activite-cr-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.activite-cr-sub {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.35rem;
+}
+
+/* 5 Cartes Cliquables */
+.activite-clickable-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.85rem;
+}
+
+.activite-clickable-card {
+  border-radius: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e2e8f0;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: pointer;
+}
+
+.activite-clickable-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.activite-clickable-card--red {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.activite-clickable-card--red .activite-clickable-card-title {
+  color: #991b1b;
+}
+
+.activite-clickable-card--red .activite-clickable-card-icon {
+  color: #dc2626;
+}
+
+.activite-clickable-card--amber {
+  background: #fffbeb;
+  border-color: #fef3c7;
+}
+
+.activite-clickable-card--amber .activite-clickable-card-title {
+  color: #92400e;
+}
+
+.activite-clickable-card--amber .activite-clickable-card-icon {
+  color: #d97706;
+}
+
+.activite-clickable-card--gray {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.activite-clickable-card--gray .activite-clickable-card-title {
+  color: #475569;
+}
+
+.activite-clickable-card--gray .activite-clickable-card-icon {
+  color: #64748b;
+}
+
+.activite-clickable-card--green {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.activite-clickable-card--green .activite-clickable-card-title {
+  color: #166534;
+}
+
+.activite-clickable-card--green .activite-clickable-card-icon {
+  color: #16a34a;
+}
+
+.activite-clickable-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.activite-clickable-card-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.activite-clickable-card-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.activite-clickable-card-sub {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 0.3rem;
+}
+
+/* Commercial Table */
+.activite-table-container {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  background: #ffffff;
+}
+
+.activite-commercial-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.activite-commercial-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.activite-commercial-table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+
+.activite-commercial-table tr:last-child td {
+  border-bottom: none;
+}
+
+.activite-comm-name {
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #0f172a;
+}

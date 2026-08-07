@@ -62,3 +62,14 @@ export async function getTopMouvements(token, mois, metrique = 'ca', limite = 10
   params.append('limite', limite);
   return activiteRequest(`/api/activite/top-mouvements?${params.toString()}`, token);
 }
+
+export async function getActionsVactis(token, mois) {
+  const query = mois ? `?mois=${encodeURIComponent(mois)}` : '';
+  return activiteRequest(`/api/activite/terrain/actions${query}`, token);
+}
+
+export async function getCompteRenduTerrain(token, mois) {
+  const query = mois ? `?mois=${encodeURIComponent(mois)}` : '';
+  return activiteRequest(`/api/activite/terrain/compte-rendu${query}`, token);
+}
+

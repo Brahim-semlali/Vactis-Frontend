@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  getActionsVactis,
   getComparaison,
+  getCompteRenduTerrain,
   getFluxAgreges,
   getKpisMensuels,
   getMoisDisponibles,
@@ -139,6 +141,59 @@ function ActiviteIcon({ name, size = 18 }) {
           <line x1="6" y1="20" x2="6" y2="14" />
         </svg>
       );
+    case 'checkCircle':
+      return (
+        <svg {...props}>
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+      );
+    case 'trendingDown':
+      return (
+        <svg {...props}>
+          <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+          <polyline points="17 18 23 18 23 12" />
+        </svg>
+      );
+    case 'trendingUp':
+      return (
+        <svg {...props}>
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+          <polyline points="17 6 23 6 23 12" />
+        </svg>
+      );
+    case 'thumbsDown':
+      return (
+        <svg {...props}>
+          <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17" />
+        </svg>
+      );
+    case 'thumbsUp':
+      return (
+        <svg {...props}>
+          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4.33A2.31 2.31 0 0 1 2 19.67V12.33A2.31 2.31 0 0 1 4.33 10H7" />
+        </svg>
+      );
+    case 'flag':
+      return (
+        <svg {...props}>
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+          <line x1="4" y1="22" x2="4" y2="15" />
+        </svg>
+      );
+    case 'lock':
+      return (
+        <svg {...props}>
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+      );
+    case 'activity':
+      return (
+        <svg {...props}>
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -236,6 +291,11 @@ export default function LectureActivitePage() {
   const [loadingN2, setLoadingN2] = useState(false);
   const [loadingTop, setLoadingTop] = useState(false);
 
+  // Niveau 3 — états (Exécution terrain)
+  const [actionsVactis, setActionsVactis] = useState(null);
+  const [compteRenduTerrain, setCompteRenduTerrain] = useState(null);
+  const [loadingN3, setLoadingN3] = useState(false);
+
   // État modal pour afficher les médecins au clic sur un statut ou un flux
   const [selectedModalData, setSelectedModalData] = useState(null);
   const [modalPage, setModalPage] = useState(1);
@@ -317,6 +377,34 @@ export default function LectureActivitePage() {
     }
   }, [token, selectedMois, metriqueTop]);
 
+  // Chargement Niveau 3 (Actions VACTIS & Compte-rendu terrain)
+  const loadDataN3 = useCallback(async () => {
+    if (!token || !selectedMois) return;
+    setLoadingN3(true);
+    try {
+      const [actionsRes, crRes] = await Promise.allSettled([
+        getActionsVactis(token, selectedMois),
+        getCompteRenduTerrain(token, selectedMois),
+      ]);
+      if (actionsRes.status === 'fulfilled') {
+        setActionsVactis(actionsRes.value);
+      } else {
+        console.warn('Impossible de charger les actions VACTIS (Niveau 3):', actionsRes.reason);
+        setActionsVactis(null);
+      }
+      if (crRes.status === 'fulfilled') {
+        setCompteRenduTerrain(crRes.value);
+      } else {
+        console.warn('Impossible de charger le compte-rendu terrain (Niveau 3):', crRes.reason);
+        setCompteRenduTerrain(null);
+      }
+    } catch (err) {
+      console.warn('Erreur Niveau 3:', err);
+    } finally {
+      setLoadingN3(false);
+    }
+  }, [token, selectedMois]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -328,6 +416,10 @@ export default function LectureActivitePage() {
   useEffect(() => {
     loadTopMouvements();
   }, [loadTopMouvements]);
+
+  useEffect(() => {
+    loadDataN3();
+  }, [loadDataN3]);
 
   function logError(err) {
     console.error('Erreur Activite:', err);
@@ -949,6 +1041,263 @@ export default function LectureActivitePage() {
               );
             })}
           </div>
+        )}
+      </section>
+
+      {/* Bloc 6 — Lecture réalisation commerciale / actions VACTIS */}
+      <section className="activite-card-section">
+        <div className="activite-section-header">
+          <h2 className="activite-section-title">Lecture réalisation commerciale / actions VACTIS</h2>
+          <p className="activite-section-subtitle">
+            Observation mensuelle des actions couvertes si données exposées.
+          </p>
+        </div>
+
+        {loadingN3 ? (
+          <div className="activite-n2-loading">Chargement de la réalisation commerciale…</div>
+        ) : !actionsVactis ? (
+          <div className="activite-n2-empty">Données d&apos;actions non disponibles.</div>
+        ) : (
+          <>
+            {/* 5 compteurs */}
+            <div className="activite-kpi-grid">
+              <div className="activite-kpi-card">
+                <div className="activite-kpi-header">
+                  <span className="activite-kpi-title">ACTIONS GÉNÉRÉES</span>
+                  <span className="activite-kpi-badge activite-kpi-badge--ghost">
+                    <ActiviteIcon name="clipboard" />
+                  </span>
+                </div>
+                <div className="activite-kpi-value">{formatNumber(actionsVactis.actionsGenerees)}</div>
+                <div className="activite-kpi-sub">Observation mensuelle.</div>
+              </div>
+
+              <div className="activite-kpi-card">
+                <div className="activite-kpi-header">
+                  <span className="activite-kpi-title">VISITES RENSEIGNÉES</span>
+                  <span className="activite-kpi-badge activite-kpi-badge--purple">
+                    <ActiviteIcon name="pulse" />
+                  </span>
+                </div>
+                <div className="activite-kpi-value">{formatNumber(actionsVactis.visitesRenseignees)}</div>
+                <div className="activite-kpi-sub">Retour terrain lu.</div>
+              </div>
+
+              <div className="activite-kpi-card">
+                <div className="activite-kpi-header">
+                  <span className="activite-kpi-title">VISITES RÉALISÉES</span>
+                  <span className="activite-kpi-badge activite-kpi-badge--green">
+                    <ActiviteIcon name="checkCircle" />
+                  </span>
+                </div>
+                <div className="activite-kpi-value">{formatNumber(actionsVactis.visitesRealisees)}</div>
+                <div className="activite-kpi-sub">Réalisation terrain.</div>
+              </div>
+
+              <div className="activite-kpi-card">
+                <div className="activite-kpi-header">
+                  <span className="activite-kpi-title">NON RÉALISÉES</span>
+                  <span className="activite-kpi-badge activite-kpi-badge--amber">
+                    <ActiviteIcon name="trendingDown" />
+                  </span>
+                </div>
+                <div className="activite-kpi-value">{formatNumber(actionsVactis.nonRealisees)}</div>
+                <div className="activite-kpi-sub">Retour terrain non exécuté.</div>
+              </div>
+
+              <div className="activite-kpi-card">
+                <div className="activite-kpi-header">
+                  <span className="activite-kpi-title">TAUX TERRAIN</span>
+                  <span className="activite-kpi-badge activite-kpi-badge--green">
+                    <ActiviteIcon name="trendingUp" />
+                  </span>
+                </div>
+                <div className="activite-kpi-value">
+                  {formatNumber(actionsVactis.tauxTerrain, 1)}%
+                </div>
+                <div className="activite-kpi-sub">Visites réalisées / renseignées.</div>
+              </div>
+            </div>
+
+            {/* Répartition par commercial (3 colonnes) */}
+            <div className="activite-subblock">
+              <h3 className="activite-subblock-title">RÉPARTITION PAR COMMERCIAL</h3>
+              {actionsVactis.repartitionParCommercial.length === 0 ? (
+                <p className="activite-n2-empty">Aucune visite terrain enregistrée.</p>
+              ) : (
+                <div className="activite-commercial-grid">
+                  {actionsVactis.repartitionParCommercial.map((c, idx) => (
+                    <div key={idx} className="activite-commercial-card">
+                      <div className="activite-commercial-name">{c.commercial}</div>
+                      <div className="activite-commercial-stat">
+                        Renseignées : <span>{c.renseignees}</span>
+                      </div>
+                      <div className="activite-commercial-stat">
+                        Réalisées : <span>{c.realisees}</span>
+                      </div>
+                      <div className="activite-commercial-stat">
+                        Non réalisées : <span>{c.nonRealisees}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* Bloc 7 — Compte-rendu terrain du mois */}
+      <section className="activite-card-section">
+        <div className="activite-section-header">
+          <h2 className="activite-section-title">Compte-rendu terrain du mois</h2>
+          <p className="activite-section-subtitle">
+            Lecture managériale des visites renseignées dans le retour terrain lié au workbook mensuel actif.
+          </p>
+        </div>
+
+        {loadingN3 ? (
+          <div className="activite-n2-loading">Chargement du compte-rendu terrain…</div>
+        ) : !compteRenduTerrain ? (
+          <div className="activite-n2-empty">Données non disponibles.</div>
+        ) : (
+          <>
+            {/* 4 compteurs principaux */}
+            <div className="activite-cr-grid">
+              <div className="activite-cr-card">
+                <span className="activite-cr-title">VISITES RENSEIGNÉES</span>
+                <div className="activite-cr-value">{formatNumber(compteRenduTerrain.visitesRenseignees)}</div>
+                <div className="activite-cr-sub">Retours terrain lus pour le mois.</div>
+              </div>
+
+              <div className="activite-cr-card activite-cr-card--green">
+                <span className="activite-cr-title">VISITES RÉALISÉES</span>
+                <div className="activite-cr-value">{formatNumber(compteRenduTerrain.visitesRealisees)}</div>
+                <div className="activite-cr-sub">Taux terrain : {formatNumber(compteRenduTerrain.tauxTerrain, 1)}%</div>
+              </div>
+
+              <div className="activite-cr-card activite-cr-card--amber">
+                <span className="activite-cr-title">VISITES NON RÉALISÉES</span>
+                <div className="activite-cr-value">{formatNumber(compteRenduTerrain.visitesNonRealisees)}</div>
+                <div className="activite-cr-sub">Actions à reprogrammer ou expliquer.</div>
+              </div>
+
+              <div className="activite-cr-card activite-cr-card--gray">
+                <span className="activite-cr-title">STATUT NON RENSEIGNÉ</span>
+                <div className="activite-cr-value">{formatNumber(compteRenduTerrain.statutNonRenseigne)}</div>
+                <div className="activite-cr-sub">Retours à compléter avant arbitrage.</div>
+              </div>
+            </div>
+
+            {/* 5 cartes cliquables */}
+            <div className="activite-subblock">
+              <h3 className="activite-subblock-title">CARTES CLIQUABLES</h3>
+              <div className="activite-clickable-cards-grid">
+                {/* 1. Visites avec réclamation */}
+                <div className="activite-clickable-card activite-clickable-card--red">
+                  <div className="activite-clickable-card-header">
+                    <span className="activite-clickable-card-title">VISITES AVEC RÉCLAMATION</span>
+                    <span className="activite-clickable-card-icon">
+                      <ActiviteIcon name="flag" size={16} />
+                    </span>
+                  </div>
+                  <div className="activite-clickable-card-value">
+                    {formatNumber(compteRenduTerrain.visitesAvecReclamation)}
+                  </div>
+                  <div className="activite-clickable-card-sub">Retours à discuter en priorité.</div>
+                </div>
+
+                {/* 2. Défavorables / Refus */}
+                <div className="activite-clickable-card activite-clickable-card--amber">
+                  <div className="activite-clickable-card-header">
+                    <span className="activite-clickable-card-title">DÉFAVORABLES / REFUS</span>
+                    <span className="activite-clickable-card-icon">
+                      <ActiviteIcon name="thumbsDown" size={16} />
+                    </span>
+                  </div>
+                  <div className="activite-clickable-card-value">
+                    {formatNumber(compteRenduTerrain.defavorablesRefus)}
+                  </div>
+                  <div className="activite-clickable-card-sub">Freins ou refus déclarés.</div>
+                </div>
+
+                {/* 3. Non réalisées */}
+                <div className="activite-clickable-card activite-clickable-card--amber">
+                  <div className="activite-clickable-card-header">
+                    <span className="activite-clickable-card-title">NON RÉALISÉES</span>
+                    <span className="activite-clickable-card-icon">
+                      <ActiviteIcon name="alert" size={16} />
+                    </span>
+                  </div>
+                  <div className="activite-clickable-card-value">
+                    {formatNumber(compteRenduTerrain.nonRealisees)}
+                  </div>
+                  <div className="activite-clickable-card-sub">Actions non exécutées sur le mois.</div>
+                </div>
+
+                {/* 4. Statut non renseigné */}
+                <div className="activite-clickable-card activite-clickable-card--gray">
+                  <div className="activite-clickable-card-header">
+                    <span className="activite-clickable-card-title">STATUT NON RENSEIGNÉ</span>
+                    <span className="activite-clickable-card-icon">
+                      <ActiviteIcon name="lock" size={16} />
+                    </span>
+                  </div>
+                  <div className="activite-clickable-card-value">
+                    {formatNumber(compteRenduTerrain.statutNonRenseigneCarte)}
+                  </div>
+                  <div className="activite-clickable-card-sub">Visites avec retour incomplet.</div>
+                </div>
+
+                {/* 5. Favorables */}
+                <div className="activite-clickable-card activite-clickable-card--green">
+                  <div className="activite-clickable-card-header">
+                    <span className="activite-clickable-card-title">FAVORABLES</span>
+                    <span className="activite-clickable-card-icon">
+                      <ActiviteIcon name="thumbsUp" size={16} />
+                    </span>
+                  </div>
+                  <div className="activite-clickable-card-value">
+                    {formatNumber(compteRenduTerrain.favorables)}
+                  </div>
+                  <div className="activite-clickable-card-sub">Retours positifs exploitables.</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Répartition par commercial (tableau 4 colonnes) */}
+            <div className="activite-subblock">
+              <h3 className="activite-subblock-title">RÉPARTITION PAR COMMERCIAL</h3>
+              {compteRenduTerrain.repartitionParCommercial.length === 0 ? (
+                <p className="activite-n2-empty">Aucune visite terrain enregistrée.</p>
+              ) : (
+                <div className="activite-table-container">
+                  <table className="activite-commercial-table">
+                    <thead>
+                      <tr>
+                        <th>COMMERCIAL</th>
+                        <th className="text-right">RENSEIGNÉES</th>
+                        <th className="text-right">RÉALISÉES</th>
+                        <th className="text-right">RÉCLAMATIONS</th>
+                        <th className="text-right">FAVORABLES</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {compteRenduTerrain.repartitionParCommercial.map((c, idx) => (
+                        <tr key={idx}>
+                          <td className="activite-comm-name">{c.commercial}</td>
+                          <td className="text-right">{formatNumber(c.renseignees)}</td>
+                          <td className="text-right">{formatNumber(c.realisees)}</td>
+                          <td className="text-right">{formatNumber(c.reclamations)}</td>
+                          <td className="text-right">{formatNumber(c.favorables)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
         )}
       </section>
 
