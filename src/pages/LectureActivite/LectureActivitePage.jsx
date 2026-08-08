@@ -1408,79 +1408,154 @@ export default function LectureActivitePage() {
                   <table className="activite-commercial-table">
                     <thead>
                       <tr>
-                        <th>COMMERCIAL</th>
-                        <th className="text-right">RENSEIGNÉES</th>
-                        <th className="text-right">RÉALISÉES</th>
-                        <th className="text-right">RÉCLAMATIONS</th>
-                        <th className="text-right">FAVORABLES</th>
+                        <th>
+                          <span className="activite-th-content">
+                            <ActiviteIcon name="users" size={14} />
+                            <span>COMMERCIAL</span>
+                          </span>
+                        </th>
+                        <th className="text-right">
+                          <span className="activite-th-content activite-th-content--right">
+                            <ActiviteIcon name="pulse" size={14} />
+                            <span>RENSEIGNÉES</span>
+                          </span>
+                        </th>
+                        <th className="text-right">
+                          <span className="activite-th-content activite-th-content--right">
+                            <ActiviteIcon name="checkCircle" size={14} />
+                            <span>RÉALISÉES</span>
+                          </span>
+                        </th>
+                        <th className="text-right">
+                          <span className="activite-th-content activite-th-content--right">
+                            <ActiviteIcon name="flag" size={14} />
+                            <span>RÉCLAMATIONS</span>
+                          </span>
+                        </th>
+                        <th className="text-right">
+                          <span className="activite-th-content activite-th-content--right">
+                            <ActiviteIcon name="thumbsUp" size={14} />
+                            <span>FAVORABLES</span>
+                          </span>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {compteRenduTerrain.repartitionParCommercial.map((c, idx) => (
-                        <tr key={idx} className="activite-comm-row--clickable">
-                          <td
-                            className="activite-comm-name activite-clickable-cell"
-                            onClick={() => openRetoursModal(
-                              `Retours terrain — ${c.commercial}`,
-                              `Toutes les visites enregistrées pour ${c.commercial}`,
-                              'blue',
-                              (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial)
-                            )}
-                            title={`Cliquer pour voir toutes les visites de ${c.commercial}`}
-                          >
-                            {c.commercial}
+                      {compteRenduTerrain.repartitionParCommercial.map((c, idx) => {
+                        const initials = c.commercial
+                          ? c.commercial.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                          : 'CO';
+
+                        return (
+                          <tr key={idx} className="activite-comm-row">
+                            <td
+                              className="activite-comm-cell"
+                              onClick={() => openRetoursModal(
+                                `Retours terrain — ${c.commercial}`,
+                                `Toutes les visites enregistrées pour ${c.commercial}`,
+                                'blue',
+                                (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial)
+                              )}
+                              title={`Cliquer pour voir toutes les visites de ${c.commercial}`}
+                            >
+                              <div className="activite-comm-info">
+                                <div className="activite-comm-avatar">{initials}</div>
+                                <div>
+                                  <div className="activite-comm-name">{c.commercial}</div>
+                                  <div className="activite-comm-hint">Cliquer pour voir les détails</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="text-right">
+                              <span
+                                className="activite-metric-pill activite-metric-pill--blue"
+                                onClick={() => openRetoursModal(
+                                  `Visites Renseignées — ${c.commercial}`,
+                                  `Visites renseignées pour ${c.commercial}`,
+                                  'blue',
+                                  (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial)
+                                )}
+                                title={`Voir les ${c.renseignees} visites de ${c.commercial}`}
+                              >
+                                {formatNumber(c.renseignees)}
+                              </span>
+                            </td>
+                            <td className="text-right">
+                              <span
+                                className={`activite-metric-pill ${c.realisees > 0 ? 'activite-metric-pill--green' : 'activite-metric-pill--zero'}`}
+                                onClick={() => openRetoursModal(
+                                  `Visites Réalisées — ${c.commercial}`,
+                                  `Visites réalisées pour ${c.commercial}`,
+                                  'green',
+                                  (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial && r.statutVisite === 'REALISEE')
+                                )}
+                                title={`Voir les ${c.realisees} visites réalisées par ${c.commercial}`}
+                              >
+                                {formatNumber(c.realisees)}
+                              </span>
+                            </td>
+                            <td className="text-right">
+                              <span
+                                className={`activite-metric-pill ${c.reclamations > 0 ? 'activite-metric-pill--red' : 'activite-metric-pill--zero'}`}
+                                onClick={() => openRetoursModal(
+                                  `Réclamations — ${c.commercial}`,
+                                  `Visites avec réclamation pour ${c.commercial}`,
+                                  'red',
+                                  (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial && r.reclamation)
+                                )}
+                                title={`Voir les ${c.reclamations} réclamations de ${c.commercial}`}
+                              >
+                                {c.reclamations > 0 && <span className="activite-pill-dot" />}
+                                {formatNumber(c.reclamations)}
+                              </span>
+                            </td>
+                            <td className="text-right">
+                              <span
+                                className={`activite-metric-pill ${c.favorables > 0 ? 'activite-metric-pill--emerald' : 'activite-metric-pill--zero'}`}
+                                onClick={() => openRetoursModal(
+                                  `Favorables — ${c.commercial}`,
+                                  `Visites favorables pour ${c.commercial}`,
+                                  'green',
+                                  (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial && r.qualification === 'FAVORABLE')
+                                )}
+                                title={`Voir les ${c.favorables} visites favorables de ${c.commercial}`}
+                              >
+                                {formatNumber(c.favorables)}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    {compteRenduTerrain.repartitionParCommercial.length > 1 && (
+                      <tfoot>
+                        <tr className="activite-comm-total-row">
+                          <td>
+                            <div className="activite-comm-total-label">TOTAL GÉNÉRAL</div>
                           </td>
-                          <td
-                            className="text-right activite-clickable-cell"
-                            onClick={() => openRetoursModal(
-                              `Visites Renseignées — ${c.commercial}`,
-                              `Visites renseignées pour ${c.commercial}`,
-                              'blue',
-                              (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial)
-                            )}
-                            title={`Voir les ${c.renseignees} visites de ${c.commercial}`}
-                          >
-                            {formatNumber(c.renseignees)}
+                          <td className="text-right">
+                            <span className="activite-total-pill activite-total-pill--blue">
+                              {formatNumber(compteRenduTerrain.repartitionParCommercial.reduce((acc, curr) => acc + (curr.renseignees || 0), 0))}
+                            </span>
                           </td>
-                          <td
-                            className="text-right activite-clickable-cell"
-                            onClick={() => openRetoursModal(
-                              `Visites Réalisées — ${c.commercial}`,
-                              `Visites réalisées pour ${c.commercial}`,
-                              'green',
-                              (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial && r.statutVisite === 'REALISEE')
-                            )}
-                            title={`Voir les ${c.realisees} visites réalisées par ${c.commercial}`}
-                          >
-                            {formatNumber(c.realisees)}
+                          <td className="text-right">
+                            <span className="activite-total-pill activite-total-pill--green">
+                              {formatNumber(compteRenduTerrain.repartitionParCommercial.reduce((acc, curr) => acc + (curr.realisees || 0), 0))}
+                            </span>
                           </td>
-                          <td
-                            className="text-right activite-clickable-cell"
-                            onClick={() => openRetoursModal(
-                              `Réclamations — ${c.commercial}`,
-                              `Visites avec réclamation pour ${c.commercial}`,
-                              'red',
-                              (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial && r.reclamation)
-                            )}
-                            title={`Voir les ${c.reclamations} réclamations de ${c.commercial}`}
-                          >
-                            {formatNumber(c.reclamations)}
+                          <td className="text-right">
+                            <span className="activite-total-pill activite-total-pill--red">
+                              {formatNumber(compteRenduTerrain.repartitionParCommercial.reduce((acc, curr) => acc + (curr.reclamations || 0), 0))}
+                            </span>
                           </td>
-                          <td
-                            className="text-right activite-clickable-cell"
-                            onClick={() => openRetoursModal(
-                              `Favorables — ${c.commercial}`,
-                              `Visites favorables pour ${c.commercial}`,
-                              'green',
-                              (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial && r.qualification === 'FAVORABLE')
-                            )}
-                            title={`Voir les ${c.favorables} visites favorables de ${c.commercial}`}
-                          >
-                            {formatNumber(c.favorables)}
+                          <td className="text-right">
+                            <span className="activite-total-pill activite-total-pill--emerald">
+                              {formatNumber(compteRenduTerrain.repartitionParCommercial.reduce((acc, curr) => acc + (curr.favorables || 0), 0))}
+                            </span>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
+                      </tfoot>
+                    )}
                   </table>
                 </div>
               )}

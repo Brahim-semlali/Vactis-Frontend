@@ -4474,46 +4474,210 @@ input {
   margin-top: 0.3rem;
 }
 
-/* Commercial Table */
+/* Modern Commercial Table */
 .activite-table-container {
   overflow-x: auto;
   border: 1px solid #e2e8f0;
-  border-radius: 0.75rem;
+  border-radius: 0.85rem;
   background: #ffffff;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+  transition: box-shadow 0.2s ease;
+}
+
+.activite-table-container:hover {
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.07);
 }
 
 .activite-commercial-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.85rem;
 }
 
 .activite-commercial-table th {
-  background: #f8fafc;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
   color: #475569;
   font-weight: 700;
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 0.75rem 1rem;
+  padding: 0.9rem 1.1rem;
   border-bottom: 1px solid #e2e8f0;
   text-align: left;
 }
 
-.activite-commercial-table td {
-  padding: 0.8rem 1rem;
-  border-bottom: 1px solid #f1f5f9;
-  color: #1e293b;
+.activite-th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #475569;
 }
 
-.activite-commercial-table tr:last-child td {
-  border-bottom: none;
+.activite-th-content--right {
+  justify-content: flex-end;
+}
+
+.activite-commercial-table td {
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.activite-comm-row {
+  transition: background-color 0.15s ease;
+}
+
+.activite-comm-row:hover {
+  background-color: #f8fafc;
+}
+
+.activite-comm-cell {
+  cursor: pointer;
+}
+
+.activite-comm-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.activite-comm-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  flex-shrink: 0;
 }
 
 .activite-comm-name {
   font-weight: 700;
   text-transform: uppercase;
   color: #0f172a;
+  font-size: 0.88rem;
+  line-height: 1.2;
+}
+
+.activite-comm-hint {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  display: block;
+  margin-top: 0.1rem;
+  transition: color 0.15s ease;
+}
+
+.activite-comm-cell:hover .activite-comm-hint {
+  color: #2563eb;
+}
+
+/* Metric Pills in Table */
+.activite-metric-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.activite-metric-pill:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.activite-metric-pill--blue {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.activite-metric-pill--green {
+  background-color: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.activite-metric-pill--red {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.activite-metric-pill--emerald {
+  background-color: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.activite-metric-pill--zero {
+  background-color: #f8fafc;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  font-weight: 500;
+}
+
+.activite-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #dc2626;
+  animation: pulse 2s infinite;
+}
+
+/* Total Summary Row */
+.activite-comm-total-row td {
+  background-color: #f8fafc;
+  border-top: 2px solid #e2e8f0;
+  border-bottom: none;
+  padding: 0.9rem 1.1rem;
+}
+
+.activite-comm-total-label {
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: #334155;
+}
+
+.activite-total-pill {
+  display: inline-block;
+  padding: 0.35rem 0.95rem;
+  border-radius: 0.5rem;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.activite-total-pill--blue {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.activite-total-pill--green {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.activite-total-pill--red {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.activite-total-pill--emerald {
+  background-color: #d1fae5;
+  color: #065f46;
 }
 
 /* Clickable CR Cards & Cells */
