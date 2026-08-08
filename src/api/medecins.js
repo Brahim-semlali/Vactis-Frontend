@@ -151,8 +151,12 @@ export async function getRetoursTerrain(token, medecinId) {
   return response.json();
 }
 
-export async function postRetourTerrain(token, medecinId, { note, dateVisite, visiteur, commentaire }) {
-  logger.info('Ajout retour terrain', { medecinId, note, dateVisite, visiteur });
+export async function postRetourTerrain(
+  token,
+  medecinId,
+  { note, dateVisite, visiteur, commentaire, statutVisite, qualification, reclamation }
+) {
+  logger.info('Ajout retour terrain', { medecinId, note, dateVisite, visiteur, statutVisite, qualification, reclamation });
 
   const response = await fetch(`${API_BASE}/api/medecins/${medecinId}/retours-terrain`, {
     method: 'POST',
@@ -165,6 +169,9 @@ export async function postRetourTerrain(token, medecinId, { note, dateVisite, vi
       dateVisite,
       visiteur: visiteur || null,
       commentaire: commentaire || null,
+      statutVisite: statutVisite || null,
+      qualification: qualification || null,
+      reclamation: reclamation ?? false,
     }),
   });
 
