@@ -4515,3 +4515,118 @@ input {
   text-transform: uppercase;
   color: #0f172a;
 }
+
+/* Clickable CR Cards & Cells */
+.activite-cr-card--clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.activite-cr-card--clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  border-color: #cbd5e1;
+}
+
+.activite-clickable-cell {
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  font-weight: 600;
+}
+
+.activite-clickable-cell:hover {
+  background-color: #f1f5f9;
+  color: #0284c7;
+}
+
+.activite-comm-row--clickable {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.activite-comm-row--clickable:hover {
+  background-color: #f8fafc;
+}
+
+/* Badges Modal */
+.activite-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.activite-badge--green {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.activite-badge--amber {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.activite-badge--red {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.activite-badge--gray {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.activite-badge--blue {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+/* Modal Search Bar */
+.activite-modal-search-bar {
+  position: relative;
+  margin-bottom: 0.85rem;
+}
+
+.activite-modal-search-input {
+  width: 100%;
+  padding: 0.55rem 2.2rem 0.55rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.activite-modal-search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.activite-modal-search-clear {
+  position: absolute;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.2rem;
+}
+
+.activite-modal-search-clear:hover {
+  color: #334155;
+}
+
+.activite-modal-comment {
+  max-width: 240px;
+  font-size: 0.78rem;
+  color: #475569;
+  white-space: normal;
+  word-break: break-word;
+}

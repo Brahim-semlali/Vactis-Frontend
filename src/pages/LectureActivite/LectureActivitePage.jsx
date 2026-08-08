@@ -296,10 +296,25 @@ export default function LectureActivitePage() {
   const [compteRenduTerrain, setCompteRenduTerrain] = useState(null);
   const [loadingN3, setLoadingN3] = useState(false);
 
-  // État modal pour afficher les médecins au clic sur un statut ou un flux
+  // État modal pour afficher les médecins ou retours terrain au clic
   const [selectedModalData, setSelectedModalData] = useState(null);
   const [modalPage, setModalPage] = useState(1);
+  const [modalSearch, setModalSearch] = useState('');
   const MODAL_PAGE_SIZE = 15;
+
+  const openRetoursModal = useCallback((title, subtitle, couleur, items) => {
+    const list = items || [];
+    setModalPage(1);
+    setModalSearch('');
+    setSelectedModalData({
+      type: 'retours',
+      title,
+      subtitle,
+      couleur: couleur || 'blue',
+      count: list.length,
+      retours: list,
+    });
+  }, []);
 
   // Charger la liste des mois disponibles
   useEffect(() => {
@@ -1072,7 +1087,16 @@ export default function LectureActivitePage() {
                 <div className="activite-kpi-sub">Observation mensuelle.</div>
               </div>
 
-              <div className="activite-kpi-card">
+              <div
+                className="activite-kpi-card activite-cr-card--clickable"
+                onClick={() => openRetoursModal(
+                  'Visites Renseignées',
+                  'Retours terrain enregistrés pour le mois',
+                  'purple',
+                  compteRenduTerrain?.retours || []
+                )}
+                title="Cliquer pour voir le détail des visites"
+              >
                 <div className="activite-kpi-header">
                   <span className="activite-kpi-title">VISITES RENSEIGNÉES</span>
                   <span className="activite-kpi-badge activite-kpi-badge--purple">
@@ -1080,10 +1104,19 @@ export default function LectureActivitePage() {
                   </span>
                 </div>
                 <div className="activite-kpi-value">{formatNumber(actionsVactis.visitesRenseignees)}</div>
-                <div className="activite-kpi-sub">Retour terrain lu.</div>
+                <div className="activite-kpi-sub">Retour terrain lu. · Cliquer pour voir</div>
               </div>
 
-              <div className="activite-kpi-card">
+              <div
+                className="activite-kpi-card activite-cr-card--clickable"
+                onClick={() => openRetoursModal(
+                  'Visites Réalisées',
+                  'Visites effectivement exécutées sur le terrain',
+                  'green',
+                  (compteRenduTerrain?.retours || []).filter(r => r.statutVisite === 'REALISEE')
+                )}
+                title="Cliquer pour voir les visites réalisées"
+              >
                 <div className="activite-kpi-header">
                   <span className="activite-kpi-title">VISITES RÉALISÉES</span>
                   <span className="activite-kpi-badge activite-kpi-badge--green">
@@ -1091,10 +1124,19 @@ export default function LectureActivitePage() {
                   </span>
                 </div>
                 <div className="activite-kpi-value">{formatNumber(actionsVactis.visitesRealisees)}</div>
-                <div className="activite-kpi-sub">Réalisation terrain.</div>
+                <div className="activite-kpi-sub">Réalisation terrain. · Cliquer pour voir</div>
               </div>
 
-              <div className="activite-kpi-card">
+              <div
+                className="activite-kpi-card activite-cr-card--clickable"
+                onClick={() => openRetoursModal(
+                  'Visites Non Réalisées',
+                  'Visites non exécutées sur le terrain',
+                  'amber',
+                  (compteRenduTerrain?.retours || []).filter(r => r.statutVisite === 'NON_REALISEE')
+                )}
+                title="Cliquer pour voir les visites non réalisées"
+              >
                 <div className="activite-kpi-header">
                   <span className="activite-kpi-title">NON RÉALISÉES</span>
                   <span className="activite-kpi-badge activite-kpi-badge--amber">
@@ -1102,7 +1144,7 @@ export default function LectureActivitePage() {
                   </span>
                 </div>
                 <div className="activite-kpi-value">{formatNumber(actionsVactis.nonRealisees)}</div>
-                <div className="activite-kpi-sub">Retour terrain non exécuté.</div>
+                <div className="activite-kpi-sub">Retour terrain non exécuté. · Cliquer pour voir</div>
               </div>
 
               <div className="activite-kpi-card">
@@ -1127,7 +1169,17 @@ export default function LectureActivitePage() {
               ) : (
                 <div className="activite-commercial-grid">
                   {actionsVactis.repartitionParCommercial.map((c, idx) => (
-                    <div key={idx} className="activite-commercial-card">
+                    <div
+                      key={idx}
+                      className="activite-commercial-card activite-cr-card--clickable"
+                      onClick={() => openRetoursModal(
+                        `Visites terrain — Commercial : ${c.commercial}`,
+                        `Ensemble des retours terrain pour le commercial ${c.commercial}`,
+                        'blue',
+                        (compteRenduTerrain?.retours || []).filter(r => r.visiteur === c.commercial)
+                      )}
+                      title={`Cliquer pour voir les visites de ${c.commercial}`}
+                    >
                       <div className="activite-commercial-name">{c.commercial}</div>
                       <div className="activite-commercial-stat">
                         Renseignées : <span>{c.renseignees}</span>
@@ -1164,28 +1216,64 @@ export default function LectureActivitePage() {
           <>
             {/* 4 compteurs principaux */}
             <div className="activite-cr-grid">
-              <div className="activite-cr-card">
+              <div
+                className="activite-cr-card activite-cr-card--clickable"
+                onClick={() => openRetoursModal(
+                  'Visites Renseignées du mois',
+                  'Ensemble des retours terrain enregistrés',
+                  'blue',
+                  compteRenduTerrain.retours || []
+                )}
+                title="Cliquer pour voir la liste complète des visites"
+              >
                 <span className="activite-cr-title">VISITES RENSEIGNÉES</span>
                 <div className="activite-cr-value">{formatNumber(compteRenduTerrain.visitesRenseignees)}</div>
-                <div className="activite-cr-sub">Retours terrain lus pour le mois.</div>
+                <div className="activite-cr-sub">Retours terrain lus pour le mois. · Cliquer pour voir les détails</div>
               </div>
 
-              <div className="activite-cr-card activite-cr-card--green">
+              <div
+                className="activite-cr-card activite-cr-card--green activite-cr-card--clickable"
+                onClick={() => openRetoursModal(
+                  'Visites Réalisées',
+                  'Visites terrain effectivement exécutées',
+                  'green',
+                  (compteRenduTerrain.retours || []).filter(r => r.statutVisite === 'REALISEE')
+                )}
+                title="Cliquer pour voir la liste des visites réalisées"
+              >
                 <span className="activite-cr-title">VISITES RÉALISÉES</span>
                 <div className="activite-cr-value">{formatNumber(compteRenduTerrain.visitesRealisees)}</div>
-                <div className="activite-cr-sub">Taux terrain : {formatNumber(compteRenduTerrain.tauxTerrain, 1)}%</div>
+                <div className="activite-cr-sub">Taux terrain : {formatNumber(compteRenduTerrain.tauxTerrain, 1)}% · Cliquer pour voir les détails</div>
               </div>
 
-              <div className="activite-cr-card activite-cr-card--amber">
+              <div
+                className="activite-cr-card activite-cr-card--amber activite-cr-card--clickable"
+                onClick={() => openRetoursModal(
+                  'Visites Non Réalisées',
+                  'Actions à reprogrammer ou expliquer',
+                  'amber',
+                  (compteRenduTerrain.retours || []).filter(r => r.statutVisite === 'NON_REALISEE')
+                )}
+                title="Cliquer pour voir la liste des visites non réalisées"
+              >
                 <span className="activite-cr-title">VISITES NON RÉALISÉES</span>
                 <div className="activite-cr-value">{formatNumber(compteRenduTerrain.visitesNonRealisees)}</div>
-                <div className="activite-cr-sub">Actions à reprogrammer ou expliquer.</div>
+                <div className="activite-cr-sub">Actions à reprogrammer ou expliquer. · Cliquer pour voir les détails</div>
               </div>
 
-              <div className="activite-cr-card activite-cr-card--gray">
+              <div
+                className="activite-cr-card activite-cr-card--gray activite-cr-card--clickable"
+                onClick={() => openRetoursModal(
+                  'Statut Non Renseigné',
+                  'Retours à compléter avant arbitrage',
+                  'gray',
+                  (compteRenduTerrain.retours || []).filter(r => r.statutVisite === 'NON_RENSEIGNE')
+                )}
+                title="Cliquer pour voir la liste des retours incomplets"
+              >
                 <span className="activite-cr-title">STATUT NON RENSEIGNÉ</span>
                 <div className="activite-cr-value">{formatNumber(compteRenduTerrain.statutNonRenseigne)}</div>
-                <div className="activite-cr-sub">Retours à compléter avant arbitrage.</div>
+                <div className="activite-cr-sub">Retours à compléter avant arbitrage. · Cliquer pour voir les détails</div>
               </div>
             </div>
 
@@ -1194,7 +1282,16 @@ export default function LectureActivitePage() {
               <h3 className="activite-subblock-title">CARTES CLIQUABLES</h3>
               <div className="activite-clickable-cards-grid">
                 {/* 1. Visites avec réclamation */}
-                <div className="activite-clickable-card activite-clickable-card--red">
+                <div
+                  className="activite-clickable-card activite-clickable-card--red"
+                  onClick={() => openRetoursModal(
+                    'Visites avec Réclamation',
+                    'Retours terrain avec réclamation médecin enregistrée',
+                    'red',
+                    (compteRenduTerrain.retours || []).filter(r => r.reclamation)
+                  )}
+                  title="Cliquer pour afficher les détails des réclamations"
+                >
                   <div className="activite-clickable-card-header">
                     <span className="activite-clickable-card-title">VISITES AVEC RÉCLAMATION</span>
                     <span className="activite-clickable-card-icon">
@@ -1204,11 +1301,20 @@ export default function LectureActivitePage() {
                   <div className="activite-clickable-card-value">
                     {formatNumber(compteRenduTerrain.visitesAvecReclamation)}
                   </div>
-                  <div className="activite-clickable-card-sub">Retours à discuter en priorité.</div>
+                  <div className="activite-clickable-card-sub">Retours à discuter en priorité. · Cliquer pour voir</div>
                 </div>
 
                 {/* 2. Défavorables / Refus */}
-                <div className="activite-clickable-card activite-clickable-card--amber">
+                <div
+                  className="activite-clickable-card activite-clickable-card--amber"
+                  onClick={() => openRetoursModal(
+                    'Visites Défavorables / Refus',
+                    'Freins ou refus déclarés lors des retours terrain',
+                    'amber',
+                    (compteRenduTerrain.retours || []).filter(r => r.qualification === 'DEFAVORABLE')
+                  )}
+                  title="Cliquer pour afficher les détails des refus"
+                >
                   <div className="activite-clickable-card-header">
                     <span className="activite-clickable-card-title">DÉFAVORABLES / REFUS</span>
                     <span className="activite-clickable-card-icon">
@@ -1218,11 +1324,20 @@ export default function LectureActivitePage() {
                   <div className="activite-clickable-card-value">
                     {formatNumber(compteRenduTerrain.defavorablesRefus)}
                   </div>
-                  <div className="activite-clickable-card-sub">Freins ou refus déclarés.</div>
+                  <div className="activite-clickable-card-sub">Freins ou refus déclarés. · Cliquer pour voir</div>
                 </div>
 
                 {/* 3. Non réalisées */}
-                <div className="activite-clickable-card activite-clickable-card--amber">
+                <div
+                  className="activite-clickable-card activite-clickable-card--amber"
+                  onClick={() => openRetoursModal(
+                    'Visites Non Réalisées',
+                    'Actions non exécutées sur le mois',
+                    'amber',
+                    (compteRenduTerrain.retours || []).filter(r => r.statutVisite === 'NON_REALISEE')
+                  )}
+                  title="Cliquer pour afficher les détails des visites non réalisées"
+                >
                   <div className="activite-clickable-card-header">
                     <span className="activite-clickable-card-title">NON RÉALISÉES</span>
                     <span className="activite-clickable-card-icon">
@@ -1232,11 +1347,20 @@ export default function LectureActivitePage() {
                   <div className="activite-clickable-card-value">
                     {formatNumber(compteRenduTerrain.nonRealisees)}
                   </div>
-                  <div className="activite-clickable-card-sub">Actions non exécutées sur le mois.</div>
+                  <div className="activite-clickable-card-sub">Actions non exécutées sur le mois. · Cliquer pour voir</div>
                 </div>
 
                 {/* 4. Statut non renseigné */}
-                <div className="activite-clickable-card activite-clickable-card--gray">
+                <div
+                  className="activite-clickable-card activite-clickable-card--gray"
+                  onClick={() => openRetoursModal(
+                    'Statut Non Renseigné',
+                    'Visites avec retour incomplet',
+                    'gray',
+                    (compteRenduTerrain.retours || []).filter(r => r.statutVisite === 'NON_RENSEIGNE')
+                  )}
+                  title="Cliquer pour afficher les détails des retours incomplets"
+                >
                   <div className="activite-clickable-card-header">
                     <span className="activite-clickable-card-title">STATUT NON RENSEIGNÉ</span>
                     <span className="activite-clickable-card-icon">
@@ -1246,11 +1370,20 @@ export default function LectureActivitePage() {
                   <div className="activite-clickable-card-value">
                     {formatNumber(compteRenduTerrain.statutNonRenseigneCarte)}
                   </div>
-                  <div className="activite-clickable-card-sub">Visites avec retour incomplet.</div>
+                  <div className="activite-clickable-card-sub">Visites avec retour incomplet. · Cliquer pour voir</div>
                 </div>
 
                 {/* 5. Favorables */}
-                <div className="activite-clickable-card activite-clickable-card--green">
+                <div
+                  className="activite-clickable-card activite-clickable-card--green"
+                  onClick={() => openRetoursModal(
+                    'Visites Favorables',
+                    'Retours positifs exploitables sur le terrain',
+                    'green',
+                    (compteRenduTerrain.retours || []).filter(r => r.qualification === 'FAVORABLE')
+                  )}
+                  title="Cliquer pour afficher les détails des visites favorables"
+                >
                   <div className="activite-clickable-card-header">
                     <span className="activite-clickable-card-title">FAVORABLES</span>
                     <span className="activite-clickable-card-icon">
@@ -1260,7 +1393,7 @@ export default function LectureActivitePage() {
                   <div className="activite-clickable-card-value">
                     {formatNumber(compteRenduTerrain.favorables)}
                   </div>
-                  <div className="activite-clickable-card-sub">Retours positifs exploitables.</div>
+                  <div className="activite-clickable-card-sub">Retours positifs exploitables. · Cliquer pour voir</div>
                 </div>
               </div>
             </div>
@@ -1284,12 +1417,67 @@ export default function LectureActivitePage() {
                     </thead>
                     <tbody>
                       {compteRenduTerrain.repartitionParCommercial.map((c, idx) => (
-                        <tr key={idx}>
-                          <td className="activite-comm-name">{c.commercial}</td>
-                          <td className="text-right">{formatNumber(c.renseignees)}</td>
-                          <td className="text-right">{formatNumber(c.realisees)}</td>
-                          <td className="text-right">{formatNumber(c.reclamations)}</td>
-                          <td className="text-right">{formatNumber(c.favorables)}</td>
+                        <tr key={idx} className="activite-comm-row--clickable">
+                          <td
+                            className="activite-comm-name activite-clickable-cell"
+                            onClick={() => openRetoursModal(
+                              `Retours terrain — ${c.commercial}`,
+                              `Toutes les visites enregistrées pour ${c.commercial}`,
+                              'blue',
+                              (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial)
+                            )}
+                            title={`Cliquer pour voir toutes les visites de ${c.commercial}`}
+                          >
+                            {c.commercial}
+                          </td>
+                          <td
+                            className="text-right activite-clickable-cell"
+                            onClick={() => openRetoursModal(
+                              `Visites Renseignées — ${c.commercial}`,
+                              `Visites renseignées pour ${c.commercial}`,
+                              'blue',
+                              (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial)
+                            )}
+                            title={`Voir les ${c.renseignees} visites de ${c.commercial}`}
+                          >
+                            {formatNumber(c.renseignees)}
+                          </td>
+                          <td
+                            className="text-right activite-clickable-cell"
+                            onClick={() => openRetoursModal(
+                              `Visites Réalisées — ${c.commercial}`,
+                              `Visites réalisées pour ${c.commercial}`,
+                              'green',
+                              (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial && r.statutVisite === 'REALISEE')
+                            )}
+                            title={`Voir les ${c.realisees} visites réalisées par ${c.commercial}`}
+                          >
+                            {formatNumber(c.realisees)}
+                          </td>
+                          <td
+                            className="text-right activite-clickable-cell"
+                            onClick={() => openRetoursModal(
+                              `Réclamations — ${c.commercial}`,
+                              `Visites avec réclamation pour ${c.commercial}`,
+                              'red',
+                              (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial && r.reclamation)
+                            )}
+                            title={`Voir les ${c.reclamations} réclamations de ${c.commercial}`}
+                          >
+                            {formatNumber(c.reclamations)}
+                          </td>
+                          <td
+                            className="text-right activite-clickable-cell"
+                            onClick={() => openRetoursModal(
+                              `Favorables — ${c.commercial}`,
+                              `Visites favorables pour ${c.commercial}`,
+                              'green',
+                              (compteRenduTerrain.retours || []).filter(r => r.visiteur === c.commercial && r.qualification === 'FAVORABLE')
+                            )}
+                            title={`Voir les ${c.favorables} visites favorables de ${c.commercial}`}
+                          >
+                            {formatNumber(c.favorables)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1301,12 +1489,32 @@ export default function LectureActivitePage() {
         )}
       </section>
 
-      {/* Modal d'affichage de la liste des médecins */}
+      {/* Modal d'affichage des détails (Médecins ou Retours terrain) */}
       {selectedModalData && (() => {
-        const totalPages = Math.ceil(selectedModalData.medecins.length / MODAL_PAGE_SIZE);
+        const isRetours = selectedModalData.type === 'retours';
+        const rawList = isRetours
+          ? selectedModalData.retours || []
+          : selectedModalData.medecins || [];
+
+        const filteredList = isRetours
+          ? rawList.filter((r) => {
+              if (!modalSearch) return true;
+              const q = modalSearch.toLowerCase();
+              return (
+                (r.nomMedecin && r.nomMedecin.toLowerCase().includes(q)) ||
+                (r.codeMedecin && r.codeMedecin.toLowerCase().includes(q)) ||
+                (r.visiteur && r.visiteur.toLowerCase().includes(q)) ||
+                (r.specialite && r.specialite.toLowerCase().includes(q)) ||
+                (r.commentaire && r.commentaire.toLowerCase().includes(q))
+              );
+            })
+          : rawList;
+
+        const totalItems = filteredList.length;
+        const totalPages = Math.max(1, Math.ceil(totalItems / MODAL_PAGE_SIZE));
         const pageStart = (modalPage - 1) * MODAL_PAGE_SIZE;
         const pageEnd = pageStart + MODAL_PAGE_SIZE;
-        const pageMedecins = selectedModalData.medecins.slice(pageStart, pageEnd);
+        const pageItems = filteredList.slice(pageStart, pageEnd);
         const hasPrev = modalPage > 1;
         const hasNext = modalPage < totalPages;
 
@@ -1319,7 +1527,7 @@ export default function LectureActivitePage() {
                     <span className={`activite-statut-dot activite-statut-dot--${selectedModalData.couleur}`} />
                     <h3 className="activite-modal-title">{selectedModalData.title}</h3>
                     <span className="activite-modal-count-badge">
-                      {selectedModalData.count} médecin{selectedModalData.count > 1 ? 's' : ''}
+                      {totalItems} {isRetours ? `visite${totalItems > 1 ? 's' : ''}` : `médecin${totalItems > 1 ? 's' : ''}`}
                     </span>
                   </div>
                   {selectedModalData.subtitle && (
@@ -1336,37 +1544,123 @@ export default function LectureActivitePage() {
                 </button>
               </div>
 
+              {isRetours && rawList.length > 3 && (
+                <div className="activite-modal-search-bar">
+                  <input
+                    type="text"
+                    className="activite-modal-search-input"
+                    placeholder="Filtrer par médecin, commercial, spécialité ou commentaire..."
+                    value={modalSearch}
+                    onChange={(e) => {
+                      setModalSearch(e.target.value);
+                      setModalPage(1);
+                    }}
+                  />
+                  {modalSearch && (
+                    <button
+                      type="button"
+                      className="activite-modal-search-clear"
+                      onClick={() => {
+                        setModalSearch('');
+                        setModalPage(1);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              )}
+
               <div className="activite-modal-body">
-                <table className="activite-modal-table">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Code</th>
-                      <th>Médecin</th>
-                      <th>Spécialité</th>
-                      <th className="text-right">Cas (M)</th>
-                      <th className="text-right">CA (M)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pageMedecins.map((m, idx) => (
-                      <tr key={m.id || m.codeMedecin}>
-                        <td className="activite-modal-rank">{pageStart + idx + 1}</td>
-                        <td className="activite-modal-code">{m.codeMedecin || '—'}</td>
-                        <td className="activite-modal-nom">{m.nom}</td>
-                        <td className="activite-modal-specialite">{m.specialite || '—'}</td>
-                        <td className="text-right">{formatNumber(m.casM)}</td>
-                        <td className="text-right activite-modal-ca">{formatCurrency(m.caM)}</td>
+                {totalItems === 0 ? (
+                  <p className="activite-n2-empty" style={{ padding: '2rem 0' }}>
+                    Aucune visite trouvée pour ce critère.
+                  </p>
+                ) : isRetours ? (
+                  <table className="activite-modal-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Date</th>
+                        <th>Médecin</th>
+                        <th>Spécialité</th>
+                        <th>Commercial</th>
+                        <th>Statut</th>
+                        <th>Qualification</th>
+                        <th>Réclamation</th>
+                        <th className="text-right">Note</th>
+                        <th>Commentaire</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {pageItems.map((r, idx) => (
+                        <tr key={r.id || idx}>
+                          <td className="activite-modal-rank">{pageStart + idx + 1}</td>
+                          <td className="activite-modal-code">{r.dateVisite || '—'}</td>
+                          <td className="activite-modal-nom">{r.nomMedecin || '—'}</td>
+                          <td className="activite-modal-specialite">{r.specialite || '—'}</td>
+                          <td>{r.visiteur || 'Non renseigné'}</td>
+                          <td>
+                            <span className={`activite-badge activite-badge--${
+                              r.statutVisite === 'REALISEE' ? 'green' : r.statutVisite === 'NON_REALISEE' ? 'amber' : 'gray'
+                            }`}>
+                              {r.statutVisite === 'REALISEE' ? 'Réalisée' : r.statutVisite === 'NON_REALISEE' ? 'Non réalisée' : 'Non renseigné'}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`activite-badge activite-badge--${
+                              r.qualification === 'FAVORABLE' ? 'green' : r.qualification === 'DEFAVORABLE' ? 'red' : 'gray'
+                            }`}>
+                              {r.qualification === 'FAVORABLE' ? 'Favorable' : r.qualification === 'DEFAVORABLE' ? 'Défavorable' : 'Non renseigné'}
+                            </span>
+                          </td>
+                          <td>
+                            {r.reclamation ? (
+                              <span className="activite-badge activite-badge--red">🚩 Oui</span>
+                            ) : (
+                              <span className="activite-badge activite-badge--gray">Non</span>
+                            )}
+                          </td>
+                          <td className="text-right" style={{ fontWeight: 600 }}>
+                            {r.note != null ? `${r.note}/5` : '—'}
+                          </td>
+                          <td className="activite-modal-comment">{r.commentaire || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="activite-modal-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Code</th>
+                        <th>Médecin</th>
+                        <th>Spécialité</th>
+                        <th className="text-right">Cas (M)</th>
+                        <th className="text-right">CA (M)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageItems.map((m, idx) => (
+                        <tr key={m.id || m.codeMedecin || idx}>
+                          <td className="activite-modal-rank">{pageStart + idx + 1}</td>
+                          <td className="activite-modal-code">{m.codeMedecin || '—'}</td>
+                          <td className="activite-modal-nom">{m.nom}</td>
+                          <td className="activite-modal-specialite">{m.specialite || '—'}</td>
+                          <td className="text-right">{formatNumber(m.casM)}</td>
+                          <td className="text-right activite-modal-ca">{formatCurrency(m.caM)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
               </div>
 
               {totalPages > 1 && (
                 <div className="activite-modal-pagination">
                   <span className="activite-modal-pag-info">
-                    {pageStart + 1}–{Math.min(pageEnd, selectedModalData.medecins.length)} sur {selectedModalData.medecins.length}
+                    {pageStart + 1}–{Math.min(pageEnd, totalItems)} sur {totalItems}
                   </span>
                   <div className="activite-modal-pag-controls">
                     <button
