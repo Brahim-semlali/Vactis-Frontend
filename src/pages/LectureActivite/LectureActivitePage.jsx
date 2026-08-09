@@ -3,9 +3,12 @@ import {
   getActionsVactis,
   getComparaison,
   getCompteRenduTerrain,
+  getDetailEvolution,
+  getEvolutionParCommercial,
   getFluxAgreges,
   getKpisMensuels,
   getMoisDisponibles,
+  getRapportImpact,
   getStatutsRepartition,
   getTopMouvements,
   getTransitionsStatuts,
@@ -296,6 +299,13 @@ export default function LectureActivitePage() {
   const [compteRenduTerrain, setCompteRenduTerrain] = useState(null);
   const [loadingN3, setLoadingN3] = useState(false);
 
+  // Niveau 4 — états (Impact des visites terrain)
+  const [rapportImpact, setRapportImpact] = useState(null);
+  const [evolutionParCommercial, setEvolutionParCommercial] = useState(null);
+  const [detailEvolution, setDetailEvolution] = useState(null);
+  const [loadingN4, setLoadingN4] = useState(false);
+  const [detailPage, setDetailPage] = useState(0);
+
   // État modal pour afficher les médecins ou retours terrain au clic
   const [selectedModalData, setSelectedModalData] = useState(null);
   const [modalPage, setModalPage] = useState(1);
@@ -435,6 +445,30 @@ export default function LectureActivitePage() {
   useEffect(() => {
     loadDataN3();
   }, [loadDataN3]);
+
+  // Chargement Niveau 4 (Impact des visites terrain)
+  const loadDataN4 = useCallback(async () => {
+    if (!token || !selectedMois) return;
+    setLoadingN4(true);
+    try {
+      const [rapportRes, evoRes, detailRes] = await Promise.allSettled([
+        getRapportImpact(token, selectedMois),
+        getEvolutionParCommercial(token, selectedMois),
+        getDetailEvolution(token, selectedMois, detailPage, 20),
+      ]);
+      if (rapportRes.status === 'fulfilled') setRapportImpact(rapportRes.value);
+      if (evoRes.status === 'fulfilled') setEvolutionParCommercial(evoRes.value);
+      if (detailRes.status === 'fulfilled') setDetailEvolution(detailRes.value);
+    } catch (err) {
+      console.warn('Erreur Niveau 4:', err);
+    } finally {
+      setLoadingN4(false);
+    }
+  }, [token, selectedMois, detailPage]);
+
+  useEffect(() => {
+    loadDataN4();
+  }, [loadDataN4]);
 
   function logError(err) {
     console.error('Erreur Activite:', err);
@@ -1558,6 +1592,511 @@ export default function LectureActivitePage() {
                     )}
                   </table>
                 </div>
+              )}
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          NIVEAU 4 — Impact des visites terrain
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="activite-card-section">
+        {loadingN4 && !rapportImpact ? (
+          <div className="activite-n2-empty">
+            <div className="activite-n2-empty-spinner" />
+            <p>Chargement du rapport d'impact (Niveau 4)...</p>
+          </div>
+        ) : (
+          <>
+            {/* Bloc 1 — Rapport d'impact des actions VACTIS */}
+            <div className="activite-section-header">
+              <div>
+                <h2 className="activite-section-title">
+                  <span className="activite-section-badge">Niveau 4</span>
+                  Rapport d'impact des actions VACTIS
+                </h2>
+                <p className="activite-section-subtitle">
+                  Lecture des visites terrain et de l'évolution observée après visites VACTIS, sans attribution causale.
+                </p>
+              </div>
+            </div>
+
+            {rapportImpact && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+                {/* 1.1 Vue globale des visites terrain */}
+                <div>
+                  <div className="activite-kpi-sub" style={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, fontSize: '0.7rem', color: '#64748b', marginBottom: '0.6rem' }}>
+                    VUE GLOBALE DES VISITES TERRAIN — Toutes visites confondues, VACTIS et hors VACTIS.
+                  </div>
+                  <div className="activite-kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))' }}>
+                    <div className="activite-kpi-card">
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title">TOTAL VISITES RENSEIGNÉES</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--blue"><ActiviteIcon name="calendar" size={14} /></span>
+                      </div>
+                      <div className="activite-kpi-value">{formatNumber(rapportImpact.totalVisitesRenseignees)}</div>
+                      <div className="activite-kpi-sub">Retours terrain lus.</div>
+                    </div>
+
+                    <div className="activite-kpi-card" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }}>
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title" style={{ color: '#166534' }}>TOTAL VISITES RÉALISÉES</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--green">✓</span>
+                      </div>
+                      <div className="activite-kpi-value" style={{ color: '#15803d' }}>{formatNumber(rapportImpact.totalVisitesRealisees)}</div>
+                      <div className="activite-kpi-sub" style={{ color: '#166534' }}>Visites exécutées.</div>
+                    </div>
+
+                    <div className="activite-kpi-card">
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title">VISITES VACTIS RÉALISÉES</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--blue">🎯</span>
+                      </div>
+                      <div className="activite-kpi-value">{formatNumber(rapportImpact.visitesVactisRealisees)}</div>
+                      <div className="activite-kpi-sub">Issues d'actions VACTIS.</div>
+                    </div>
+
+                    <div className="activite-kpi-card">
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title">VISITES HORS VACTIS RÉALISÉES</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--purple">📝</span>
+                      </div>
+                      <div className="activite-kpi-value">{formatNumber(rapportImpact.visitesHorsVactisRealisees)}</div>
+                      <div className="activite-kpi-sub">Saisies terrain hors demande VACTIS.</div>
+                    </div>
+
+                    <div className="activite-kpi-card" style={{ backgroundColor: '#fff1f2', borderColor: '#fecdd3' }}>
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title" style={{ color: '#9f1239' }}>VISITES AVEC RÉCLAMATION</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--red">💬</span>
+                      </div>
+                      <div className="activite-kpi-value" style={{ color: '#be123c' }}>{formatNumber(rapportImpact.visitesAvecReclamation)}</div>
+                      <div className="activite-kpi-sub" style={{ color: '#9f1239' }}>Détails à traiter.</div>
+                    </div>
+
+                    <div className="activite-kpi-card" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }}>
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title" style={{ color: '#166534' }}>VISITES FAVORABLES</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--green">✓</span>
+                      </div>
+                      <div className="activite-kpi-value" style={{ color: '#15803d' }}>{formatNumber(rapportImpact.visitesFavorables)}</div>
+                      <div className="activite-kpi-sub" style={{ color: '#166534' }}>Qualification commerciale positive.</div>
+                    </div>
+
+                    <div className="activite-kpi-card" style={{ backgroundColor: '#fff7ed', borderColor: '#ffedd5' }}>
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title" style={{ color: '#9a3412' }}>DÉFAVORABLES / REFUS</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--amber">👎</span>
+                      </div>
+                      <div className="activite-kpi-value" style={{ color: '#c2410c' }}>{formatNumber(rapportImpact.visitesDefavorables)}</div>
+                      <div className="activite-kpi-sub" style={{ color: '#9a3412' }}>Freins déclarés.</div>
+                    </div>
+
+                    <div className="activite-kpi-card">
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title">SANS QUALIFICATION</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--gray"><ActiviteIcon name="calendar" size={14} /></span>
+                      </div>
+                      <div className="activite-kpi-value">{formatNumber(rapportImpact.visitesSansQualification)}</div>
+                      <div className="activite-kpi-sub">Statut visite absent.</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 1.2 Exécution des actions VACTIS */}
+                <div>
+                  <div className="activite-kpi-sub" style={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, fontSize: '0.7rem', color: '#64748b', marginBottom: '0.6rem' }}>
+                    EXÉCUTION DES ACTIONS VACTIS — Lecture globale, sans taux de non-réalisation par commercial.
+                  </div>
+                  <div className="activite-kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                    <div className="activite-kpi-card">
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title">ACTIONS VACTIS GÉNÉRÉES</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--blue">🎯</span>
+                      </div>
+                      <div className="activite-kpi-value">{formatNumber(rapportImpact.actionsVactisGenerees)}</div>
+                      <div className="activite-kpi-sub">Lignes d'actions mensuelles.</div>
+                    </div>
+
+                    <div className="activite-kpi-card" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }}>
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title" style={{ color: '#166534' }}>VACTIS RÉALISÉES</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--green">✓</span>
+                      </div>
+                      <div className="activite-kpi-value" style={{ color: '#15803d' }}>{formatNumber(rapportImpact.vactisRealisees)}</div>
+                      <div className="activite-kpi-sub" style={{ color: '#166534' }}>Visites exécutées.</div>
+                    </div>
+
+                    <div className="activite-kpi-card">
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title">VACTIS RENSEIGNÉES</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--blue">📋</span>
+                      </div>
+                      <div className="activite-kpi-value">{formatNumber(rapportImpact.vactisRenseignees)}</div>
+                      <div className="activite-kpi-sub">Retours associés.</div>
+                    </div>
+
+                    <div className="activite-kpi-card" style={{ backgroundColor: '#fefce8', borderColor: '#fef08a' }}>
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title" style={{ color: '#854d0e' }}>VACTIS NON RÉALISÉES</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--amber">⚠️</span>
+                      </div>
+                      <div className="activite-kpi-value" style={{ color: '#a16207' }}>{formatNumber(rapportImpact.vactisNonRealisees)}</div>
+                      <div className="activite-kpi-sub" style={{ color: '#854d0e' }}>Détails disponibles.</div>
+                    </div>
+
+                    <div className="activite-kpi-card">
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title">SANS RETOUR TERRAIN</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--gray">⊖</span>
+                      </div>
+                      <div className="activite-kpi-value">{formatNumber(rapportImpact.sanRetourTerrain)}</div>
+                      <div className="activite-kpi-sub">Actions VACTIS sans retour renseigné.</div>
+                    </div>
+
+                    <div className="activite-kpi-card">
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title">EXCLUES DIRECTION</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--gray">⊖</span>
+                      </div>
+                      <div className="activite-kpi-value">{formatNumber(rapportImpact.excluesDirection)}</div>
+                      <div className="activite-kpi-sub">Actions retirées du périmètre terrain.</div>
+                    </div>
+
+                    <div className="activite-kpi-card" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }}>
+                      <div className="activite-kpi-header">
+                        <span className="activite-kpi-title" style={{ color: '#166534' }}>TAUX RÉALISATION VACTIS HORS EXCLUSIONS</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--green">📊</span>
+                      </div>
+                      <div className="activite-kpi-value" style={{ color: '#15803d' }}>
+                        {formatNumber(rapportImpact.tauxRealisation, 1)}%
+                      </div>
+                      <div className="activite-kpi-sub" style={{ color: '#166534' }}>Réalisées / actions hors exclusions.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Bloc 2 — Graphique empilé & Évolution observée */}
+            {evolutionParCommercial && (
+              <div className="activite-n4-grid" style={{ marginBottom: '2rem' }}>
+                {/* 2.1 Graphique empilé */}
+                <div className="activite-cr-card" style={{ padding: '1.25rem' }}>
+                  <div className="activite-cr-header">
+                    <div>
+                      <h3 className="activite-cr-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span>📊</span> VISITES RÉALISÉES PAR COMMERCIAL ET TYPE DE VISITE
+                      </h3>
+                      <p className="activite-cr-subtitle">
+                        Graphique empilé des visites réalisées uniquement, classées par type_visite puis type_action.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Légende type_visite */}
+                  <div className="activite-n4-legend">
+                    {[
+                      { key: 'FIDELISATION', label: 'Fidélisation', color: '#10b981' },
+                      { key: 'RETENTION', label: 'Rétention', color: '#ef4444' },
+                      { key: 'PROSPECTION', label: 'Prospection', color: '#06b6d4' },
+                      { key: 'DIAGNOSTIC', label: 'Diagnostic', color: '#f59e0b' },
+                      { key: 'RECONNAISSANCE', label: 'Reconnaissance', color: '#8b5cf6' },
+                      { key: 'URGENCE_SILENCE', label: 'Urgence silence', color: '#f97316' },
+                      { key: 'AUTRE', label: 'Autre', color: '#6b7280' },
+                    ].map((item) => (
+                      <div key={item.key} className="activite-n4-legend-item">
+                        <span className="activite-n4-legend-dot" style={{ backgroundColor: item.color }} />
+                        <span>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Liste par commercial */}
+                  {(evolutionParCommercial.visitesParCommercial || []).map((c) => {
+                    const total = c.totalRealisees || 1;
+                    const types = c.parTypeVisite || {};
+                    return (
+                      <div key={c.commercial} className="activite-n4-comm-card">
+                        <div className="activite-n4-comm-header">
+                          <span className="activite-n4-comm-name">{c.commercial}</span>
+                          <span className="activite-n4-comm-total">{c.totalRealisees}</span>
+                        </div>
+                        {/* Bar empilée */}
+                        <div className="activite-n4-stacked-bar">
+                          {[
+                            { key: 'FIDELISATION', color: '#10b981' },
+                            { key: 'RETENTION', color: '#ef4444' },
+                            { key: 'PROSPECTION', color: '#06b6d4' },
+                            { key: 'DIAGNOSTIC', color: '#f59e0b' },
+                            { key: 'RECONNAISSANCE', color: '#8b5cf6' },
+                            { key: 'URGENCE_SILENCE', color: '#f97316' },
+                            { key: 'AUTRE', color: '#6b7280' },
+                          ].map((t) => {
+                            const count = types[t.key] || 0;
+                            if (count === 0) return null;
+                            const pct = (count / total) * 100;
+                            return (
+                              <div
+                                key={t.key}
+                                className="activite-n4-stacked-seg"
+                                style={{ width: `${pct}%`, backgroundColor: t.color }}
+                                title={`${t.key}: ${count} (${Math.round(pct)}%)`}
+                              />
+                            );
+                          })}
+                        </div>
+                        {/* Grille des compteurs par type */}
+                        <div className="activite-n4-types-grid">
+                          {[
+                            { key: 'FIDELISATION', label: 'Fidélisation' },
+                            { key: 'RETENTION', label: 'Rétention' },
+                            { key: 'PROSPECTION', label: 'Prospection' },
+                            { key: 'DIAGNOSTIC', label: 'Diagnostic' },
+                            { key: 'RECONNAISSANCE', label: 'Reconnaissance' },
+                            { key: 'URGENCE_SILENCE', label: 'Urgence silence' },
+                            { key: 'AUTRE', label: 'Autre' },
+                          ].map((t) => (
+                            <div key={t.key} className="activite-n4-type-item">
+                              <span>{t.label}</span>
+                              <span className="activite-n4-type-count">{types[t.key] || 0}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 2.2 Évolution observée après visites VACTIS */}
+                <div className="activite-cr-card" style={{ padding: '1.25rem' }}>
+                  <div className="activite-cr-header">
+                    <div>
+                      <h3 className="activite-cr-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span>🎯</span> ÉVOLUTION OBSERVÉE APRÈS VISITES VACTIS
+                      </h3>
+                      <p className="activite-cr-subtitle">
+                        Classification favorable / stable / défavorable / non observable.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Compteurs globaux avec barres d'indicateurs */}
+                  {(() => {
+                    const totalG = evolutionParCommercial.totalAnalyse || 1;
+                    const favG = evolutionParCommercial.favorable || 0;
+                    const staG = evolutionParCommercial.stable || 0;
+                    const defG = evolutionParCommercial.defavorable || 0;
+                    const nonObsG = evolutionParCommercial.nonObservable || 0;
+
+                    return (
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        {[
+                          { label: 'Favorable', count: favG, color: '#10b981' },
+                          { label: 'Stable', count: staG, color: '#475569' },
+                          { label: 'Défavorable', count: defG, color: '#ef4444' },
+                          { label: 'Non observable', count: nonObsG, color: '#f59e0b' },
+                        ].map((item) => (
+                          <div key={item.label} className="activite-n4-evo-item">
+                            <span className="activite-n4-evo-label">{item.label}</span>
+                            <div className="activite-n4-evo-bar-bg">
+                              <div
+                                className="activite-n4-evo-bar-fill"
+                                style={{
+                                  width: `${Math.min(100, (item.count / totalG) * 100)}%`,
+                                  backgroundColor: item.color,
+                                }}
+                              />
+                            </div>
+                            <span className="activite-n4-evo-count">{item.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Évolution observée par commercial */}
+                  <div>
+                    <h4 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#475569', marginBottom: '0.25rem' }}>
+                      ÉVOLUTION OBSERVÉE PAR COMMERCIAL
+                    </h4>
+                    <p style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.85rem' }}>
+                      Lecture par commercial des médecins visités suite aux actions VACTIS.
+                    </p>
+
+                    {(evolutionParCommercial.evolutionParCommercial || []).map((c) => {
+                      const totalC = c.totalAnalyse || 1;
+                      const favP = (c.favorable / totalC) * 100;
+                      const staP = (c.stable / totalC) * 100;
+                      const defP = (c.defavorable / totalC) * 100;
+                      const nonObsP = (c.nonObservable / totalC) * 100;
+
+                      return (
+                        <div key={c.commercial} className="activite-n4-comm-evo-card">
+                          <div className="activite-n4-comm-evo-header">
+                            <span className="activite-n4-comm-evo-title">{c.commercial}</span>
+                            <span className="activite-n4-table-badge">{c.totalAnalyse}</span>
+                          </div>
+                          <div className="activite-n4-comm-evo-sub" style={{ marginBottom: '0.4rem' }}>
+                            {c.totalAnalyse} visites VACTIS analysées : taux favorable {formatNumber(c.tauxFavorable, 1)}%
+                          </div>
+
+                          {/* Bar multi-couleurs */}
+                          <div className="activite-n4-comm-evo-bar">
+                            <div style={{ width: `${favP}%`, backgroundColor: '#10b981' }} title={`Favorable: ${c.favorable}`} />
+                            <div style={{ width: `${staP}%`, backgroundColor: '#475569' }} title={`Stable: ${c.stable}`} />
+                            <div style={{ width: `${defP}%`, backgroundColor: '#ef4444' }} title={`Défavorable: ${c.defavorable}`} />
+                            <div style={{ width: `${nonObsP}%`, backgroundColor: '#f59e0b' }} title={`Non observable: ${c.nonObservable}`} />
+                          </div>
+
+                          {/* Ligne récapitulative */}
+                          <div className="activite-n4-comm-evo-stats">
+                            <span className="activite-n4-comm-evo-stat-item">
+                              <span style={{ color: '#10b981', fontWeight: 700 }}>• Favorable</span> {c.favorable}
+                            </span>
+                            <span className="activite-n4-comm-evo-stat-item">
+                              <span style={{ color: '#475569', fontWeight: 700 }}>• Stable</span> {c.stable}
+                            </span>
+                            <span className="activite-n4-comm-evo-stat-item">
+                              <span style={{ color: '#ef4444', fontWeight: 700 }}>• Défavorable</span> {c.defavorable}
+                            </span>
+                            <span className="activite-n4-comm-evo-stat-item">
+                              <span style={{ color: '#f59e0b', fontWeight: 700 }}>• Non observable</span> {c.nonObservable}
+                            </span>
+                            <span style={{ marginLeft: 'auto', fontWeight: 700 }}>
+                              Taux favorable {formatNumber(c.tauxFavorable, 1)}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Bloc 3 — Détail évolution post-visite VACTIS */}
+            <div className="activite-cr-card" style={{ padding: '1.25rem' }}>
+              <div className="activite-n4-table-header-row">
+                <div>
+                  <h3 className="activite-cr-title">DÉTAIL ÉVOLUTION POST-VISITE VACTIS</h3>
+                  <p className="activite-cr-subtitle">
+                    Lecture médecin par médecin : statut avant, qualification terrain, statut après.
+                  </p>
+                </div>
+                {detailEvolution && (
+                  <span className="activite-n4-table-badge">
+                    {detailEvolution.totalLignes} lignes
+                  </span>
+                )}
+              </div>
+
+              {detailEvolution && detailEvolution.lignes && detailEvolution.lignes.length > 0 ? (
+                <>
+                  <div className="activite-n4-table-container">
+                    <table className="activite-n4-table">
+                      <thead>
+                        <tr>
+                          <th>Médecin</th>
+                          <th>Commercial</th>
+                          <th>Type action / visite</th>
+                          <th>Statut avant</th>
+                          <th>Qualification terrain</th>
+                          <th>Statut après</th>
+                          <th>Évolution</th>
+                          <th>Commentaire</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detailEvolution.lignes.map((l, idx) => (
+                          <tr key={l.retourTerrainId || idx}>
+                            <td style={{ fontWeight: 700, color: '#0f172a' }}>{l.nomMedecin}</td>
+                            <td>{l.commercial}</td>
+                            <td>
+                              <span className="activite-n4-type-tag">{l.typeActionVisite}</span>
+                            </td>
+                            <td>
+                              <span className="activite-n4-statut-text">{l.statutAvant}</span>
+                            </td>
+                            <td>
+                              <span className={`activite-badge activite-badge--${
+                                l.qualification === 'favorable' ? 'green' : l.qualification === 'defavorable' ? 'red' : 'gray'
+                              }`}>
+                                {l.qualification}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="activite-n4-statut-text">{l.statutApres}</span>
+                            </td>
+                            <td>
+                              <span className={`activite-badge activite-badge--${
+                                l.evolution === 'FAVORABLE' ? 'green' : l.evolution === 'DEFAVORABLE' ? 'red' : l.evolution === 'NON_OBSERVABLE' ? 'amber' : 'gray'
+                              }`}>
+                                {l.evolution === 'FAVORABLE' ? 'Favorable' : l.evolution === 'DEFAVORABLE' ? 'Défavorable' : l.evolution === 'STABLE' ? 'Stable' : 'Non observable'}
+                              </span>
+                            </td>
+                            <td className="activite-modal-comment">{l.commentaire || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Contrôles de pagination */}
+                  {detailEvolution.totalPages > 1 && (
+                    <div className="activite-n4-pagination">
+                      <span className="activite-n4-page-info">
+                        Page {detailEvolution.page + 1} sur {detailEvolution.totalPages} ({detailEvolution.totalLignes} lignes)
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.35rem' }}>
+                        <button
+                          type="button"
+                          className="activite-n4-page-btn"
+                          disabled={detailPage === 0}
+                          onClick={() => setDetailPage((p) => Math.max(0, p - 1))}
+                        >
+                          ‹ Précédent
+                        </button>
+
+                        {Array.from({ length: detailEvolution.totalPages }, (_, i) => i)
+                          .filter((p) => p === 0 || p === detailEvolution.totalPages - 1 || Math.abs(p - detailPage) <= 1)
+                          .reduce((acc, p, i, arr) => {
+                            if (i > 0 && p - arr[i - 1] > 1) acc.push('...');
+                            acc.push(p);
+                            return acc;
+                          }, [])
+                          .map((p, idx) =>
+                            p === '...' ? (
+                              <span key={`ell-${idx}`} style={{ padding: '0.3rem 0.5rem', color: '#94a3b8' }}>…</span>
+                            ) : (
+                              <button
+                                key={p}
+                                type="button"
+                                className={`activite-n4-page-btn ${p === detailPage ? 'activite-n4-page-btn--active' : ''}`}
+                                onClick={() => setDetailPage(p)}
+                              >
+                                {p + 1}
+                              </button>
+                            )
+                          )}
+
+                        <button
+                          type="button"
+                          className="activite-n4-page-btn"
+                          disabled={detailPage >= detailEvolution.totalPages - 1}
+                          onClick={() => setDetailPage((p) => p + 1)}
+                        >
+                          Suivant ›
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="activite-n2-empty" style={{ padding: '2rem 0' }}>
+                  Aucune donnée disponible pour le détail post-visite VACTIS sur ce mois.
+                </p>
               )}
             </div>
           </>

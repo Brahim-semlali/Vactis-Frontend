@@ -73,3 +73,22 @@ export async function getCompteRenduTerrain(token, mois) {
   return activiteRequest(`/api/activite/terrain/compte-rendu${query}`, token);
 }
 
+// --- Niveau 4 — Impact des visites terrain ---
+
+export async function getRapportImpact(token, mois) {
+  const query = mois ? `?mois=${encodeURIComponent(mois)}` : '';
+  return activiteRequest(`/api/activite/impact/rapport${query}`, token);
+}
+
+export async function getEvolutionParCommercial(token, mois) {
+  const query = mois ? `?mois=${encodeURIComponent(mois)}` : '';
+  return activiteRequest(`/api/activite/impact/par-commercial${query}`, token);
+}
+
+export async function getDetailEvolution(token, mois, page = 0, taille = 20) {
+  const params = new URLSearchParams();
+  if (mois) params.append('mois', mois);
+  params.append('page', page);
+  params.append('taille', taille);
+  return activiteRequest(`/api/activite/impact/detail?${params.toString()}`, token);
+}

@@ -2875,6 +2875,25 @@ input {
   color: #0f172a;
   margin: 0;
   letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Badge inline dans les titres de section (ex. "Niveau 4") */
+.activite-section-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.35rem;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  flex-shrink: 0;
 }
 
 .activite-section-subtitle {
@@ -4793,4 +4812,311 @@ input {
   color: #475569;
   white-space: normal;
   word-break: break-word;
+}
+
+/* ══════════════════════════════════════════════
+   Niveau 4 — Impact des visites terrain
+══════════════════════════════════════════════ */
+
+.activite-n4-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+  .activite-n4-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Legend items for stacked chart */
+.activite-n4-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  margin-bottom: 1.1rem;
+  padding: 0.6rem 0.85rem;
+  background-color: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 0.5rem;
+}
+
+.activite-n4-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.activite-n4-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Stacked commercial bars */
+.activite-n4-comm-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  padding: 0.9rem;
+  margin-bottom: 0.85rem;
+}
+
+.activite-n4-comm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.activite-n4-comm-name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.activite-n4-comm-total {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #475569;
+}
+
+.activite-n4-stacked-bar {
+  display: flex;
+  height: 12px;
+  width: 100%;
+  background-color: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 0.65rem;
+}
+
+.activite-n4-stacked-seg {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.activite-n4-types-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.3rem 0.6rem;
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+.activite-n4-type-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.activite-n4-type-count {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Evolution indicator bars (Right column) */
+.activite-n4-evo-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.activite-n4-evo-label {
+  width: 110px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #334155;
+  flex-shrink: 0;
+}
+
+.activite-n4-evo-bar-bg {
+  flex: 1;
+  height: 14px;
+  background-color: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.activite-n4-evo-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.activite-n4-evo-count {
+  width: 32px;
+  text-align: right;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #1e293b;
+  flex-shrink: 0;
+}
+
+/* Per commercial evolution summary card */
+.activite-n4-comm-evo-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+  padding: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.activite-n4-comm-evo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.activite-n4-comm-evo-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.activite-n4-comm-evo-sub {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.activite-n4-comm-evo-bar {
+  display: flex;
+  height: 10px;
+  width: 100%;
+  background-color: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.activite-n4-comm-evo-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+.activite-n4-comm-evo-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Detail Table (Block 3) */
+.activite-n4-table-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.activite-n4-table-badge {
+  display: inline-block;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background-color: #f1f5f9;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.activite-n4-table-container {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.65rem;
+}
+
+.activite-n4-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.activite-n4-table th {
+  background-color: #f8fafc;
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.7rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.activite-n4-table td {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.activite-n4-table tr:hover td {
+  background-color: #f8fafc;
+}
+
+.activite-n4-type-tag {
+  font-family: monospace;
+  font-size: 0.72rem;
+  color: #475569;
+  background-color: #f1f5f9;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  display: inline-block;
+}
+
+.activite-n4-statut-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.activite-n4-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.2rem 0;
+  margin-top: 0.5rem;
+}
+
+.activite-n4-page-info {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.activite-n4-page-btn {
+  padding: 0.3rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  background-color: #fff;
+  color: #334155;
+  border-radius: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.activite-n4-page-btn:hover:not(:disabled) {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.activite-n4-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.activite-n4-page-btn--active {
+  background-color: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
 }
