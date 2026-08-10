@@ -197,6 +197,44 @@ function ActiviteIcon({ name, size = 18 }) {
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
         </svg>
       );
+    case 'target':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="6" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      );
+    case 'fileEdit':
+      return (
+        <svg {...props}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="12" y1="18" x2="12" y2="12" />
+          <line x1="9" y1="15" x2="15" y2="15" />
+        </svg>
+      );
+    case 'messageCircle':
+      return (
+        <svg {...props}>
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </svg>
+      );
+    case 'ban':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="10" />
+          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+        </svg>
+      );
+    case 'helpCircle':
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -1642,7 +1680,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }}>
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title" style={{ color: '#166534' }}>TOTAL VISITES RÉALISÉES</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--green">✓</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--green"><ActiviteIcon name="checkCircle" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value" style={{ color: '#15803d' }}>{formatNumber(rapportImpact.totalVisitesRealisees)}</div>
                       <div className="activite-kpi-sub" style={{ color: '#166534' }}>Visites exécutées.</div>
@@ -1651,7 +1689,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card">
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title">VISITES VACTIS RÉALISÉES</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--blue">🎯</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--blue"><ActiviteIcon name="target" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value">{formatNumber(rapportImpact.visitesVactisRealisees)}</div>
                       <div className="activite-kpi-sub">Issues d'actions VACTIS.</div>
@@ -1660,7 +1698,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card">
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title">VISITES HORS VACTIS RÉALISÉES</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--purple">📝</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--purple"><ActiviteIcon name="fileEdit" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value">{formatNumber(rapportImpact.visitesHorsVactisRealisees)}</div>
                       <div className="activite-kpi-sub">Saisies terrain hors demande VACTIS.</div>
@@ -1669,7 +1707,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card" style={{ backgroundColor: '#fff1f2', borderColor: '#fecdd3' }}>
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title" style={{ color: '#9f1239' }}>VISITES AVEC RÉCLAMATION</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--red">💬</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--red"><ActiviteIcon name="messageCircle" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value" style={{ color: '#be123c' }}>{formatNumber(rapportImpact.visitesAvecReclamation)}</div>
                       <div className="activite-kpi-sub" style={{ color: '#9f1239' }}>Détails à traiter.</div>
@@ -1678,7 +1716,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }}>
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title" style={{ color: '#166534' }}>VISITES FAVORABLES</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--green">✓</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--green"><ActiviteIcon name="thumbsUp" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value" style={{ color: '#15803d' }}>{formatNumber(rapportImpact.visitesFavorables)}</div>
                       <div className="activite-kpi-sub" style={{ color: '#166534' }}>Qualification commerciale positive.</div>
@@ -1687,7 +1725,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card" style={{ backgroundColor: '#fff7ed', borderColor: '#ffedd5' }}>
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title" style={{ color: '#9a3412' }}>DÉFAVORABLES / REFUS</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--amber">👎</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--amber"><ActiviteIcon name="thumbsDown" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value" style={{ color: '#c2410c' }}>{formatNumber(rapportImpact.visitesDefavorables)}</div>
                       <div className="activite-kpi-sub" style={{ color: '#9a3412' }}>Freins déclarés.</div>
@@ -1696,7 +1734,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card">
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title">SANS QUALIFICATION</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--gray"><ActiviteIcon name="calendar" size={14} /></span>
+                        <span className="activite-kpi-badge activite-kpi-badge--gray"><ActiviteIcon name="helpCircle" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value">{formatNumber(rapportImpact.visitesSansQualification)}</div>
                       <div className="activite-kpi-sub">Statut visite absent.</div>
@@ -1713,7 +1751,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card">
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title">ACTIONS VACTIS GÉNÉRÉES</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--blue">🎯</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--blue"><ActiviteIcon name="target" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value">{formatNumber(rapportImpact.actionsVactisGenerees)}</div>
                       <div className="activite-kpi-sub">Lignes d'actions mensuelles.</div>
@@ -1722,7 +1760,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }}>
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title" style={{ color: '#166534' }}>VACTIS RÉALISÉES</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--green">✓</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--green"><ActiviteIcon name="checkCircle" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value" style={{ color: '#15803d' }}>{formatNumber(rapportImpact.vactisRealisees)}</div>
                       <div className="activite-kpi-sub" style={{ color: '#166534' }}>Visites exécutées.</div>
@@ -1731,7 +1769,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card">
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title">VACTIS RENSEIGNÉES</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--blue">📋</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--blue"><ActiviteIcon name="clipboard" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value">{formatNumber(rapportImpact.vactisRenseignees)}</div>
                       <div className="activite-kpi-sub">Retours associés.</div>
@@ -1740,7 +1778,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card" style={{ backgroundColor: '#fefce8', borderColor: '#fef08a' }}>
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title" style={{ color: '#854d0e' }}>VACTIS NON RÉALISÉES</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--amber">⚠️</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--amber"><ActiviteIcon name="alert" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value" style={{ color: '#a16207' }}>{formatNumber(rapportImpact.vactisNonRealisees)}</div>
                       <div className="activite-kpi-sub" style={{ color: '#854d0e' }}>Détails disponibles.</div>
@@ -1749,7 +1787,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card">
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title">SANS RETOUR TERRAIN</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--gray">⊖</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--gray"><ActiviteIcon name="ban" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value">{formatNumber(rapportImpact.sanRetourTerrain)}</div>
                       <div className="activite-kpi-sub">Actions VACTIS sans retour renseigné.</div>
@@ -1758,7 +1796,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card">
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title">EXCLUES DIRECTION</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--gray">⊖</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--gray"><ActiviteIcon name="lock" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value">{formatNumber(rapportImpact.excluesDirection)}</div>
                       <div className="activite-kpi-sub">Actions retirées du périmètre terrain.</div>
@@ -1767,7 +1805,7 @@ export default function LectureActivitePage() {
                     <div className="activite-kpi-card" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0' }}>
                       <div className="activite-kpi-header">
                         <span className="activite-kpi-title" style={{ color: '#166534' }}>TAUX RÉALISATION VACTIS HORS EXCLUSIONS</span>
-                        <span className="activite-kpi-badge activite-kpi-badge--green">📊</span>
+                        <span className="activite-kpi-badge activite-kpi-badge--green"><ActiviteIcon name="chart" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value" style={{ color: '#15803d' }}>
                         {formatNumber(rapportImpact.tauxRealisation, 1)}%
@@ -1787,7 +1825,7 @@ export default function LectureActivitePage() {
                   <div className="activite-cr-header">
                     <div>
                       <h3 className="activite-cr-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span>📊</span> VISITES RÉALISÉES PAR COMMERCIAL ET TYPE DE VISITE
+                        <ActiviteIcon name="chart" size={16} /> VISITES RÉALISÉES PAR COMMERCIAL ET TYPE DE VISITE
                       </h3>
                       <p className="activite-cr-subtitle">
                         Graphique empilé des visites réalisées uniquement, classées par type_visite puis type_action.
@@ -1874,7 +1912,7 @@ export default function LectureActivitePage() {
                   <div className="activite-cr-header">
                     <div>
                       <h3 className="activite-cr-title" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span>🎯</span> ÉVOLUTION OBSERVÉE APRÈS VISITES VACTIS
+                        <ActiviteIcon name="target" size={16} /> ÉVOLUTION OBSERVÉE APRÈS VISITES VACTIS
                       </h3>
                       <p className="activite-cr-subtitle">
                         Classification favorable / stable / défavorable / non observable.

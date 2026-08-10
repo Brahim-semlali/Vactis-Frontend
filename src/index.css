@@ -2975,6 +2975,11 @@ input {
   color: #dc2626;
 }
 
+.activite-kpi-badge--gray {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 .activite-kpi-value {
   font-size: 1.6rem;
   font-weight: 800;
