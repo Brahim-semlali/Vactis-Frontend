@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   getActionsVactis,
   getComparaison,
@@ -15,6 +15,66 @@ import {
 } from '../../api/activite.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
+import {
+  getEvolutionMeta,
+  getQualificationMeta,
+  getTypeActionMeta,
+  getVactisStatutMeta,
+} from './activiteLabels.js';
+
+function ActiviteMetaBadge({ meta, className = '' }) {
+  const badgeRef = useRef(null);
+  const [tooltip, setTooltip] = useState(null);
+
+  if (!meta) return null;
+
+  const showTooltip = () => {
+    const rect = badgeRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const maxWidth = 260;
+    const left = Math.min(
+      Math.max(12, rect.left + rect.width / 2 - maxWidth / 2),
+      window.innerWidth - maxWidth - 12,
+    );
+
+    setTooltip({
+      top: rect.bottom + 8,
+      left,
+      width: maxWidth,
+    });
+  };
+
+  const hideTooltip = () => setTooltip(null);
+
+  return (
+    <>
+      <span
+        ref={badgeRef}
+        className={`activite-meta-badge activite-meta-badge--${meta.tone} ${className}`.trim()}
+        tabIndex={0}
+        title={meta.description}
+        aria-label={`${meta.label} — ${meta.description}`}
+        onMouseEnter={showTooltip}
+        onMouseLeave={hideTooltip}
+        onFocus={showTooltip}
+        onBlur={hideTooltip}
+      >
+        <span className="activite-meta-badge__label">{meta.label}</span>
+      </span>
+
+      {tooltip && (
+        <span
+          className="activite-meta-badge__tooltip activite-meta-badge__tooltip--fixed"
+          style={{ top: tooltip.top, left: tooltip.left, width: tooltip.width }}
+          role="tooltip"
+        >
+          {meta.description}
+        </span>
+      )}
+    </>
+  );
+}
 
 function formatNumber(val, decimals = 0) {
   if (val === null || val === undefined || isNaN(val)) return '0';
@@ -2052,27 +2112,19 @@ export default function LectureActivitePage() {
                             <td style={{ fontWeight: 700, color: '#0f172a' }}>{l.nomMedecin}</td>
                             <td>{l.commercial}</td>
                             <td>
-                              <span className="activite-n4-type-tag">{l.typeActionVisite}</span>
+                              <ActiviteMetaBadge meta={getTypeActionMeta(l.typeActionVisite, l.typeVisite)} />
                             </td>
                             <td>
-                              <span className="activite-n4-statut-text">{l.statutAvant}</span>
+                              <ActiviteMetaBadge meta={getVactisStatutMeta(l.statutAvant)} />
                             </td>
                             <td>
-                              <span className={`activite-badge activite-badge--${
-                                l.qualification === 'favorable' ? 'green' : l.qualification === 'defavorable' ? 'red' : 'gray'
-                              }`}>
-                                {l.qualification}
-                              </span>
+                              <ActiviteMetaBadge meta={getQualificationMeta(l.qualification)} />
                             </td>
                             <td>
-                              <span className="activite-n4-statut-text">{l.statutApres}</span>
+                              <ActiviteMetaBadge meta={getVactisStatutMeta(l.statutApres)} />
                             </td>
                             <td>
-                              <span className={`activite-badge activite-badge--${
-                                l.evolution === 'FAVORABLE' ? 'green' : l.evolution === 'DEFAVORABLE' ? 'red' : l.evolution === 'NON_OBSERVABLE' ? 'amber' : 'gray'
-                              }`}>
-                                {l.evolution === 'FAVORABLE' ? 'Favorable' : l.evolution === 'DEFAVORABLE' ? 'Défavorable' : l.evolution === 'STABLE' ? 'Stable' : 'Non observable'}
-                              </span>
+                              <ActiviteMetaBadge meta={getEvolutionMeta(l.evolution)} />
                             </td>
                             <td className="activite-modal-comment">{l.commentaire || '—'}</td>
                           </tr>
