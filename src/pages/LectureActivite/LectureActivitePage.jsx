@@ -1703,7 +1703,7 @@ export default function LectureActivitePage() {
         {loadingN4 && !rapportImpact ? (
           <div className="activite-n2-empty">
             <div className="activite-n2-empty-spinner" />
-            <p>Chargement du rapport d'impact (Niveau 4)...</p>
+            <p>Chargement du rapport d'impact...</p>
           </div>
         ) : (
           <>
@@ -1711,7 +1711,6 @@ export default function LectureActivitePage() {
             <div className="activite-section-header">
               <div>
                 <h2 className="activite-section-title">
-                  <span className="activite-section-badge">Niveau 4</span>
                   Rapport d'impact des actions VACTIS
                 </h2>
                 <p className="activite-section-subtitle">
