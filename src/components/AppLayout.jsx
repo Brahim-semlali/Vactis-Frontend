@@ -29,7 +29,7 @@ export default function AppLayout({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f7f9] text-slate-900 flex flex-row font-sans antialiased selection:bg-teal-500 selection:text-white">
+    <div className="min-h-screen bg-[#f0f2f5] text-slate-900 flex flex-row font-sans antialiased selection:bg-teal-500 selection:text-white">
       {/* Sidebar */}
       <Sidebar
         activeRoute={activeRoute}
@@ -38,13 +38,10 @@ export default function AppLayout({ children }) {
         onToggleCollapse={() => setCollapsed((value) => !value)}
       />
 
-      {/* Main Container */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#f4f7f9] relative">
-        {/* Topbar Header (Z-index 99999 absolu au-dessus de TOUT le contenu défilant) */}
-        <header
-          className="h-16 px-6 md:px-8 bg-white border-b border-slate-200 flex items-center justify-between sticky top-0 z-[99999] shadow-xs shrink-0"
-          style={{ backgroundColor: '#ffffff', opacity: 1, zIndex: 99999, position: 'sticky', top: 0 }}
-        >
+      {/* Right Column Container - Single Continuous Document Flow */}
+      <div className="flex-1 flex flex-col min-w-0 bg-[#f0f2f5]">
+        {/* Topbar Header (Défile naturellement avec la page entière vers le haut) */}
+        <header className="h-16 px-6 md:px-8 bg-white border-b border-slate-200 flex items-center justify-between shadow-2xs shrink-0" style={{ position: 'relative', top: 'auto' }}>
           <div className="flex items-center gap-2.5">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -63,7 +60,7 @@ export default function AppLayout({ children }) {
 
             <button
               type="button"
-              className="px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 transition-all active:scale-95 shadow-2xs"
+              className="px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 transition-all active:scale-95 shadow-2xs cursor-pointer"
               onClick={logout}
             >
               Déconnexion
@@ -71,8 +68,8 @@ export default function AppLayout({ children }) {
           </div>
         </header>
 
-        {/* Dynamic Main Body Content with z-1 Stacking Context */}
-        <main className="flex-1 p-6 md:p-8 w-full max-w-none relative z-1">
+        {/* Main Body Content - Scrolls seamlessly with header */}
+        <main className="flex-1 p-6 md:p-8 w-full max-w-none bg-[#f0f2f5]">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeRoute}

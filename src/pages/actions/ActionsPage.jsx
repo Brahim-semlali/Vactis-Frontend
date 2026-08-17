@@ -292,35 +292,54 @@ export default function ActionsPage() {
     loadActions();
   }, [loadActions]);
 
+  const scrollToActionRow = useCallback((targetId, fallbackPos) => {
+    const perform = () => {
+      if (targetId) {
+        const rowEl = document.getElementById(`action-row-${targetId}`);
+        if (rowEl) {
+          rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return true;
+        }
+      }
+      if (fallbackPos > 0) {
+        window.scrollTo({ top: fallbackPos, behavior: 'smooth' });
+        return true;
+      }
+      return false;
+    };
+
+    if (perform()) return;
+    const t1 = setTimeout(perform, 50);
+    const t2 = setTimeout(perform, 150);
+    const t3 = setTimeout(perform, 300);
+    const t4 = setTimeout(perform, 500);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
+  }, []);
+
   // Scroll automatique garanti à la ligne exacte de l'action sélectionnée lors du retour à la table
   useEffect(() => {
     if (viewMode === 'table' && selectedAction?.id) {
-      const scrollToAction = () => {
-        const rowEl = document.getElementById(`action-row-${selectedAction.id}`);
-        if (rowEl) {
-          rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else if (lastScrollPosition.current > 0) {
-          window.scrollTo({ top: lastScrollPosition.current, behavior: 'smooth' });
-        }
-      };
-
-      const t1 = setTimeout(scrollToAction, 50);
-      const t2 = setTimeout(scrollToAction, 200);
-      const t3 = setTimeout(scrollToAction, 400);
-
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-      };
+      return scrollToActionRow(selectedAction.id, lastScrollPosition.current);
     }
-  }, [viewMode, selectedAction?.id]);
+  }, [viewMode, selectedAction?.id, scrollToActionRow]);
 
   const handleSelectAction = (action) => {
     lastScrollPosition.current = window.scrollY || document.documentElement.scrollTop;
     setSelectedAction(action);
     setViewMode('detail');
-    window.scrollTo({ top: 120, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBackToTable = () => {
+    const targetId = selectedAction?.id;
+    const targetPos = lastScrollPosition.current;
+    setViewMode('table');
+    scrollToActionRow(targetId, targetPos);
   };
 
   const updateFilter = (key) => (event) => {
@@ -341,10 +360,9 @@ export default function ActionsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Pure White Designer Hero Section avec Bouton Style Soft Red (en bleu) */}
-      <Card className="p-6 bg-white border border-slate-200/90 rounded-2xl shadow-xs relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-80 h-80 bg-sky-200/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+      {/* Pure White Clean Hero Section */}
+      <Card className="p-6 bg-white border border-slate-200/90 rounded-2xl shadow-2xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-sky-50 text-sky-700 rounded-xl border border-sky-100">
@@ -398,7 +416,7 @@ export default function ActionsPage() {
                   placeholder="Rechercher un médecin, une action, un commercial…"
                   value={filters.search}
                   onChange={updateFilter('search')}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all"
                   aria-label="Rechercher une action"
                 />
               </div>
@@ -477,7 +495,7 @@ export default function ActionsPage() {
 
           {/* Error State */}
           {error && (
-            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold">
+            <div className="p-4 rounded-2xl bg-white border border-rose-200 text-rose-700 text-sm font-semibold shadow-2xs">
               {error}
             </div>
           )}
@@ -498,7 +516,7 @@ export default function ActionsPage() {
       )}
 
       {/* Main Container */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {viewMode === 'table' ? (
           /* VUE 1 : TABLE COMPLÈTE EN 100% */
           <motion.div
@@ -506,7 +524,7 @@ export default function ActionsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.15 }}
           >
             <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
               <div className="p-5 border-b border-slate-100 flex items-center justify-between">
@@ -640,17 +658,17 @@ export default function ActionsPage() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.15 }}
             className="space-y-6"
           >
-            {/* Header Bar avec grand bouton RETOUR ROUGE CLAIRE */}
+            {/* Header Bar avec grand bouton RETOUR BLANC PUR ET ROUGE */}
             <div className="flex flex-wrap items-center justify-between gap-4 p-2">
               <button
                 type="button"
-                onClick={() => setViewMode('table')}
-                className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 font-extrabold text-sm shadow-2xs hover:shadow-xs hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+                onClick={handleBackToTable}
+                className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-white hover:bg-slate-50 text-rose-700 border border-slate-200/90 font-extrabold text-sm shadow-2xs hover:shadow-xs hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
               >
-                <div className="p-1.5 bg-rose-200/80 rounded-xl text-rose-800">
+                <div className="p-1.5 bg-rose-50 text-rose-700 rounded-xl border border-rose-100">
                   <ActionsIcon name="arrow-left" size={20} />
                 </div>
                 <span>← Retour à la table des actions</span>
@@ -663,7 +681,7 @@ export default function ActionsPage() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setViewMode('table')}
+                  onClick={handleBackToTable}
                   className="p-2 rounded-full bg-white text-slate-400 hover:text-slate-900 hover:bg-slate-200 border border-slate-200 transition-all shadow-xs"
                   title="Fermer"
                 >
@@ -675,10 +693,9 @@ export default function ActionsPage() {
             {/* Contenu complet de l'action sur 100% de la largeur */}
             {selectedAction && (
               <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-md overflow-hidden p-6 md:p-8 space-y-8">
-                {/* Hero Header Pure White avec Accentuation Bleu Soft */}
-                <div className="p-6 rounded-2xl bg-gradient-to-r from-sky-50/90 via-white to-slate-50 border border-sky-100 text-slate-900 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
-                  <div className="absolute right-0 top-0 w-80 h-80 bg-sky-200/20 rounded-full blur-2xl pointer-events-none" />
-                  <div className="space-y-2 relative z-10">
+                {/* Hero Header Pure White */}
+                <div className="p-6 rounded-2xl bg-white border border-slate-200/80 text-slate-900 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <div className="p-3 bg-sky-50 text-sky-700 border border-sky-200 rounded-2xl shadow-xs">
                         <MenuIcon name="actions" />
@@ -690,7 +707,7 @@ export default function ActionsPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3 relative z-10">
+                  <div className="flex flex-wrap items-center gap-3">
                     {selectedAction.segment && (
                       <Badge variant={getBadgeVariant('segment', selectedAction.segment)} className="px-3.5 py-1.5 text-xs">
                         SEGMENT {selectedAction.segment}
@@ -782,18 +799,18 @@ export default function ActionsPage() {
                   {/* Colonne Droite (6 cols) : Silence Radio & Métriques avancées */}
                   <div className="lg:col-span-6 space-y-6">
                     {/* Silence Radio */}
-                    <div className="p-6 rounded-2xl bg-rose-50/70 border border-rose-100 space-y-4">
+                    <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-rose-800 font-bold text-xs">
+                        <div className="flex items-center gap-2 text-rose-700 font-extrabold text-xs">
                           <ActionsIcon name="heartbeat" size={16} />
                           <span>SILENCE RADIO</span>
                         </div>
                         <Badge variant="silence">SILENCE CRITIQUE</Badge>
                       </div>
-                      <div className="text-xs text-rose-900 font-medium space-y-1 pt-1">
-                        <p className="font-extrabold text-lg text-rose-950">44 jours sans activité</p>
-                        <p className="text-rose-700 text-[11px] uppercase tracking-wider font-bold pt-2">Fréquence habituelle détectée</p>
-                        <p className="text-rose-900 font-semibold text-sm">1 visite tous les 10 jours</p>
+                      <div className="text-xs text-slate-800 font-medium space-y-1 pt-1">
+                        <p className="font-extrabold text-lg text-slate-900">44 jours sans activité</p>
+                        <p className="text-slate-500 text-[11px] uppercase tracking-wider font-bold pt-2">Fréquence habituelle détectée</p>
+                        <p className="text-slate-800 font-semibold text-sm">1 visite tous les 10 jours</p>
                       </div>
                     </div>
                   </div>

@@ -200,7 +200,7 @@ function KpiCardComponent({ label, icon, tone, value }) {
     amber: 'bg-amber-50 text-amber-700 border-amber-100',
     blue: 'bg-sky-50 text-sky-700 border-sky-100',
     red: 'bg-rose-50 text-rose-700 border-rose-100',
-    purple: 'bg-purple-50 text-purple-700 border-purple-100',
+    purple: 'bg-sky-50 text-sky-700 border-sky-100',
   };
 
   const bgTone = toneClasses[tone] || toneClasses.sky;
@@ -321,29 +321,41 @@ export default function MedecinsPage() {
     }
   }, [selectedMedecin?.id]);
 
+  const scrollToDoctorRow = useCallback((targetId, fallbackPos) => {
+    const perform = () => {
+      if (targetId) {
+        const rowEl = document.getElementById(`medecin-row-${targetId}`);
+        if (rowEl) {
+          rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          return true;
+        }
+      }
+      if (fallbackPos > 0) {
+        window.scrollTo({ top: fallbackPos, behavior: 'smooth' });
+        return true;
+      }
+      return false;
+    };
+
+    if (perform()) return;
+    const t1 = setTimeout(perform, 50);
+    const t2 = setTimeout(perform, 150);
+    const t3 = setTimeout(perform, 300);
+    const t4 = setTimeout(perform, 500);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+    };
+  }, []);
+
   // Scroll automatique garanti à la ligne exacte du médecin sélectionné lors du retour à la table
   useEffect(() => {
     if (viewMode === 'table' && selectedMedecin?.id) {
-      const scrollToDoctor = () => {
-        const rowEl = document.getElementById(`medecin-row-${selectedMedecin.id}`);
-        if (rowEl) {
-          rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else if (lastScrollPosition.current > 0) {
-          window.scrollTo({ top: lastScrollPosition.current, behavior: 'smooth' });
-        }
-      };
-
-      const t1 = setTimeout(scrollToDoctor, 50);
-      const t2 = setTimeout(scrollToDoctor, 200);
-      const t3 = setTimeout(scrollToDoctor, 400);
-
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-      };
+      return scrollToDoctorRow(selectedMedecin.id, lastScrollPosition.current);
     }
-  }, [viewMode, selectedMedecin?.id]);
+  }, [viewMode, selectedMedecin?.id, scrollToDoctorRow]);
 
   useEffect(() => {
     if (!selectedMedecin?.id || !token) {
@@ -383,7 +395,14 @@ export default function MedecinsPage() {
     lastScrollPosition.current = window.scrollY || document.documentElement.scrollTop;
     setSelectedMedecin(medecin);
     setViewMode('detail');
-    window.scrollTo({ top: 120, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBackToTable = () => {
+    const targetId = selectedMedecin?.id;
+    const targetPos = lastScrollPosition.current;
+    setViewMode('table');
+    scrollToDoctorRow(targetId, targetPos);
   };
 
   const handleSaveNote = async () => {
@@ -484,10 +503,9 @@ export default function MedecinsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Pure White Designer Hero Section avec Bouton Style Soft Red (en bleu) */}
-      <Card className="p-6 bg-white border border-slate-200/90 rounded-2xl shadow-xs relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-80 h-80 bg-sky-200/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+      {/* Pure White Clean Hero Section */}
+      <Card className="p-6 bg-white border border-slate-200/90 rounded-2xl shadow-2xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-sky-50 text-sky-700 rounded-xl border border-sky-100">
@@ -541,7 +559,7 @@ export default function MedecinsPage() {
                   placeholder="Rechercher un médecin, une spécialité, un lieu…"
                   value={filters.search}
                   onChange={updateFilter('search')}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all"
                   aria-label="Rechercher un médecin"
                 />
               </div>
@@ -610,7 +628,7 @@ export default function MedecinsPage() {
 
           {/* Error State */}
           {error && (
-            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold">
+            <div className="p-4 rounded-2xl bg-white border border-rose-200 text-rose-700 text-sm font-semibold shadow-2xs">
               {error}
             </div>
           )}
@@ -631,7 +649,7 @@ export default function MedecinsPage() {
       )}
 
       {/* Main Container */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {viewMode === 'table' ? (
           /* VUE 1 : TABLE COMPLÈTE EN 100% */
           <motion.div
@@ -639,7 +657,7 @@ export default function MedecinsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.15 }}
           >
             <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
               <div className="p-5 border-b border-slate-100 flex items-center justify-between">
@@ -758,17 +776,17 @@ export default function MedecinsPage() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.15 }}
             className="space-y-6"
           >
-            {/* Header Bar avec grand bouton RETOUR ROUGE CLAIRE */}
+            {/* Header Bar avec grand bouton RETOUR BLANC PUR ET ROUGE */}
             <div className="flex flex-wrap items-center justify-between gap-4 p-2">
               <button
                 type="button"
-                onClick={() => setViewMode('table')}
-                className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/90 font-extrabold text-sm shadow-2xs hover:shadow-xs hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+                onClick={handleBackToTable}
+                className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-white hover:bg-slate-50 text-rose-700 border border-slate-200/90 font-extrabold text-sm shadow-2xs hover:shadow-xs hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
               >
-                <div className="p-1.5 bg-rose-200/80 rounded-xl text-rose-800">
+                <div className="p-1.5 bg-rose-50 text-rose-700 rounded-xl border border-rose-100">
                   <MedecinsIcon name="arrow-left" size={20} />
                 </div>
                 <span>← Retour à la table des médecins</span>
@@ -781,7 +799,7 @@ export default function MedecinsPage() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setViewMode('table')}
+                  onClick={handleBackToTable}
                   className="p-2 rounded-full bg-white text-slate-400 hover:text-slate-900 hover:bg-slate-200 border border-slate-200 transition-all shadow-xs"
                   title="Fermer"
                 >
@@ -793,10 +811,9 @@ export default function MedecinsPage() {
             {/* Contenu complet du médecin sur 100% de la largeur */}
             {selectedMedecin && (
               <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-md overflow-hidden p-6 md:p-8 space-y-8">
-                {/* Hero Card Pure White avec Accentuation Bleu Soft */}
-                <div className="p-6 rounded-2xl bg-gradient-to-r from-sky-50/90 via-white to-slate-50 border border-sky-100 text-slate-900 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
-                  <div className="absolute right-0 top-0 w-80 h-80 bg-sky-200/20 rounded-full blur-2xl pointer-events-none" />
-                  <div className="space-y-2 relative z-10">
+                {/* Hero Card Pure White */}
+                <div className="p-6 rounded-2xl bg-white border border-slate-200/80 text-slate-900 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <div className="p-3 bg-sky-50 text-sky-700 border border-sky-200 rounded-2xl shadow-xs">
                         <MenuIcon name="medecins" />
@@ -808,7 +825,7 @@ export default function MedecinsPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-3 relative z-10">
+                  <div className="flex flex-wrap items-center gap-3">
                     <Badge variant={getBadgeVariant('segment', selectedMedecin.segment)} className="px-3.5 py-1.5 text-xs">
                       {selectedMedecin.segment ? `SEGMENT ${selectedMedecin.segment}` : '—'}
                     </Badge>
@@ -906,7 +923,6 @@ export default function MedecinsPage() {
                       {noteError && <p className="text-xs font-semibold text-rose-600">{noteError}</p>}
                       {noteSaved && <p className="text-xs font-semibold text-emerald-600">Note enregistrée ✓</p>}
 
-                      {/* Bouton Enregistrer la note : MÊME DESIGN QUE LE BOUTON ROUGE MAIS EN BLEU */}
                       <button
                         type="button"
                         className="w-full py-3.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 font-extrabold text-sm shadow-2xs hover:shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
@@ -1036,7 +1052,6 @@ export default function MedecinsPage() {
                         {terrainError && <p className="text-xs font-semibold text-rose-600">{terrainError}</p>}
                         {terrainSaved && <p className="text-xs font-semibold text-emerald-600">Visite enregistrée ✓</p>}
 
-                        {/* Bouton Enregistrer la visite : MÊME DESIGN QUE LE BOUTON ROUGE MAIS EN BLEU */}
                         <button
                           type="submit"
                           className="w-full py-3.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 font-extrabold text-sm shadow-2xs hover:shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
