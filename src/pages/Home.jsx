@@ -40,15 +40,37 @@ function resolvePageContent(activeRoute, username, navigate) {
 
   if (isPublicRoute(activeRoute)) {
     return (
-      <section className="page-panel">
-        <header className="page-panel-header">
-          <p className="page-eyebrow">PILOTAGE</p>
-          <h1 className="page-title">Bienvenue {username}</h1>
-          <p className="page-description">
-            Sélectionnez une rubrique dans le menu pour accéder aux modules VACTIS.
-          </p>
-        </header>
-      </section>
+      <div className="space-y-6">
+        <div className="p-8 bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl shadow-xl border border-slate-800 relative overflow-hidden">
+          <div className="absolute right-0 top-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 space-y-3 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-xs font-bold border border-teal-500/30">
+              <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
+              PLATEFORME DE PILOTAGE VACTIS
+            </div>
+            <h1 className="text-3xl font-black tracking-tight">Bienvenue, {username} 👋</h1>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              De la donnée à l&apos;action terrain. Sélectionnez un module dans le menu de navigation pour consulter vos analyses, prioriser vos médecins et exécuter vos actions commerciales.
+            </p>
+            <div className="flex flex-wrap gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => navigate('/medecins')}
+                className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs transition-all shadow-md shadow-teal-600/30 active:scale-95 flex items-center gap-2"
+              >
+                Accéder au Portefeuille Médecins →
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/actions')}
+                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-all border border-white/20 active:scale-95 flex items-center gap-2"
+              >
+                Voir les Actions →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 

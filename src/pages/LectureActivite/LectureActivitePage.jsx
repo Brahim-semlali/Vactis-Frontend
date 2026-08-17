@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+} from 'recharts';
+import {
   getActionsVactis,
   getComparaison,
   getCompteRenduTerrain,
@@ -300,73 +311,195 @@ function ActiviteIcon({ name, size = 18 }) {
   }
 }
 
-function ComparisonBarChart({ mMinus1, m, refRecente, isCurrency = false }) {
-  const values = [mMinus1 ?? 0, m ?? 0, refRecente ?? 0];
-  const maxVal = Math.max(...values, 1);
-
-  const formatVal = (v) => (isCurrency ? `${formatNumber(v)} MAD` : formatNumber(v, 2).replace(',00', ''));
-
-  const getBarHeight = (v) => {
-    if (!v || v <= 0) return '6%';
-    const pct = Math.round((v / maxVal) * 82);
-    return `${Math.max(pct, 10)}%`;
-  };
+function CustomTooltipComparison({ active, payload, isCurrency }) {
+  if (!active || !payload || !payload.length) return null;
+  const data = payload[0];
+  const formatVal = (v) => (isCurrency ? `${formatNumber(v)} MAD` : formatNumber(v, 2));
 
   return (
-    <div className="activite-chart-container">
-      {/* Légende */}
-      <div className="activite-chart-legend">
-        <span className="activite-chart-legend-item">
-          <span className="activite-chart-legend-dot activite-chart-legend-dot--mminus1" />
-          M-1
-        </span>
-        <span className="activite-chart-legend-item">
-          <span className="activite-chart-legend-dot activite-chart-legend-dot--m" />
-          Mois courant
-        </span>
-        <span className="activite-chart-legend-item">
-          <span className="activite-chart-legend-dot activite-chart-legend-dot--ref" />
-          Référence récente
-        </span>
+    <div className="bg-slate-900/95 text-white backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl border border-slate-700/60 text-xs font-medium space-y-1">
+      <p className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">{data.payload.period}</p>
+      <p className="text-lg font-black text-teal-300">{formatVal(data.value)}</p>
+      <p className="text-[11px] text-slate-300">
+        {data.payload.period === 'Mois M' ? 'Période courante clôturée' : data.payload.period === 'M-1' ? 'Période précédente' : 'Moyenne 3 derniers mois'}
+      </p>
+    </div>
+  );
+}
+
+function ComparisonBarChart({ mMinus1, m, refRecente, isCurrency = false }) {
+  const data = [
+    {
+      period: 'M-1',
+      name: 'M-1',
+      Valeur: mMinus1 ?? 0,
+      fill: 'url(#gradM1)',
+    },
+    {
+      period: 'Mois M',
+      name: 'Mois M (Courant)',
+      Valeur: m ?? 0,
+      fill: 'url(#gradM)',
+    },
+    {
+      period: 'Réf. récente',
+      name: 'Réf. récente',
+      Valeur: refRecente ?? 0,
+      fill: 'url(#gradRef)',
+    },
+  ];
+
+  return (
+    <div className="w-full bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-4">
+      {/* Legend Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-teal-600 shadow-xs" />
+          <span className="text-xs font-bold text-slate-800">Indicateur temporel</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-4 text-xs font-semibold">
+          <span className="flex items-center gap-1.5 text-slate-500">
+            <span className="w-2.5 h-2.5 rounded-full bg-slate-400" /> M-1
+          </span>
+          <span className="flex items-center gap-1.5 text-teal-700">
+            <span className="w-2.5 h-2.5 rounded-full bg-teal-600" /> Mois M (Courant)
+          </span>
+          <span className="flex items-center gap-1.5 text-blue-600">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Réf. récente
+          </span>
+        </div>
       </div>
 
-      {/* Corps du graphique */}
-      <div className="activite-chart-body">
-        {/* Bar 1: M-1 */}
-        <div className="activite-chart-col">
-          <div className="activite-chart-value">{formatVal(mMinus1)}</div>
-          <div className="activite-chart-bar-wrap">
-            <div
-              className="activite-chart-bar activite-chart-bar--mminus1"
-              style={{ height: getBarHeight(mMinus1) }}
-            />
-          </div>
-          <div className="activite-chart-label activite-chart-label--mminus1">M-1</div>
-        </div>
+      {/* Recharts Container */}
+      <div className="w-full h-80">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 25, right: 30, left: 10, bottom: 10 }}>
+            <defs>
+              <linearGradient id="gradM1" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#94a3b8" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="#cbd5e1" stopOpacity={0.6} />
+              </linearGradient>
+              <linearGradient id="gradM" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#0f766e" stopOpacity={1} />
+                <stop offset="100%" stopColor="#14b8a6" stopOpacity={0.8} />
+              </linearGradient>
+              <linearGradient id="gradRef" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#2563eb" stopOpacity={0.9} />
+                <stop offset="100%" stopColor="#60a5fa" stopOpacity={0.7} />
+              </linearGradient>
+            </defs>
 
-        {/* Bar 2: M */}
-        <div className="activite-chart-col">
-          <div className="activite-chart-value">{formatVal(m)}</div>
-          <div className="activite-chart-bar-wrap">
-            <div
-              className="activite-chart-bar activite-chart-bar--m"
-              style={{ height: getBarHeight(m) }}
+            <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#475569', fontWeight: 700 }} axisLine={{ stroke: '#cbd5e1' }} />
+            <YAxis
+              tick={{ fontSize: 11, fill: '#64748b' }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(val) => (isCurrency ? `${(val / 1000).toFixed(0)}k` : val)}
             />
-          </div>
-          <div className="activite-chart-label activite-chart-label--m">M</div>
-        </div>
+            <Tooltip cursor={false} content={<CustomTooltipComparison isCurrency={isCurrency} />} />
+            <Bar dataKey="Valeur" radius={[10, 10, 0, 0]} maxBarSize={70}>
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} className="hover:opacity-85 transition-opacity" />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
 
-        {/* Bar 3: Référence récente */}
-        <div className="activite-chart-col">
-          <div className="activite-chart-value">{formatVal(refRecente)}</div>
-          <div className="activite-chart-bar-wrap">
-            <div
-              className="activite-chart-bar activite-chart-bar--ref"
-              style={{ height: getBarHeight(refRecente) }}
-            />
-          </div>
-          <div className="activite-chart-label activite-chart-label--ref">Réf. récente</div>
+function CustomTooltipStacked({ active, payload, label }) {
+  if (!active || !payload || !payload.length) return null;
+  const activeItems = payload.filter((item) => item.value > 0);
+
+  return (
+    <div className="bg-slate-900/95 text-white backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-slate-700/60 text-xs min-w-[200px] space-y-2">
+      <div className="border-b border-slate-700 pb-1.5 flex items-center justify-between">
+        <span className="font-bold text-slate-200">{label}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-teal-400">Visites terrain</span>
+      </div>
+
+      {activeItems.length === 0 ? (
+        <p className="text-slate-400 italic text-[11px]">Aucune visite enregistrée</p>
+      ) : (
+        <div className="space-y-1 pt-1">
+          {activeItems.map((item) => (
+            <div key={item.name} className="flex items-center justify-between gap-4">
+              <span className="flex items-center gap-1.5 text-slate-300">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.fill }} />
+                {item.name}
+              </span>
+              <span className="font-bold text-white">{item.value}</span>
+            </div>
+          ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+function StackedVisitesChart({ visitesParCommercial }) {
+  if (!visitesParCommercial || visitesParCommercial.length === 0) return null;
+
+  const data = visitesParCommercial.map((c) => {
+    const types = c.parTypeVisite || {};
+    return {
+      commercial: c.commercial,
+      Fidélisation: types.FIDELISATION || 0,
+      Rétention: types.RETENTION || 0,
+      Prospection: types.PROSPECTION || 0,
+      Diagnostic: types.DIAGNOSTIC || 0,
+      Reconnaissance: types.RECONNAISSANCE || 0,
+      'Urgence silence': types.URGENCE_SILENCE || 0,
+      Autre: types.AUTRE || 0,
+    };
+  });
+
+  const categories = [
+    { key: 'Fidélisation', color: '#10b981' },
+    { key: 'Rétention', color: '#f43f5e' },
+    { key: 'Prospection', color: '#0284c7' },
+    { key: 'Diagnostic', color: '#f59e0b' },
+    { key: 'Reconnaissance', color: '#8b5cf6' },
+    { key: 'Urgence silence', color: '#ea580c' },
+    { key: 'Autre', color: '#64748b' },
+  ];
+
+  return (
+    <div className="w-full bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-4">
+      {/* Legend Custom Box */}
+      <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 pb-3">
+        <span className="text-xs font-bold text-slate-800 mr-2">Types de visite :</span>
+        {categories.map((cat) => (
+          <span key={cat.key} className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+            {cat.key}
+          </span>
+        ))}
+      </div>
+
+      {/* Recharts Container */}
+      <div className="w-full h-80">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 20, right: 30, left: 10, bottom: 25 }}>
+            <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
+            <XAxis dataKey="commercial" tick={{ fontSize: 12, fill: '#475569', fontWeight: 600 }} axisLine={{ stroke: '#cbd5e1' }} />
+            <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+            <Tooltip cursor={false} content={<CustomTooltipStacked />} />
+            {categories.map((cat, idx) => (
+              <Bar
+                key={cat.key}
+                dataKey={cat.key}
+                stackId="a"
+                fill={cat.color}
+                radius={idx === categories.length - 1 ? [8, 8, 0, 0] : [0, 0, 0, 0]}
+                maxBarSize={55}
+              />
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
@@ -1892,79 +2025,10 @@ export default function LectureActivitePage() {
                     </div>
                   </div>
 
-                  {/* Légende type_visite */}
-                  <div className="activite-n4-legend">
-                    {[
-                      { key: 'FIDELISATION', label: 'Fidélisation', color: '#10b981' },
-                      { key: 'RETENTION', label: 'Rétention', color: '#ef4444' },
-                      { key: 'PROSPECTION', label: 'Prospection', color: '#06b6d4' },
-                      { key: 'DIAGNOSTIC', label: 'Diagnostic', color: '#f59e0b' },
-                      { key: 'RECONNAISSANCE', label: 'Reconnaissance', color: '#8b5cf6' },
-                      { key: 'URGENCE_SILENCE', label: 'Urgence silence', color: '#f97316' },
-                      { key: 'AUTRE', label: 'Autre', color: '#6b7280' },
-                    ].map((item) => (
-                      <div key={item.key} className="activite-n4-legend-item">
-                        <span className="activite-n4-legend-dot" style={{ backgroundColor: item.color }} />
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <StackedVisitesChart visitesParCommercial={evolutionParCommercial.visitesParCommercial} />
 
-                  {/* Liste par commercial */}
-                  {(evolutionParCommercial.visitesParCommercial || []).map((c) => {
-                    const total = c.totalRealisees || 1;
-                    const types = c.parTypeVisite || {};
-                    return (
-                      <div key={c.commercial} className="activite-n4-comm-card">
-                        <div className="activite-n4-comm-header">
-                          <span className="activite-n4-comm-name">{c.commercial}</span>
-                          <span className="activite-n4-comm-total">{c.totalRealisees}</span>
-                        </div>
-                        {/* Bar empilée */}
-                        <div className="activite-n4-stacked-bar">
-                          {[
-                            { key: 'FIDELISATION', color: '#10b981' },
-                            { key: 'RETENTION', color: '#ef4444' },
-                            { key: 'PROSPECTION', color: '#06b6d4' },
-                            { key: 'DIAGNOSTIC', color: '#f59e0b' },
-                            { key: 'RECONNAISSANCE', color: '#8b5cf6' },
-                            { key: 'URGENCE_SILENCE', color: '#f97316' },
-                            { key: 'AUTRE', color: '#6b7280' },
-                          ].map((t) => {
-                            const count = types[t.key] || 0;
-                            if (count === 0) return null;
-                            const pct = (count / total) * 100;
-                            return (
-                              <div
-                                key={t.key}
-                                className="activite-n4-stacked-seg"
-                                style={{ width: `${pct}%`, backgroundColor: t.color }}
-                                title={`${t.key}: ${count} (${Math.round(pct)}%)`}
-                              />
-                            );
-                          })}
-                        </div>
-                        {/* Grille des compteurs par type */}
-                        <div className="activite-n4-types-grid">
-                          {[
-                            { key: 'FIDELISATION', label: 'Fidélisation' },
-                            { key: 'RETENTION', label: 'Rétention' },
-                            { key: 'PROSPECTION', label: 'Prospection' },
-                            { key: 'DIAGNOSTIC', label: 'Diagnostic' },
-                            { key: 'RECONNAISSANCE', label: 'Reconnaissance' },
-                            { key: 'URGENCE_SILENCE', label: 'Urgence silence' },
-                            { key: 'AUTRE', label: 'Autre' },
-                          ].map((t) => (
-                            <div key={t.key} className="activite-n4-type-item">
-                              <span>{t.label}</span>
-                              <span className="activite-n4-type-count">{types[t.key] || 0}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
+
 
                 {/* 2.2 Évolution observée après visites VACTIS */}
                 <div className="activite-cr-card" style={{ padding: '1.25rem' }}>
