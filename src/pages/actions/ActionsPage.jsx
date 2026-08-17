@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { getActions } from '../../api/actions.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
@@ -262,6 +262,7 @@ export default function ActionsPage() {
 
   // Sauvegarde de la position exacte de scroll avant sélection
   const lastScrollPosition = useRef(0);
+  const lastSelectedActionIdRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -292,27 +293,36 @@ export default function ActionsPage() {
     loadActions();
   }, [loadActions]);
 
-  const scrollToActionRow = useCallback((targetId, fallbackPos) => {
-    const perform = () => {
-      if (targetId) {
-        const rowEl = document.getElementById(`action-row-${targetId}`);
+  const scrollToSelectedActionRow = useCallback((targetId, fallbackPos) => {
+    const actId = targetId || lastSelectedActionIdRef.current;
+    const pos = fallbackPos || lastScrollPosition.current;
+
+    const performScroll = () => {
+      if (actId) {
+        const rowEl = document.getElementById(`action-row-${actId}`);
         if (rowEl) {
-          rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          rowEl.scrollIntoView({ block: 'center', behavior: 'auto' });
+          rowEl.classList.add('bg-sky-100/90', 'ring-2', 'ring-sky-400');
+          setTimeout(() => {
+            rowEl.classList.remove('bg-sky-100/90', 'ring-2', 'ring-sky-400');
+          }, 1500);
           return true;
         }
       }
-      if (fallbackPos > 0) {
-        window.scrollTo({ top: fallbackPos, behavior: 'smooth' });
+      if (pos > 0) {
+        window.scrollTo({ top: pos, behavior: 'auto' });
         return true;
       }
       return false;
     };
 
-    if (perform()) return;
-    const t1 = setTimeout(perform, 50);
-    const t2 = setTimeout(perform, 150);
-    const t3 = setTimeout(perform, 300);
-    const t4 = setTimeout(perform, 500);
+    performScroll();
+    requestAnimationFrame(performScroll);
+    const t1 = setTimeout(performScroll, 40);
+    const t2 = setTimeout(performScroll, 120);
+    const t3 = setTimeout(performScroll, 250);
+    const t4 = setTimeout(performScroll, 450);
+
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -323,23 +333,27 @@ export default function ActionsPage() {
 
   // Scroll automatique garanti à la ligne exacte de l'action sélectionnée lors du retour à la table
   useEffect(() => {
-    if (viewMode === 'table' && selectedAction?.id) {
-      return scrollToActionRow(selectedAction.id, lastScrollPosition.current);
+    if (viewMode === 'table' && (selectedAction?.id || lastSelectedActionIdRef.current)) {
+      return scrollToSelectedActionRow(selectedAction?.id, lastScrollPosition.current);
     }
-  }, [viewMode, selectedAction?.id, scrollToActionRow]);
+  }, [viewMode, selectedAction?.id, scrollToSelectedActionRow]);
 
   const handleSelectAction = (action) => {
-    lastScrollPosition.current = window.scrollY || document.documentElement.scrollTop;
+    const currentScroll = window.scrollY || document.documentElement.scrollTop;
+    lastScrollPosition.current = currentScroll;
+    lastSelectedActionIdRef.current = action.id;
+
     setSelectedAction(action);
     setViewMode('detail');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const handleBackToTable = () => {
-    const targetId = selectedAction?.id;
+    const targetId = selectedAction?.id || lastSelectedActionIdRef.current;
     const targetPos = lastScrollPosition.current;
+
     setViewMode('table');
-    scrollToActionRow(targetId, targetPos);
+    scrollToSelectedActionRow(targetId, targetPos);
   };
 
   const updateFilter = (key) => (event) => {
@@ -516,310 +530,296 @@ export default function ActionsPage() {
       )}
 
       {/* Main Container */}
-      <AnimatePresence>
-        {viewMode === 'table' ? (
-          /* VUE 1 : TABLE COMPLÈTE EN 100% */
-          <motion.div
-            key="actions-table-view"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.15 }}
-          >
-            <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
-              <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base">Table actions</h3>
-                  <p className="text-xs text-slate-500">Cliquez sur une ligne ou sur la flèche <span className="font-bold text-sky-700">→</span> pour ouvrir son espace complet.</p>
-                </div>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-slate-50/80 cursor-default bg-slate-50/90">
-                    {TABLE_COLUMNS.map((column, idx) => (
-                      <TableHead key={idx} className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">
-                        {column}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading && (
-                    Array.from({ length: 6 }).map((_, idx) => (
-                      <TableRow key={idx} className="hover:bg-transparent">
-                        <TableCell><Skeleton className="h-4 w-36 mb-1.5" /><Skeleton className="h-3 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-14 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-44" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                        <TableCell><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></TableCell>
-                      </TableRow>
-                    ))
-                  )}
-
-                  {!loading && actions.length === 0 && (
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={TABLE_COLUMNS.length} className="h-80 text-center">
-                        <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
-                          <MenuIcon name="actions" />
-                          <p className="font-semibold text-slate-700">Aucune action trouvée</p>
-                          <p className="text-xs text-slate-500">Ajustez les filtres ou réinitialisez la recherche.</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-
-                  {!loading &&
-                    actions.map((action) => {
-                      const isSelected = selectedAction?.id === action.id;
-                      return (
-                        <TableRow
-                          key={action.id}
-                          id={`action-row-${action.id}`}
-                          onClick={() => handleSelectAction(action)}
-                          className={`transition-all group cursor-pointer ${
-                            isSelected
-                              ? 'bg-sky-50/90 border-l-4 border-l-sky-500 shadow-2xs font-semibold'
-                              : 'hover:bg-sky-50/30'
-                          }`}
-                        >
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {isSelected && (
-                                <span className="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0" title="Action actuellement sélectionnée" />
-                              )}
-                              <div>
-                                <div className={`font-bold transition-colors ${isSelected ? 'text-sky-950' : 'text-slate-900 group-hover:text-sky-700'}`}>
-                                  {formatMedecinName(action.medecin)}
-                                </div>
-                                <div className="text-xs text-slate-500 font-medium">{action.medecin?.specialite ?? '—'}</div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={getBadgeVariant('statut', action.statut)}>
-                              {formatEnumLabel(action.statut)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={getBadgeVariant('segment', action.segment)}>
-                              {action.segment ? `SEGMENT ${action.segment}` : '—'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-semibold text-slate-800">
-                            {action.actionRecommandee ?? '—'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={getBadgeVariant('urgence', action.urgence)} className="gap-1">
-                              <ActionsIcon name="heartbeat" size={12} />
-                              {formatEnumLabel(action.urgence)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={getBadgeVariant('etat', action.etatAction)}>
-                              {formatEnumLabel(action.etatAction)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs font-bold text-slate-700">
-                            {formatDate(action.dateVisite)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSelectAction(action);
-                              }}
-                              className={`px-3.5 py-2 rounded-xl transition-all shadow-2xs font-extrabold text-xs inline-flex items-center gap-1.5 ${
-                                isSelected
-                                  ? 'bg-sky-50 text-sky-700 border border-sky-200/90'
-                                  : 'bg-slate-100 text-slate-600 hover:bg-sky-50 hover:text-sky-700 hover:border hover:border-sky-200'
-                              }`}
-                              title={isSelected ? "Revoir l'espace action" : "Ouvrir l'espace action"}
-                            >
-                              <span>{isSelected ? 'Sélectionnée' : 'Ouvrir'}</span>
-                              <ActionsIcon name="arrow-right" size={16} />
-                            </button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                </TableBody>
-              </Table>
-            </Card>
-          </motion.div>
-        ) : (
-          /* VUE 2 : ESPACE ACTION DÉTAILLÉ EN 100% DE L'ESPACE DE LA TABLE */
-          <motion.div
-            key="actions-detail-view"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.15 }}
-            className="space-y-6"
-          >
-            {/* Header Bar avec grand bouton RETOUR BLANC PUR ET ROUGE */}
-            <div className="flex flex-wrap items-center justify-between gap-4 p-2">
-              <button
-                type="button"
-                onClick={handleBackToTable}
-                className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-white hover:bg-slate-50 text-rose-700 border border-slate-200/90 font-extrabold text-sm shadow-2xs hover:shadow-xs hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
-              >
-                <div className="p-1.5 bg-rose-50 text-rose-700 rounded-xl border border-rose-100">
-                  <ActionsIcon name="arrow-left" size={20} />
-                </div>
-                <span>← Retour à la table des actions</span>
-              </button>
-
-              <div className="flex items-center gap-3">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
-                <span className="text-xs font-extrabold uppercase tracking-widest text-slate-500">
-                  FICHE ACTION VACTIS
-                </span>
-                <button
-                  type="button"
-                  onClick={handleBackToTable}
-                  className="p-2 rounded-full bg-white text-slate-400 hover:text-slate-900 hover:bg-slate-200 border border-slate-200 transition-all shadow-xs"
-                  title="Fermer"
-                >
-                  <ActionsIcon name="x" size={16} />
-                </button>
+      {viewMode === 'table' ? (
+        /* VUE 1 : TABLE COMPLÈTE EN 100% */
+        <div key="actions-table-view">
+          <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Table actions</h3>
+                <p className="text-xs text-slate-500">Cliquez sur une ligne ou sur la flèche <span className="font-bold text-sky-700">→</span> pour ouvrir son espace complet.</p>
               </div>
             </div>
 
-            {/* Contenu complet de l'action sur 100% de la largeur */}
-            {selectedAction && (
-              <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-md overflow-hidden p-6 md:p-8 space-y-8">
-                {/* Hero Header Pure White */}
-                <div className="p-6 rounded-2xl bg-white border border-slate-200/80 text-slate-900 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <div className="p-3 bg-sky-50 text-sky-700 border border-sky-200 rounded-2xl shadow-xs">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-slate-50/80 cursor-default bg-slate-50/90">
+                  {TABLE_COLUMNS.map((column, idx) => (
+                    <TableHead key={idx} className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">
+                      {column}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading && (
+                  Array.from({ length: 6 }).map((_, idx) => (
+                    <TableRow key={idx} className="hover:bg-transparent">
+                      <TableCell><Skeleton className="h-4 w-36 mb-1.5" /><Skeleton className="h-3 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-14 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-44" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></TableCell>
+                    </TableRow>
+                  ))
+                )}
+
+                {!loading && actions.length === 0 && (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={TABLE_COLUMNS.length} className="h-80 text-center">
+                      <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
                         <MenuIcon name="actions" />
+                        <p className="font-semibold text-slate-700">Aucune action trouvée</p>
+                        <p className="text-xs text-slate-500">Ajustez les filtres ou réinitialisez la recherche.</p>
                       </div>
-                      <div>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight">{formatMedecinName(selectedMedecin)}</h2>
-                        <p className="text-xs font-bold text-sky-700 pt-0.5">{selectedMedecin?.specialite ?? 'Spécialité non renseignée'}</p>
-                      </div>
-                    </div>
-                  </div>
+                    </TableCell>
+                  </TableRow>
+                )}
 
-                  <div className="flex flex-wrap items-center gap-3">
-                    {selectedAction.segment && (
-                      <Badge variant={getBadgeVariant('segment', selectedAction.segment)} className="px-3.5 py-1.5 text-xs">
-                        SEGMENT {selectedAction.segment}
-                      </Badge>
-                    )}
-                    {selectedAction.statut && (
-                      <Badge variant={getBadgeVariant('statut', selectedAction.statut)} className="px-3.5 py-1.5 text-xs">
-                        {formatEnumLabel(selectedAction.statut)}
-                      </Badge>
-                    )}
-                    {selectedAction.urgence && (
-                      <Badge variant={getBadgeVariant('urgence', selectedAction.urgence)} className="gap-1 px-3.5 py-1.5 text-xs">
-                        <ActionsIcon name="heartbeat" size={14} />
-                        {formatEnumLabel(selectedAction.urgence)}
-                      </Badge>
-                    )}
-                    {selectedAction.etatAction && (
-                      <Badge variant={getBadgeVariant('etat', selectedAction.etatAction)} className="px-3.5 py-1.5 text-xs">
-                        {formatEnumLabel(selectedAction.etatAction)}
-                      </Badge>
-                    )}
+                {!loading &&
+                  actions.map((action) => {
+                    const isSelected = selectedAction?.id === action.id;
+                    return (
+                      <TableRow
+                        key={action.id}
+                        id={`action-row-${action.id}`}
+                        onClick={() => handleSelectAction(action)}
+                        className={`transition-all group cursor-pointer ${
+                          isSelected
+                            ? 'bg-sky-50/90 border-l-4 border-l-sky-500 shadow-2xs font-semibold'
+                            : 'hover:bg-sky-50/30'
+                        }`}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {isSelected && (
+                              <span className="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0" title="Action actuellement sélectionnée" />
+                            )}
+                            <div>
+                              <div className={`font-bold transition-colors ${isSelected ? 'text-sky-950' : 'text-slate-900 group-hover:text-sky-700'}`}>
+                                {formatMedecinName(action.medecin)}
+                              </div>
+                              <div className="text-xs text-slate-500 font-medium">{action.medecin?.specialite ?? '—'}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getBadgeVariant('statut', action.statut)}>
+                            {formatEnumLabel(action.statut)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getBadgeVariant('segment', action.segment)}>
+                            {action.segment ? `SEGMENT ${action.segment}` : '—'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-semibold text-slate-800">
+                          {action.actionRecommandee ?? '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getBadgeVariant('urgence', action.urgence)} className="gap-1">
+                            <ActionsIcon name="heartbeat" size={12} />
+                            {formatEnumLabel(action.urgence)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getBadgeVariant('etat', action.etatAction)}>
+                            {formatEnumLabel(action.etatAction)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs font-bold text-slate-700">
+                          {formatDate(action.dateVisite)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectAction(action);
+                            }}
+                            className={`px-3.5 py-2 rounded-xl transition-all shadow-2xs font-extrabold text-xs inline-flex items-center gap-1.5 ${
+                              isSelected
+                                ? 'bg-sky-50 text-sky-700 border border-sky-200/90'
+                                : 'bg-slate-100 text-slate-600 hover:bg-sky-50 hover:text-sky-700 hover:border hover:border-sky-200'
+                            }`}
+                            title={isSelected ? "Revoir l'espace action" : "Ouvrir l'espace action"}
+                          >
+                            <span>{isSelected ? 'Sélectionnée' : 'Ouvrir'}</span>
+                            <ActionsIcon name="arrow-right" size={16} />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+              </TableBody>
+            </Table>
+          </Card>
+        </div>
+      ) : (
+        /* VUE 2 : ESPACE ACTION DÉTAILLÉ EN 100% DE L'ESPACE DE LA TABLE */
+        <div key="actions-detail-view" className="space-y-6">
+          {/* Header Bar avec grand bouton RETOUR BLANC PUR ET ROUGE */}
+          <div className="flex flex-wrap items-center justify-between gap-4 p-2">
+            <button
+              type="button"
+              onClick={handleBackToTable}
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-white hover:bg-slate-50 text-rose-700 border border-slate-200/90 font-extrabold text-sm shadow-2xs hover:shadow-xs hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+            >
+              <div className="p-1.5 bg-rose-50 text-rose-700 rounded-xl border border-rose-100">
+                <ActionsIcon name="arrow-left" size={20} />
+              </div>
+              <span>← Retour à la table des actions</span>
+            </button>
+
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
+              <span className="text-xs font-extrabold uppercase tracking-widest text-slate-500">
+                FICHE ACTION VACTIS
+              </span>
+              <button
+                type="button"
+                onClick={handleBackToTable}
+                className="p-2 rounded-full bg-white text-slate-400 hover:text-slate-900 hover:bg-slate-200 border border-slate-200 transition-all shadow-xs"
+                title="Fermer"
+              >
+                <ActionsIcon name="x" size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Contenu complet de l'action sur 100% de la largeur */}
+          {selectedAction && (
+            <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-md overflow-hidden p-6 md:p-8 space-y-8">
+              {/* Hero Header Pure White */}
+              <div className="p-6 rounded-2xl bg-white border border-slate-200/80 text-slate-900 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-sky-50 text-sky-700 border border-sky-200 rounded-2xl shadow-xs">
+                      <MenuIcon name="actions" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">{formatMedecinName(selectedMedecin)}</h2>
+                      <p className="text-xs font-bold text-sky-700 pt-0.5">{selectedMedecin?.specialite ?? 'Spécialité non renseignée'}</p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Grid 2 Colonnes */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                  {/* Colonne Gauche (6 cols) : Action recommandée & Métriques */}
-                  <div className="lg:col-span-6 space-y-6">
-                    {/* Action Recommandée */}
-                    <div className="p-6 rounded-2xl bg-sky-50/60 border border-sky-100 space-y-3">
-                      <span className="text-[11px] font-extrabold text-sky-800 uppercase tracking-wider block">
-                        Action recommandée
-                      </span>
-                      <h4 className="text-lg font-black text-sky-950">
-                        {selectedAction.actionRecommandee ?? '—'}
-                      </h4>
-                      <p className="text-xs text-sky-900 leading-relaxed">
-                        Silence stratégique confirmé : médecin à valeur/potentiel élevé avec rupture de rythme nécessitant une visite urgente.
-                      </p>
-                    </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  {selectedAction.segment && (
+                    <Badge variant={getBadgeVariant('segment', selectedAction.segment)} className="px-3.5 py-1.5 text-xs">
+                      SEGMENT {selectedAction.segment}
+                    </Badge>
+                  )}
+                  {selectedAction.statut && (
+                    <Badge variant={getBadgeVariant('statut', selectedAction.statut)} className="px-3.5 py-1.5 text-xs">
+                      {formatEnumLabel(selectedAction.statut)}
+                    </Badge>
+                  )}
+                  {selectedAction.urgence && (
+                    <Badge variant={getBadgeVariant('urgence', selectedAction.urgence)} className="gap-1 px-3.5 py-1.5 text-xs">
+                      <ActionsIcon name="heartbeat" size={14} />
+                      {formatEnumLabel(selectedAction.urgence)}
+                    </Badge>
+                  )}
+                  {selectedAction.etatAction && (
+                    <Badge variant={getBadgeVariant('etat', selectedAction.etatAction)} className="px-3.5 py-1.5 text-xs">
+                      {formatEnumLabel(selectedAction.etatAction)}
+                    </Badge>
+                  )}
+                </div>
+              </div>
 
-                    {/* Métriques Grid */}
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Métriques de suivi</h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                          <div>
-                            <span className="text-[11px] text-slate-400 font-bold block uppercase">Deadline</span>
-                            <span className="text-base font-bold text-slate-900">{formatDate(selectedAction.dateVisite)}</span>
-                          </div>
-                          <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl">
-                            <ActionsIcon name="calendar" size={18} />
-                          </div>
-                        </div>
-
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                          <div>
-                            <span className="text-[11px] text-slate-400 font-bold block uppercase">Jours restants</span>
-                            <span className="text-base font-bold text-slate-900">0</span>
-                          </div>
-                          <div className="p-2.5 bg-slate-100 text-slate-600 rounded-xl">
-                            <ActionsIcon name="clock" size={18} />
-                          </div>
-                        </div>
-
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                          <div>
-                            <span className="text-[11px] text-slate-400 font-bold block uppercase">CA Mois</span>
-                            <span className="text-base font-bold text-sky-700">0 MAD</span>
-                          </div>
-                          <div className="p-2.5 bg-sky-50 text-sky-700 rounded-xl">
-                            <ActionsIcon name="target" size={18} />
-                          </div>
-                        </div>
-
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                          <div>
-                            <span className="text-[11px] text-slate-400 font-bold block uppercase">Baseline</span>
-                            <span className="text-base font-bold text-emerald-700">3 987 MAD</span>
-                          </div>
-                          <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
-                            <ActionsIcon name="target" size={18} />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+              {/* Grid 2 Colonnes */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Colonne Gauche (6 cols) : Action recommandée & Métriques */}
+                <div className="lg:col-span-6 space-y-6">
+                  {/* Action Recommandée */}
+                  <div className="p-6 rounded-2xl bg-sky-50/60 border border-sky-100 space-y-3">
+                    <span className="text-[11px] font-extrabold text-sky-800 uppercase tracking-wider block">
+                      Action recommandée
+                    </span>
+                    <h4 className="text-lg font-black text-sky-950">
+                      {selectedAction.actionRecommandee ?? '—'}
+                    </h4>
+                    <p className="text-xs text-sky-900 leading-relaxed">
+                      Silence stratégique confirmé : médecin à valeur/potentiel élevé avec rupture de rythme nécessitant une visite urgente.
+                    </p>
                   </div>
 
-                  {/* Colonne Droite (6 cols) : Silence Radio & Métriques avancées */}
-                  <div className="lg:col-span-6 space-y-6">
-                    {/* Silence Radio */}
-                    <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-rose-700 font-extrabold text-xs">
-                          <ActionsIcon name="heartbeat" size={16} />
-                          <span>SILENCE RADIO</span>
+                  {/* Métriques Grid */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Métriques de suivi</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[11px] text-slate-400 font-bold block uppercase">Deadline</span>
+                          <span className="text-base font-bold text-slate-900">{formatDate(selectedAction.dateVisite)}</span>
                         </div>
-                        <Badge variant="silence">SILENCE CRITIQUE</Badge>
+                        <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl">
+                          <ActionsIcon name="calendar" size={18} />
+                        </div>
                       </div>
-                      <div className="text-xs text-slate-800 font-medium space-y-1 pt-1">
-                        <p className="font-extrabold text-lg text-slate-900">44 jours sans activité</p>
-                        <p className="text-slate-500 text-[11px] uppercase tracking-wider font-bold pt-2">Fréquence habituelle détectée</p>
-                        <p className="text-slate-800 font-semibold text-sm">1 visite tous les 10 jours</p>
+
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[11px] text-slate-400 font-bold block uppercase">Jours restants</span>
+                          <span className="text-base font-bold text-slate-900">0</span>
+                        </div>
+                        <div className="p-2.5 bg-slate-100 text-slate-600 rounded-xl">
+                          <ActionsIcon name="clock" size={18} />
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[11px] text-slate-400 font-bold block uppercase">CA Mois</span>
+                          <span className="text-base font-bold text-sky-700">0 MAD</span>
+                        </div>
+                        <div className="p-2.5 bg-sky-50 text-sky-700 rounded-xl">
+                          <ActionsIcon name="target" size={18} />
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[11px] text-slate-400 font-bold block uppercase">Baseline</span>
+                          <span className="text-base font-bold text-emerald-700">3 987 MAD</span>
+                        </div>
+                        <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
+                          <ActionsIcon name="target" size={18} />
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </Card>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+                {/* Colonne Droite (6 cols) : Silence Radio & Métriques avancées */}
+                <div className="lg:col-span-6 space-y-6">
+                  {/* Silence Radio */}
+                  <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-rose-700 font-extrabold text-xs">
+                        <ActionsIcon name="heartbeat" size={16} />
+                        <span>SILENCE RADIO</span>
+                      </div>
+                      <Badge variant="silence">SILENCE CRITIQUE</Badge>
+                    </div>
+                    <div className="text-xs text-slate-800 font-medium space-y-1 pt-1">
+                      <p className="font-extrabold text-lg text-slate-900">44 jours sans activité</p>
+                      <p className="text-slate-500 text-[11px] uppercase tracking-wider font-bold pt-2">Fréquence habituelle détectée</p>
+                      <p className="text-slate-800 font-semibold text-sm">1 visite tous les 10 jours</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+      {/* End Main Container */}
     </div>
   );
 }
