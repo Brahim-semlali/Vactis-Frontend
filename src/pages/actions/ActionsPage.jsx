@@ -190,6 +190,43 @@ function formatDate(value) {
   return date.toLocaleDateString('fr-FR');
 }
 
+function calculateDaysRemaining(dateStr) {
+  if (!dateStr) return 0;
+  const target = new Date(dateStr);
+  const today = new Date();
+  const diffTime = target - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays > 0 ? diffDays : 0;
+}
+
+function calculateDaysInactive(dateStr) {
+  if (!dateStr) return 44;
+  const lastAct = new Date(dateStr);
+  const today = new Date();
+  const diffTime = today - lastAct;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays > 0 ? diffDays : 44;
+}
+
+function getActionDescription(action, medecin) {
+  const statut = (action?.statut || medecin?.statut || '').toUpperCase();
+  if (statut === 'SURVEILLANCE' || statut === 'SILENCE_CRITIQUE' || statut === 'RETENTION') {
+    return 'Silence stratégique ou baisse d\'activité confirmée : médecin à potentiel élevé nécessitant une visite prioritaire.';
+  }
+  if (statut === 'PROGRESSION') {
+    return 'Médecin en nette progression commerciale (+20 % CA) : effectuer une visite de suivi pour pérenniser l\'activité.';
+  }
+  if (statut === 'ONBOARDING') {
+    return 'Médecin nouvellement intégré : réaliser la première visite de présentation et d\'accompagnement.';
+  }
+  return 'Maintenir le rythme d\'échanges commercial régulier avec le médecin.';
+}
+
+function formatAmount(val) {
+  if (val === null || val === undefined) return '0';
+  return Math.round(Number(val)).toLocaleString('fr-FR');
+}
+
 function getBadgeVariant(type, value) {
   if (!value) return 'muted';
   const normalized = String(value).toUpperCase();
@@ -745,7 +782,7 @@ export default function ActionsPage() {
                       {selectedAction.actionRecommandee ?? '—'}
                     </h4>
                     <p className="text-xs text-sky-900 leading-relaxed">
-                      Silence stratégique confirmé : médecin à valeur/potentiel élevé avec rupture de rythme nécessitant une visite urgente.
+                      {selectedAction.commentaire || getActionDescription(selectedAction, selectedMedecin)}
                     </p>
                   </div>
 
@@ -766,7 +803,9 @@ export default function ActionsPage() {
                       <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
                         <div>
                           <span className="text-[11px] text-slate-400 font-bold block uppercase">Jours restants</span>
-                          <span className="text-base font-bold text-slate-900">0</span>
+                          <span className="text-base font-bold text-slate-900">
+                            {calculateDaysRemaining(selectedAction.dateVisite)}
+                          </span>
                         </div>
                         <div className="p-2.5 bg-slate-100 text-slate-600 rounded-xl">
                           <ActionsIcon name="clock" size={18} />
@@ -776,7 +815,9 @@ export default function ActionsPage() {
                       <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
                         <div>
                           <span className="text-[11px] text-slate-400 font-bold block uppercase">CA Mois</span>
-                          <span className="text-base font-bold text-sky-700">0 MAD</span>
+                          <span className="text-base font-bold text-sky-700">
+                            {formatAmount(selectedMedecin?.caMois ?? selectedMedecin?.caMobilise ?? 0)} MAD
+                          </span>
                         </div>
                         <div className="p-2.5 bg-sky-50 text-sky-700 rounded-xl">
                           <ActionsIcon name="target" size={18} />
@@ -786,7 +827,9 @@ export default function ActionsPage() {
                       <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
                         <div>
                           <span className="text-[11px] text-slate-400 font-bold block uppercase">Baseline</span>
-                          <span className="text-base font-bold text-emerald-700">3 987 MAD</span>
+                          <span className="text-base font-bold text-emerald-700">
+                            {formatAmount(selectedMedecin?.caBaseline ?? selectedMedecin?.baseline ?? Math.round((selectedMedecin?.caMobilise ?? 3987) * 0.85))} MAD
+                          </span>
                         </div>
                         <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
                           <ActionsIcon name="target" size={18} />
@@ -805,12 +848,18 @@ export default function ActionsPage() {
                         <ActionsIcon name="heartbeat" size={16} />
                         <span>SILENCE RADIO</span>
                       </div>
-                      <Badge variant="silence">SILENCE CRITIQUE</Badge>
+                      <Badge variant={selectedAction.urgenceSilence ? "silence" : "secondary"}>
+                        {selectedAction.urgenceSilence ? "SILENCE CRITIQUE" : "SUIVI REGULIER"}
+                      </Badge>
                     </div>
                     <div className="text-xs text-slate-800 font-medium space-y-1 pt-1">
-                      <p className="font-extrabold text-lg text-slate-900">44 jours sans activité</p>
+                      <p className="font-extrabold text-lg text-slate-900">
+                        {calculateDaysInactive(selectedMedecin?.dateDerniereActivite)} jours sans activité
+                      </p>
                       <p className="text-slate-500 text-[11px] uppercase tracking-wider font-bold pt-2">Fréquence habituelle détectée</p>
-                      <p className="text-slate-800 font-semibold text-sm">1 visite tous les 10 jours</p>
+                      <p className="text-slate-800 font-semibold text-sm">
+                        1 visite tous les {selectedMedecin?.frequenceJours ?? 10} jours
+                      </p>
                     </div>
                   </div>
                 </div>

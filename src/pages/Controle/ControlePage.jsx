@@ -16,7 +16,7 @@ import { Skeleton } from '../../components/ui/skeleton.jsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table.jsx';
 
 const TABS = [
-  { id: 'STATUT', label: 'Statuts', description: 'Règles de statut médecin selon le CA' },
+  { id: 'STATUT', label: 'Statuts', description: 'Règles de statut médecin selon la variation du CA (M vs M-1)' },
   {
     id: 'SEGEMENTS',
     label: 'Segments',
@@ -32,11 +32,11 @@ const EMPTY_FORM = {
   actif: true,
 };
 
-function formatRuleVal(value, isSegmentTab) {
+function formatRuleVal(value, isSegmentTab, activeTab) {
   if (value === null || value === undefined || value === '') return '—';
-  return isSegmentTab
-    ? `${Number(value).toLocaleString('fr-FR')} pts`
-    : `${Number(value).toLocaleString('fr-FR')} MAD`;
+  if (isSegmentTab) return `${Number(value).toLocaleString('fr-FR')} pts`;
+  const num = Number(value);
+  return `${num > 0 ? '+' : ''}${num}%`;
 }
 
 function ControleIcon({ name, size = 18 }) {
@@ -103,7 +103,7 @@ function RuleForm({ form, onChange, onSubmit, onCancel, submitLabel, loading, is
           type="text"
           value={form.etat}
           onChange={(e) => onChange({ ...form, etat: e.target.value })}
-          placeholder={isSegmentTab ? 'Ex. A, B, C, D…' : 'Ex. ACTIF, NOUVEAU…'}
+          placeholder={isSegmentTab ? 'Ex. A, B, C, D…' : 'Ex. Progression, Surveillance…'}
           className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-primary focus:outline-none"
           required
         />
@@ -111,14 +111,15 @@ function RuleForm({ form, onChange, onSubmit, onCancel, submitLabel, loading, is
 
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold text-slate-700">
-          {isSegmentTab ? 'Score min (sur 100)' : 'CA min (MAD)'}
+          {isSegmentTab ? 'Score min (sur 100)' : 'Variation min (%)'}
         </label>
         <input
           type="number"
-          min="0"
-          max={isSegmentTab ? '100' : undefined}
+          min={isSegmentTab ? '0' : '-100'}
+          max={isSegmentTab ? '100' : '1000'}
           value={form.minCA}
           onChange={(e) => onChange({ ...form, minCA: e.target.value })}
+          placeholder={isSegmentTab ? '0' : '-10'}
           className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-primary focus:outline-none"
           required
         />
@@ -126,14 +127,15 @@ function RuleForm({ form, onChange, onSubmit, onCancel, submitLabel, loading, is
 
       <div className="flex flex-col gap-1">
         <label className="text-xs font-semibold text-slate-700">
-          {isSegmentTab ? 'Score max (sur 100)' : 'CA max (MAD)'}
+          {isSegmentTab ? 'Score max (sur 100)' : 'Variation max (%)'}
         </label>
         <input
           type="number"
-          min="0"
-          max={isSegmentTab ? '100' : undefined}
+          min={isSegmentTab ? '0' : '-100'}
+          max={isSegmentTab ? '100' : '1000'}
           value={form.maxCA}
           onChange={(e) => onChange({ ...form, maxCA: e.target.value })}
+          placeholder={isSegmentTab ? '100' : '20'}
           className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-primary focus:outline-none"
           required
         />
@@ -296,7 +298,7 @@ export default function ControlePage({ navigate }) {
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-teal-700">Table contrôle</p>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Règles par palier de CA</h1>
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Règles par palier de variation & score</h1>
               </div>
             </div>
             <p className="text-sm text-slate-600 pt-1">{currentTab.description}</p>
@@ -373,8 +375,8 @@ export default function ControlePage({ navigate }) {
           <TableHeader>
             <TableRow className="hover:bg-slate-50/80 cursor-default">
               <TableHead>État</TableHead>
-              <TableHead>{activeTab === 'SEGEMENTS' ? 'Score min' : 'CA min'}</TableHead>
-              <TableHead>{activeTab === 'SEGEMENTS' ? 'Score max' : 'CA max'}</TableHead>
+              <TableHead>{activeTab === 'SEGEMENTS' ? 'Score min' : 'Variation min'}</TableHead>
+              <TableHead>{activeTab === 'SEGEMENTS' ? 'Score max' : 'Variation max'}</TableHead>
               <TableHead>Actif</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -427,10 +429,10 @@ export default function ControlePage({ navigate }) {
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium text-slate-800">
-                      {formatRuleVal(rule.minCA, activeTab === 'SEGEMENTS')}
+                      {formatRuleVal(rule.minCA, activeTab === 'SEGEMENTS', activeTab)}
                     </TableCell>
                     <TableCell className="font-medium text-slate-800">
-                      {formatRuleVal(rule.maxCA, activeTab === 'SEGEMENTS')}
+                      {formatRuleVal(rule.maxCA, activeTab === 'SEGEMENTS', activeTab)}
                     </TableCell>
                     <TableCell>
                       <Badge variant={rule.actif !== false ? 'actif' : 'muted'}>

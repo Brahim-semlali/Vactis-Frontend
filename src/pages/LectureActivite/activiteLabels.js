@@ -1,22 +1,22 @@
 const VACTIS_STATUT_META = {
   progression: {
     label: 'Progression',
-    description: 'CA du mois supérieur de plus de 10 % par rapport au mois précédent.',
+    description: 'CA du mois en hausse de plus de +20 % par rapport au mois précédent.',
     tone: 'green',
   },
   actif_stable: {
     label: 'Actif stable',
-    description: 'Activité régulière : CA stable (entre −5 % et +10 %) ou reprise après absence en M−1.',
+    description: 'Activité régulière : variation de CA entre −10 % et +20 % par rapport au mois précédent.',
     tone: 'green',
   },
   surveillance: {
     label: 'Surveillance',
-    description: 'Légère baisse d\'activité : CA entre −20 % et −5 % par rapport au mois précédent.',
+    description: 'Légère baisse d\'activité : variation de CA entre −40 % et −10 % par rapport au mois précédent.',
     tone: 'amber',
   },
   retention: {
     label: 'Rétention',
-    description: 'Risque commercial : CA en baisse de 20 % à 70 % par rapport au mois précédent.',
+    description: 'Risque commercial : baisse de CA entre −40 % et −70 % par rapport au mois précédent.',
     tone: 'red',
   },
   silence_critique: {
