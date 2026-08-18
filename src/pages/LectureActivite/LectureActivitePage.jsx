@@ -1052,111 +1052,6 @@ export default function LectureActivitePage() {
         </div>
       </section>
 
-      {/* ================================================================ */}
-      {/* NIVEAU 2 — Dynamique du portefeuille médecins                    */}
-      {/* ================================================================ */}
-
-      {/* Bloc 3 — Lecture statuts VACTIS */}
-      <section className="activite-card-section">
-        <div className="activite-section-header">
-          <h2 className="activite-section-title">Lecture statuts VACTIS</h2>
-          <p className="activite-section-subtitle">
-            Répartition des statuts du mois M et transitions M-1 vers M si exposées.
-          </p>
-        </div>
-
-        {/* Grille 4×2 des 8 statuts */}
-        {loadingN2 ? (
-          <div className="activite-n2-loading">Chargement des statuts…</div>
-        ) : (
-          <div className="activite-statuts-grid">
-            {(statuts?.statuts ?? []).map((s) => {
-              const hasMedecins = s.count > 0 && s.medecins?.length > 0;
-              return (
-                <div
-                  key={s.statut}
-                  className={`activite-statut-card activite-statut-card--${s.couleur}${
-                    hasMedecins ? ' activite-statut-card--clickable' : ''
-                  }`}
-                  onClick={() => {
-                    if (hasMedecins) {
-                      setModalPage(1);
-                      setSelectedModalData({
-                        title: `Médecins — Statut : ${s.statut.replace('_', ' ').toUpperCase()}`,
-                        subtitle: s.libelle,
-                        couleur: s.couleur,
-                        count: s.count,
-                        medecins: s.medecins,
-                      });
-                    }
-                  }}
-                  title={hasMedecins ? 'Cliquer pour voir la liste des médecins' : ''}
-                >
-                  <div className="activite-statut-card-header">
-                    <span className="activite-statut-label">{s.statut.replace('_', ' ').toUpperCase()}</span>
-                    <span className={`activite-statut-dot activite-statut-dot--${s.couleur}`} />
-                  </div>
-                  <div className="activite-statut-count">
-                    {s.count > 0 ? s.count : '—'}
-                  </div>
-                  <div className="activite-statut-libelle">
-                    {s.libelle}
-                    {hasMedecins && <span className="activite-click-hint"> · Cliquer pour voir ({s.count})</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Sous-bloc Transitions statuts */}
-        {transitions && (
-          <div className="activite-transitions-bloc">
-            <div className="activite-transitions-header">
-              <span className="activite-transitions-title">TRANSITIONS STATUTS</span>
-            </div>
-            <p className="activite-transitions-subtitle">
-              Comparaison {transitions.moisPrecedent} — {transitions.moisCourant}
-            </p>
-            <p className="activite-transitions-note">
-              {transitions.totalEtudies} médecins suivis avec un statut précédent.
-            </p>
-            <div className="activite-transitions-grid">
-              <div className="activite-transition-item">
-                <span className="activite-transition-label">TOTAL MÉDECINS ÉTUDIÉS</span>
-                <span className="activite-transition-dot activite-statut-dot--blue" />
-                <div className="activite-transition-value">{transitions.totalEtudies} médecins</div>
-                <div className="activite-transition-sub">Base de comparaison statuts M-1 vers M.</div>
-              </div>
-              <div className="activite-transition-item">
-                <span className="activite-transition-label">TRANSITIONS FAVORABLES</span>
-                <span className="activite-transition-dot activite-statut-dot--green" />
-                <div className="activite-transition-value">{transitions.favorables} médecins</div>
-                <div className="activite-transition-sub">Montée dans la hiérarchie de statut.</div>
-              </div>
-              <div className="activite-transition-item">
-                <span className="activite-transition-label">TRANSITIONS STABLES</span>
-                <span className="activite-transition-dot activite-statut-dot--blue" />
-                <div className="activite-transition-value">{transitions.stables} médecins</div>
-                <div className="activite-transition-sub">Statut conservé ou transition neutre.</div>
-              </div>
-              <div className="activite-transition-item">
-                <span className="activite-transition-label">TRANSITIONS DÉFAVORABLES</span>
-                <span className="activite-transition-dot activite-statut-dot--red" />
-                <div className="activite-transition-value">{transitions.defavorables} médecins</div>
-                <div className="activite-transition-sub">Descente dans la hiérarchie de statut.</div>
-              </div>
-              <div className="activite-transition-item">
-                <span className="activite-transition-label">NOUVEAUX MÉDECINS</span>
-                <span className="activite-transition-dot activite-statut-dot--blue" />
-                <div className="activite-transition-value">{transitions.nouveauxMedecins} médecins</div>
-                <div className="activite-transition-sub">Entrées onboarding observées.</div>
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
       {/* Bloc 4 — Top mouvements */}
       <section className="activite-card-section">
         <div className="activite-comparison-header">
@@ -1266,6 +1161,113 @@ export default function LectureActivitePage() {
           </div>
         )}
       </section>
+
+      {/* ================================================================ */}
+      {/* NIVEAU 2 — Dynamique du portefeuille médecins                    */}
+      {/* ================================================================ */}
+
+      {/* Bloc 3 — Lecture statuts VACTIS */}
+      <section className="activite-card-section">
+        <div className="activite-section-header">
+          <h2 className="activite-section-title">Lecture statuts VACTIS</h2>
+          <p className="activite-section-subtitle">
+            Répartition des statuts du mois M et transitions M-1 vers M si exposées.
+          </p>
+        </div>
+
+        {/* Grille 4×2 des 8 statuts */}
+        {loadingN2 ? (
+          <div className="activite-n2-loading">Chargement des statuts…</div>
+        ) : (
+          <div className="activite-statuts-grid">
+            {(statuts?.statuts ?? []).map((s) => {
+              const hasMedecins = s.count > 0 && s.medecins?.length > 0;
+              return (
+                <div
+                  key={s.statut}
+                  className={`activite-statut-card activite-statut-card--${s.couleur}${
+                    hasMedecins ? ' activite-statut-card--clickable' : ''
+                  }`}
+                  onClick={() => {
+                    if (hasMedecins) {
+                      setModalPage(1);
+                      setSelectedModalData({
+                        title: `Médecins — Statut : ${s.statut.replace('_', ' ').toUpperCase()}`,
+                        subtitle: s.libelle,
+                        couleur: s.couleur,
+                        count: s.count,
+                        medecins: s.medecins,
+                      });
+                    }
+                  }}
+                  title={hasMedecins ? 'Cliquer pour voir la liste des médecins' : ''}
+                >
+                  <div className="activite-statut-card-header">
+                    <span className="activite-statut-label">{s.statut.replace('_', ' ').toUpperCase()}</span>
+                    <span className={`activite-statut-dot activite-statut-dot--${s.couleur}`} />
+                  </div>
+                  <div className="activite-statut-count">
+                    {s.count > 0 ? s.count : '—'}
+                  </div>
+                  <div className="activite-statut-libelle">
+                    {s.libelle}
+                    {hasMedecins && <span className="activite-click-hint"> · Cliquer pour voir ({s.count})</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Sous-bloc Transitions statuts */}
+        {transitions && (
+          <div className="activite-transitions-bloc">
+            <div className="activite-transitions-header">
+              <span className="activite-transitions-title">TRANSITIONS STATUTS</span>
+            </div>
+            <p className="activite-transitions-subtitle">
+              Comparaison {transitions.moisPrecedent} — {transitions.moisCourant}
+            </p>
+            <p className="activite-transitions-note">
+              {transitions.totalEtudies} médecins suivis avec un statut précédent.
+            </p>
+            <div className="activite-transitions-grid">
+              <div className="activite-transition-item">
+                <span className="activite-transition-label">TOTAL MÉDECINS ÉTUDIÉS</span>
+                <span className="activite-transition-dot activite-statut-dot--blue" />
+                <div className="activite-transition-value">{transitions.totalEtudies} médecins</div>
+                <div className="activite-transition-sub">Base de comparaison statuts M-1 vers M.</div>
+              </div>
+              <div className="activite-transition-item">
+                <span className="activite-transition-label">TRANSITIONS FAVORABLES</span>
+                <span className="activite-transition-dot activite-statut-dot--green" />
+                <div className="activite-transition-value">{transitions.favorables} médecins</div>
+                <div className="activite-transition-sub">Montée dans la hiérarchie de statut.</div>
+              </div>
+              <div className="activite-transition-item">
+                <span className="activite-transition-label">TRANSITIONS STABLES</span>
+                <span className="activite-transition-dot activite-statut-dot--blue" />
+                <div className="activite-transition-value">{transitions.stables} médecins</div>
+                <div className="activite-transition-sub">Statut conservé ou transition neutre.</div>
+              </div>
+              <div className="activite-transition-item">
+                <span className="activite-transition-label">TRANSITIONS DÉFAVORABLES</span>
+                <span className="activite-transition-dot activite-statut-dot--red" />
+                <div className="activite-transition-value">{transitions.defavorables} médecins</div>
+                <div className="activite-transition-sub">Descente dans la hiérarchie de statut.</div>
+              </div>
+              <div className="activite-transition-item">
+                <span className="activite-transition-label">NOUVEAUX MÉDECINS</span>
+                <span className="activite-transition-dot activite-statut-dot--blue" />
+                <div className="activite-transition-value">{transitions.nouveauxMedecins} médecins</div>
+                <div className="activite-transition-sub">Entrées onboarding observées.</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
+
 
       {/* Bloc 5 — Flux agrégés */}
       <section className="activite-card-section">

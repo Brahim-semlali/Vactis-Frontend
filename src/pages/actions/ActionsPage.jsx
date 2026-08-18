@@ -421,13 +421,13 @@ export default function ActionsPage() {
           {/* Filters Section */}
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
             <Card className="p-5 bg-white border border-slate-200/90 rounded-2xl shadow-2xs space-y-4">
-              <div className="relative">
+              <div className="relative w-80">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                   <ActionsIcon name="search" />
                 </div>
                 <input
                   type="search"
-                  placeholder="Rechercher un médecin, une action, un commercial…"
+                  placeholder="Rechercher un médecin, une action…"
                   value={filters.search}
                   onChange={updateFilter('search')}
                   className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all"
