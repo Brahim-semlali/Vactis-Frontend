@@ -44,6 +44,19 @@ html, body, #root {
   color: var(--text);
 }
 
+/* Style de sélection de texte (Ctrl+A / Surlignage) à haut contraste et lisibilité parfaite */
+::selection {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
+::-moz-selection {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  text-shadow: none !important;
+}
+
 header {
   position: relative !important;
   top: auto !important;

@@ -29,7 +29,7 @@ export default function AppLayout({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#f0f2f5] text-slate-900 flex flex-row font-sans antialiased selection:bg-teal-500 selection:text-white">
+    <div className="min-h-screen bg-[#f0f2f5] text-slate-900 flex flex-row font-sans antialiased">
       {/* Sidebar */}
       <Sidebar
         activeRoute={activeRoute}
@@ -41,7 +41,7 @@ export default function AppLayout({ children }) {
       {/* Right Column Container - Single Continuous Document Flow */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#f0f2f5]">
         {/* Topbar Header (Défile naturellement avec la page entière vers le haut) */}
-        <header className="h-16 px-6 md:px-8 bg-white border-b border-slate-200 flex items-center justify-between shadow-2xs shrink-0" style={{ position: 'relative', top: 'auto' }}>
+        <header className="h-16 px-6 md:px-8 bg-white border-b border-slate-200 flex items-center justify-between shadow-2xs shrink-0">
           <div className="flex items-center gap-2.5">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -73,10 +73,10 @@ export default function AppLayout({ children }) {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeRoute}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
             >
               {typeof children === 'function' ? children({ activeRoute, navigate }) : children}
             </motion.div>

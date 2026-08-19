@@ -73,3 +73,101 @@ export async function getActionById(token, id) {
 
   return response.json();
 }
+
+export async function reserverActionApi(token, id) {
+  logger.info('Réservation action VACTIS', { id });
+
+  const response = await fetch(`${API_BASE}/api/actions/${id}/reserver`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const error = await parseError(response);
+    logger.warn('Échec réservation action', { status: error.status, id });
+    throw error;
+  }
+
+  return response.json();
+}
+
+export async function soumettreRetourTerrainApi(token, id, payload) {
+  logger.info('Soumission retour terrain action', { id, payload });
+
+  const response = await fetch(`${API_BASE}/api/actions/${id}/retour-terrain`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await parseError(response);
+    logger.warn('Échec soumission retour terrain', { status: error.status, id });
+    throw error;
+  }
+
+  return response.json();
+}
+
+export async function creerVisiteLibreApi(token, payload) {
+  logger.info('Création visite commerciale libre', { payload });
+
+  const response = await fetch(`${API_BASE}/api/actions/visite-libre`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const error = await parseError(response);
+    logger.warn('Échec création visite libre', { status: error.status });
+    throw error;
+  }
+
+  return response.json();
+}
+
+export async function getFicheContextuelleApi(token, medecinId) {
+  logger.info('Chargement fiche contextuelle médecin', { medecinId });
+
+  const response = await fetch(`${API_BASE}/api/actions/medecins/${medecinId}/fiche-contextuelle`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await parseError(response);
+    logger.warn('Échec chargement fiche contextuelle', { status: error.status, medecinId });
+    throw error;
+  }
+
+  return response.json();
+}
+
+export async function getVisitesLibresApi(token) {
+  logger.info('Chargement de la liste des visites commerciales libres');
+
+  const response = await fetch(`${API_BASE}/api/actions/visite-libre`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await parseError(response);
+    logger.warn('Échec chargement visites libres', { status: error.status });
+    throw error;
+  }
+
+  return response.json();
+}

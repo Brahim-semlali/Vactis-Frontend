@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { getActions } from '../../api/actions.js';
+import { getActions, reserverActionApi, soumettreRetourTerrainApi, creerVisiteLibreApi, getVisitesLibresApi } from '../../api/actions.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
+import ModalSaisieRetour from '../../components/actions/ModalSaisieRetour.jsx';
+import ModalVisiteLibre from '../../components/actions/ModalVisiteLibre.jsx';
+import FicheContextuelleDrawer from '../../components/medecins/FicheContextuelleDrawer.jsx';
 
 // UI components shadcn/ui
 import { Card } from '../../components/ui/card.jsx';
@@ -301,8 +304,103 @@ export default function ActionsPage() {
   const lastScrollPosition = useRef(0);
   const lastSelectedActionIdRef = useRef(null);
 
+  // Onglets principaux: 'VACTIS' (Actions moteur VACTIS) ou 'LIBRES' (Visites commerciales libres)
+  const [activeTab, setActiveTab] = useState('VACTIS');
+
+  // Modals & Drawer State
+  const [isSaisieRetourOpen, setIsSaisieRetourOpen] = useState(false);
+  const [actionToSubmit, setActionToSubmit] = useState(null);
+
+  const [isVisiteLibreOpen, setIsVisiteLibreOpen] = useState(false);
+
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerMedecinId, setDrawerMedecinId] = useState(null);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Reservation handler
+  const handleReserverAction = async (actionId, e) => {
+    if (e) e.stopPropagation();
+    if (!token) return;
+    try {
+      await reserverActionApi(token, actionId);
+      loadActions();
+    } catch (err) {
+      alert(err.message || 'Impossible de réserver cette action');
+    }
+  };
+
+  // Open Saisie Retour modal
+  const handleOpenSaisieRetour = (action, e) => {
+    if (e) e.stopPropagation();
+    setActionToSubmit(action);
+    setIsSaisieRetourOpen(true);
+  };
+
+  // Submit Saisie Retour
+  const handleSubmitRetour = async (payload) => {
+    if (!token || !actionToSubmit) return;
+    setIsSubmitting(true);
+    try {
+      await soumettreRetourTerrainApi(token, actionToSubmit.id, payload);
+      setIsSaisieRetourOpen(false);
+      setActionToSubmit(null);
+      loadActions();
+    } catch (err) {
+      alert(err.message || 'Erreur lors de l\'enregistrement du retour terrain');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const [visitesLibresList, setVisitesLibresList] = useState([]);
+  const [loadingVisitesLibres, setLoadingVisitesLibres] = useState(false);
+
+  const loadVisitesLibres = useCallback(async () => {
+    if (!token) return;
+    setLoadingVisitesLibres(true);
+    try {
+      const list = await getVisitesLibresApi(token);
+      setVisitesLibresList(list || []);
+    } catch (err) {
+      console.error('Erreur chargement visites libres', err);
+    } finally {
+      setLoadingVisitesLibres(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (activeTab === 'LIBRES') {
+      loadVisitesLibres();
+    }
+  }, [activeTab, loadVisitesLibres]);
+
+  // Submit Visite Libre
+  const handleSubmitVisiteLibre = async (payload) => {
+    if (!token) return;
+    setIsSubmitting(true);
+    try {
+      await creerVisiteLibreApi(token, payload);
+      setIsVisiteLibreOpen(false);
+      loadVisitesLibres();
+      loadActions();
+    } catch (err) {
+      alert(err.message || 'Erreur lors de la création de la visite libre');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Open Fiche Contextuelle Drawer
+  const handleOpenDrawer = (medecinId, e) => {
+    if (e) e.stopPropagation();
+    if (!medecinId) return;
+    setDrawerMedecinId(medecinId);
+    setIsDrawerOpen(true);
+  };
 
   const loadActions = useCallback(async () => {
     if (!token) return;
@@ -411,46 +509,33 @@ export default function ActionsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Pure White Clean Hero Section */}
-      <Card className="p-6 bg-white border border-slate-200/90 rounded-2xl shadow-2xs">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-sky-50 text-sky-700 rounded-xl border border-sky-100">
-                <MenuIcon name="actions" />
-              </div>
-              <div>
-                <p className="text-xs font-extrabold uppercase tracking-widest text-sky-700">CYCLE MENSUEL VACTIS</p>
-                <h1 className="text-2xl font-black tracking-tight text-slate-900">Actions</h1>
-              </div>
-            </div>
-            <p className="text-sm text-slate-600 pt-1 max-w-2xl">
-              Consultez vos actions. Cliquez sur une action ou sur la flèche <span className="font-bold text-sky-700">→</span> pour consulter son espace complet.
-            </p>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 pt-1 font-medium">
-              <span>Workbook VACTIS</span>
-              <span>•</span>
-              <span>Dernière mise à jour — {loading ? '…' : 'maintenant'}</span>
-              <span>•</span>
-              <span className="font-bold text-sky-700">
-                {meta.affiches ?? 0} affichées / {meta.charges ?? 0} chargées
-              </span>
-            </div>
+      {/* Page Header — intégré dans le flux, sans Card ni bordure */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-1">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-sky-100 text-sky-700 rounded-xl">
+            <MenuIcon name="actions" />
           </div>
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-widest text-sky-600">Cycle Mensuel VACTIS</p>
+            <h1 className="text-2xl font-black tracking-tight text-slate-900 leading-tight">Actions</h1>
+          </div>
+        </div>
 
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-400 font-medium hidden md:block">
+            {meta.affiches ?? 0} affichées / {meta.charges ?? 0} chargées
+          </span>
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 font-extrabold text-sm transition-all shadow-2xs hover:shadow-xs active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-sky-50 text-sky-700 border border-slate-200 font-extrabold text-xs transition-all shadow-2xs active:scale-95 disabled:opacity-50 cursor-pointer"
             onClick={loadActions}
             disabled={loading}
           >
-            <div className="p-1 bg-sky-200/80 rounded-lg text-sky-800">
-              <ActionsIcon name="refresh" size={16} />
-            </div>
+            <ActionsIcon name="refresh" size={14} />
             Rafraîchir
           </button>
         </div>
-      </Card>
+      </div>
 
       {/* AFFICHAGE CONDITIONNEL : Masquer les filtres et les KPIs en mode 'detail' */}
       {viewMode === 'table' && (
@@ -569,131 +654,309 @@ export default function ActionsPage() {
       {/* Main Container */}
       {viewMode === 'table' ? (
         /* VUE 1 : TABLE COMPLÈTE EN 100% */
-        <div key="actions-table-view">
-          <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-slate-900 text-base">Table actions</h3>
-                <p className="text-xs text-slate-500">Cliquez sur une ligne ou sur la flèche <span className="font-bold text-sky-700">→</span> pour ouvrir son espace complet.</p>
+        <div key="actions-table-view" className="space-y-4">
+          {/* Onglets + Table / Carte dans un seul bloc */}
+          {activeTab === 'VACTIS' ? (
+            <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
+              {/* Tab Bar intégrée dans l'en-tête de la Card */}
+              <div className="px-5 pt-4 pb-0 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('VACTIS')}
+                    className={`px-4 py-2.5 rounded-t-xl font-extrabold text-xs transition-all border-b-2 -mb-px ${
+                      activeTab === 'VACTIS'
+                        ? 'border-sky-600 text-sky-700 bg-sky-50'
+                        : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    Actions VACTIS ({actions.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('LIBRES')}
+                    className={`px-4 py-2.5 rounded-t-xl font-extrabold text-xs transition-all border-b-2 -mb-px ${
+                      activeTab === 'LIBRES'
+                        ? 'border-amber-500 text-amber-700 bg-amber-50'
+                        : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    Visites commerciales libres ({visitesLibresList.length})
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 pb-3 hidden md:block">
+                  Réservez vos actions, saisissez vos retours ou cliquez sur un médecin pour sa fiche contextuelle.
+                </p>
               </div>
-            </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-slate-50/80 cursor-default bg-slate-50/90">
-                  {TABLE_COLUMNS.map((column, idx) => (
-                    <TableHead key={idx} className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">
-                      {column}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading && (
-                  Array.from({ length: 6 }).map((_, idx) => (
-                    <TableRow key={idx} className="hover:bg-transparent">
-                      <TableCell><Skeleton className="h-4 w-36 mb-1.5" /><Skeleton className="h-3 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-14 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-44" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></TableCell>
-                    </TableRow>
-                  ))
-                )}
-
-                {!loading && actions.length === 0 && (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={TABLE_COLUMNS.length} className="h-80 text-center">
-                      <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
-                        <MenuIcon name="actions" />
-                        <p className="font-semibold text-slate-700">Aucune action trouvée</p>
-                        <p className="text-xs text-slate-500">Ajustez les filtres ou réinitialisez la recherche.</p>
-                      </div>
-                    </TableCell>
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-slate-50/80 cursor-default bg-slate-50/90">
+                    {TABLE_COLUMNS.map((column, idx) => (
+                      <TableHead key={idx} className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">
+                        {column}
+                      </TableHead>
+                    ))}
                   </TableRow>
-                )}
+                </TableHeader>
+                <TableBody>
+                  {loading && (
+                    Array.from({ length: 6 }).map((_, idx) => (
+                      <TableRow key={idx} className="hover:bg-transparent">
+                        <TableCell><Skeleton className="h-4 w-36 mb-1.5" /><Skeleton className="h-3 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-14 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-44" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-24 rounded-lg" /></TableCell>
+                        <TableCell><Skeleton className="h-8 w-24 rounded-lg" /></TableCell>
+                        <TableCell><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></TableCell>
+                      </TableRow>
+                    ))
+                  )}
 
-                {!loading &&
-                  actions.map((action) => {
-                    const isSelected = selectedAction?.id === action.id;
-                    return (
-                      <TableRow
-                        key={action.id}
-                        id={`action-row-${action.id}`}
-                        onClick={() => handleSelectAction(action)}
-                        className={`transition-all group cursor-pointer ${
-                          isSelected
-                            ? 'bg-sky-50/90 border-l-4 border-l-sky-500 shadow-2xs font-semibold'
-                            : 'hover:bg-sky-50/30'
-                        }`}
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {isSelected && (
-                              <span className="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0" title="Action actuellement sélectionnée" />
-                            )}
-                            <div>
-                              <div className={`font-bold transition-colors ${isSelected ? 'text-sky-950' : 'text-slate-900 group-hover:text-sky-700'}`}>
-                                {formatMedecinName(action.medecin)}
+                  {!loading && actions.length === 0 && (
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={TABLE_COLUMNS.length} className="h-80 text-center">
+                        <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
+                          <MenuIcon name="actions" />
+                          <p className="font-semibold text-slate-700">Aucune action VACTIS trouvée</p>
+                          <p className="text-xs text-slate-500">Ajustez les filtres ou réinitialisez la recherche.</p>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+
+                  {!loading &&
+                    actions.map((action) => {
+                      const isSelected = selectedAction?.id === action.id;
+                      return (
+                        <TableRow
+                          key={action.id}
+                          id={`action-row-${action.id}`}
+                          onClick={() => handleSelectAction(action)}
+                          className={`transition-all group cursor-pointer ${
+                            isSelected
+                              ? 'bg-sky-50/90 border-l-4 border-l-sky-500 shadow-2xs font-semibold'
+                              : 'hover:bg-sky-50/30'
+                          }`}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {isSelected && (
+                                <span className="w-2.5 h-2.5 rounded-full bg-sky-500 shrink-0" title="Action actuellement sélectionnée" />
+                              )}
+                              <div>
+                                <div
+                                  onClick={(e) => handleOpenDrawer(action.medecin?.id, e)}
+                                  className={`font-bold hover:underline transition-colors ${isSelected ? 'text-sky-950' : 'text-slate-900 group-hover:text-sky-700'}`}
+                                  title="Cliquer pour ouvrir la fiche contextuelle du médecin"
+                                >
+                                  {formatMedecinName(action.medecin)} 🛈
+                                </div>
+                                <div className="text-xs text-slate-500 font-medium">{action.medecin?.specialite ?? '—'}</div>
                               </div>
-                              <div className="text-xs text-slate-500 font-medium">{action.medecin?.specialite ?? '—'}</div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getBadgeVariant('statut', action.statut)}>
-                            {formatEnumLabel(action.statut)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getBadgeVariant('segment', action.segment)}>
-                            {action.segment ? `SEGMENT ${action.segment}` : '—'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-semibold text-slate-800">
-                          {action.actionRecommandee ?? '—'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getBadgeVariant('urgence', action.urgence)} className="gap-1">
-                            <ActionsIcon name="heartbeat" size={12} />
-                            {formatEnumLabel(action.urgence)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getBadgeVariant('etat', action.etatAction)}>
-                            {formatEnumLabel(action.etatAction)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs font-bold text-slate-700">
-                          {formatDate(action.dateVisite)}
-                        </TableCell>
-                        <TableCell className="text-right">
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getBadgeVariant('statut', action.statut)}>
+                              {formatEnumLabel(action.statut)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getBadgeVariant('segment', action.segment)}>
+                              {action.segment ? `SEGMENT ${action.segment}` : '—'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-semibold text-slate-800">
+                            {action.actionRecommandee ?? '—'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getBadgeVariant('urgence', action.urgence)} className="gap-1">
+                              <ActionsIcon name="heartbeat" size={12} />
+                              {formatEnumLabel(action.urgence)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getBadgeVariant('etat', action.etatAction)}>
+                              {formatEnumLabel(action.etatAction)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs font-bold text-slate-700">
+                            {formatDate(action.dateVisite)}
+                          </TableCell>
+                          <TableCell>
+                            {action.isReserved || action.reservedBy ? (
+                              <span className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 inline-flex items-center gap-1">
+                                🔒 {action.reservedBy ?? action.commercial}
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => handleReserverAction(action.id, e)}
+                                className="px-3 py-1 rounded-lg text-xs font-extrabold bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 transition-all"
+                              >
+                                Réserver
+                              </button>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenSaisieRetour(action, e)}
+                              className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-sky-600 hover:bg-sky-700 text-white shadow-2xs transition-all"
+                            >
+                              Saisir retour
+                            </button>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectAction(action);
+                              }}
+                              className={`px-3.5 py-2 rounded-xl transition-all shadow-2xs font-extrabold text-xs inline-flex items-center gap-1.5 ${
+                                isSelected
+                                  ? 'bg-sky-50 text-sky-700 border border-sky-200/90'
+                                  : 'bg-slate-100 text-slate-600 hover:bg-sky-50 hover:text-sky-700 hover:border hover:border-sky-200'
+                              }`}
+                              title={isSelected ? "Revoir l'espace action" : "Ouvrir l'espace action"}
+                            >
+                              <span>{isSelected ? 'Sélectionnée' : 'Ouvrir'}</span>
+                              <ActionsIcon name="arrow-right" size={16} />
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </TableBody>
+              </Table>
+            </Card>
+          ) : (
+            /* Onglet 2 : Visites commerciales libres */
+            <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
+              {/* Tab Bar intégrée dans l'en-tête de la Card */}
+              <div className="px-5 pt-4 pb-0 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('VACTIS')}
+                    className={`px-4 py-2.5 rounded-t-xl font-extrabold text-xs transition-all border-b-2 -mb-px ${
+                      activeTab === 'VACTIS'
+                        ? 'border-sky-600 text-sky-700 bg-sky-50'
+                        : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    Actions VACTIS ({actions.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('LIBRES')}
+                    className={`px-4 py-2.5 rounded-t-xl font-extrabold text-xs transition-all border-b-2 -mb-px ${
+                      activeTab === 'LIBRES'
+                        ? 'border-amber-500 text-amber-700 bg-amber-50'
+                        : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                    }`}
+                  >
+                    Visites commerciales libres ({visitesLibresList.length})
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsVisiteLibreOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs transition-all shadow-xs mb-3"
+                >
+                  + Enregistrer une visite libre
+                </button>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-slate-50/80 cursor-default bg-slate-50/90">
+                    <TableHead className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">Date Visite</TableHead>
+                    <TableHead className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">Médecin</TableHead>
+                    <TableHead className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">Spécialité / Organisme</TableHead>
+                    <TableHead className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">Commercial</TableHead>
+                    <TableHead className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">Qualification</TableHead>
+                    <TableHead className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">Commentaire / Observations</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loadingVisitesLibres && (
+                    Array.from({ length: 4 }).map((_, idx) => (
+                      <TableRow key={idx} className="hover:bg-transparent">
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                      </TableRow>
+                    ))
+                  )}
+
+                  {!loadingVisitesLibres && visitesLibresList.length === 0 && (
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell colSpan={6} className="h-80 text-center">
+                        <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
+                          <ActionsIcon name="clipboard" size={32} />
+                          <p className="font-semibold text-slate-700">Aucune visite libre enregistrée</p>
+                          <p className="text-xs text-slate-500">Cliquez sur le bouton pour enregistrer votre première visite libre.</p>
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelectAction(action);
-                            }}
-                            className={`px-3.5 py-2 rounded-xl transition-all shadow-2xs font-extrabold text-xs inline-flex items-center gap-1.5 ${
-                              isSelected
-                                ? 'bg-sky-50 text-sky-700 border border-sky-200/90'
-                                : 'bg-slate-100 text-slate-600 hover:bg-sky-50 hover:text-sky-700 hover:border hover:border-sky-200'
-                            }`}
-                            title={isSelected ? "Revoir l'espace action" : "Ouvrir l'espace action"}
+                            onClick={() => setIsVisiteLibreOpen(true)}
+                            className="mt-2 px-5 py-2.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs"
                           >
-                            <span>{isSelected ? 'Sélectionnée' : 'Ouvrir'}</span>
-                            <ActionsIcon name="arrow-right" size={16} />
+                            + Enregistrer une visite libre
                           </button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+
+                  {!loadingVisitesLibres &&
+                    visitesLibresList.map((v) => (
+                      <TableRow key={v.id} className="hover:bg-amber-50/20 transition-colors">
+                        <TableCell className="font-bold text-xs text-slate-900">
+                          {v.dateVisite ? new Date(v.dateVisite).toLocaleDateString('fr-FR') : 'Date NC'}
+                        </TableCell>
+                        <TableCell>
+                          <div
+                            onClick={(e) => handleOpenDrawer(v.medecinId, e)}
+                            className="font-extrabold text-slate-900 hover:text-amber-600 hover:underline cursor-pointer"
+                          >
+                            {v.medecinNom || v.medecinPrenom
+                              ? `${v.medecinNom ?? ''} ${v.medecinPrenom ?? ''}`.trim()
+                              : 'Médecin NC'} 🛈
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600">
+                          {v.medecinSpecialite ?? '—'} <span className="text-slate-400">({v.medecinOrganisme ?? 'Cabinet'})</span>
+                        </TableCell>
+                        <TableCell className="text-xs font-semibold text-slate-800">
+                          {v.visiteur ?? 'Commercial'}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-lg uppercase ${
+                            v.qualification === 'FAVORABLE' ? 'bg-emerald-100 text-emerald-800' :
+                            v.qualification === 'RECLAMATION' ? 'bg-rose-100 text-rose-800' :
+                            v.qualification === 'DEFAVORABLE' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {v.qualification ?? '—'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-700 font-medium">
+                          {v.commentaire || '—'}
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-              </TableBody>
-            </Table>
-          </Card>
+                    ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
         </div>
       ) : (
         /* VUE 2 : ESPACE ACTION DÉTAILLÉ EN 100% DE L'ESPACE DE LA TABLE */
@@ -869,6 +1132,30 @@ export default function ActionsPage() {
         </div>
       )}
       {/* End Main Container */}
+
+      {/* Modals & Drawer */}
+      <ModalSaisieRetour
+        action={actionToSubmit}
+        isOpen={isSaisieRetourOpen}
+        onClose={() => setIsSaisieRetourOpen(false)}
+        onSubmit={handleSubmitRetour}
+        isSubmitting={isSubmitting}
+      />
+
+      <ModalVisiteLibre
+        medecinsList={actions.map((a) => a.medecin).filter(Boolean)}
+        isOpen={isVisiteLibreOpen}
+        onClose={() => setIsVisiteLibreOpen(false)}
+        onSubmit={handleSubmitVisiteLibre}
+        isSubmitting={isSubmitting}
+      />
+
+      <FicheContextuelleDrawer
+        medecinId={drawerMedecinId}
+        token={token}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </div>
   );
 }
