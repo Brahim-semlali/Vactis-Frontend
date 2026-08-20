@@ -145,20 +145,24 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Note potentielle médecin (1-5)
+                  Note de la visite (1 à 5)
                 </label>
-                <select
-                  value={notePotentielle}
-                  onChange={(e) => setNotePotentielle(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500"
-                >
-                  <option value="">Conserver la note actuelle</option>
-                  <option value="5.0">⭐⭐⭐⭐⭐ (5/5 - Très fort potentiel)</option>
-                  <option value="4.0">⭐⭐⭐⭐ (4/5 - Bon potentiel)</option>
-                  <option value="3.0">⭐⭐⭐ (3/5 - Potentiel moyen)</option>
-                  <option value="2.0">⭐⭐ (2/5 - Faible potentiel)</option>
-                  <option value="1.0">⭐ (1/5 - Sans potentiel)</option>
-                </select>
+                <div className="flex items-center gap-1.5 pt-0.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setNotePotentielle(n.toString())}
+                      className={`flex-1 h-10 rounded-xl font-extrabold text-xs transition-all border ${
+                        notePotentielle === n.toString()
+                          ? 'bg-sky-500 text-white border-sky-600 shadow-md scale-[1.02]'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 

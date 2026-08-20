@@ -75,15 +75,15 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-wrap gap-2 items-center justify-between">
                 <div>
                   <span className="text-[11px] font-bold text-slate-400 uppercase block">Statut VACTIS</span>
-                  <span className="text-sm font-extrabold text-teal-700">{medecin?.statut ?? 'ACTIF_STABLE'}</span>
+                  <span className="text-sm font-extrabold text-teal-700">{medecin?.statut || '—'}</span>
                 </div>
                 <div>
                   <span className="text-[11px] font-bold text-slate-400 uppercase block">Segment</span>
-                  <span className="text-sm font-extrabold text-indigo-600">SEGMENT {medecin?.segment ?? 'D'}</span>
+                  <span className="text-sm font-extrabold text-indigo-600">{medecin?.segment ? `SEGMENT ${medecin.segment}` : '—'}</span>
                 </div>
                 <div>
                   <span className="text-[11px] font-bold text-slate-400 uppercase block">Score Valeur</span>
-                  <span className="text-sm font-extrabold text-emerald-600">{medecin?.scoreValeur ?? 60} / 100</span>
+                  <span className="text-sm font-extrabold text-emerald-600">{medecin?.scoreValeur != null ? `${medecin.scoreValeur} / 100` : '—'}</span>
                 </div>
               </div>
 

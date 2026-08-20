@@ -194,21 +194,41 @@ function formatDate(value) {
 }
 
 function calculateDaysRemaining(dateStr) {
-  if (!dateStr) return 0;
+  if (!dateStr) return '—';
   const target = new Date(dateStr);
+  if (isNaN(target.getTime())) return '—';
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
   const diffTime = target - today;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays > 0 ? diffDays : 0;
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  if (diffDays > 0) return `${diffDays} j`;
+  if (diffDays === 0) return "Aujourd'hui";
+  return `Échéance dépassée (${Math.abs(diffDays)} j)`;
 }
 
 function calculateDaysInactive(dateStr) {
-  if (!dateStr) return 44;
+  if (!dateStr) return null;
   const lastAct = new Date(dateStr);
+  if (isNaN(lastAct.getTime())) return null;
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  lastAct.setHours(0, 0, 0, 0);
   const diffTime = today - lastAct;
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays > 0 ? diffDays : 44;
+  return diffDays >= 0 ? diffDays : 0;
+}
+
+/** Fréquence de visite attendue selon le segment (même logique que le backend) */
+function calculateFrequenceJours(segment) {
+  if (!segment) return null;
+  switch (segment.trim().toUpperCase()) {
+    case 'A': return 7;
+    case 'B': return 10;
+    case 'C': return 15;
+    case 'D': return 30;
+    default:  return null;
+  }
 }
 
 function getActionDescription(action, medecin) {
@@ -1051,51 +1071,111 @@ export default function ActionsPage() {
 
                   {/* Métriques Grid */}
                   <div className="space-y-3">
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Métriques de suivi</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Statistiques & Métriques du Médecin</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
                         <div>
-                          <span className="text-[11px] text-slate-400 font-bold block uppercase">Deadline</span>
-                          <span className="text-base font-bold text-slate-900">{formatDate(selectedAction.dateVisite)}</span>
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Date planifiée</span>
+                          <span className="text-sm font-bold text-slate-900">{formatDate(selectedAction.dateVisite)}</span>
                         </div>
-                        <div className="p-2.5 bg-amber-50 text-amber-700 rounded-xl">
-                          <ActionsIcon name="calendar" size={18} />
+                        <div className="p-2 bg-amber-50 text-amber-700 rounded-xl shrink-0">
+                          <ActionsIcon name="calendar" size={16} />
                         </div>
                       </div>
 
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
                         <div>
-                          <span className="text-[11px] text-slate-400 font-bold block uppercase">Jours restants</span>
-                          <span className="text-base font-bold text-slate-900">
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Jours restants</span>
+                          <span className="text-sm font-bold text-slate-900">
                             {calculateDaysRemaining(selectedAction.dateVisite)}
                           </span>
                         </div>
-                        <div className="p-2.5 bg-slate-100 text-slate-600 rounded-xl">
-                          <ActionsIcon name="clock" size={18} />
+                        <div className="p-2 bg-slate-100 text-slate-600 rounded-xl shrink-0">
+                          <ActionsIcon name="clock" size={16} />
                         </div>
                       </div>
 
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <div className="p-3.5 rounded-2xl bg-sky-50/70 border border-sky-100 flex items-center justify-between">
                         <div>
-                          <span className="text-[11px] text-slate-400 font-bold block uppercase">CA Mois</span>
-                          <span className="text-base font-bold text-sky-700">
-                            {formatAmount(selectedMedecin?.caMois ?? selectedMedecin?.caMobilise ?? 0)} MAD
+                          <span className="text-[10px] text-sky-800 font-extrabold block uppercase">CA Mois Actuel</span>
+                          <span className="text-sm font-black text-sky-700">
+                            {formatAmount(selectedMedecin?.caMois ?? 0)} MAD
                           </span>
                         </div>
-                        <div className="p-2.5 bg-sky-50 text-sky-700 rounded-xl">
-                          <ActionsIcon name="target" size={18} />
+                        <div className="p-2 bg-sky-100 text-sky-700 rounded-xl shrink-0">
+                          <ActionsIcon name="target" size={16} />
                         </div>
                       </div>
 
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 flex items-center justify-between">
                         <div>
-                          <span className="text-[11px] text-slate-400 font-bold block uppercase">Baseline</span>
-                          <span className="text-base font-bold text-emerald-700">
-                            {formatAmount(selectedMedecin?.caBaseline ?? selectedMedecin?.baseline ?? Math.round((selectedMedecin?.caMobilise ?? 3987) * 0.85))} MAD
+                          <span className="text-[10px] text-emerald-800 font-extrabold block uppercase">Baseline (M-1)</span>
+                          <span className="text-sm font-black text-emerald-700">
+                            {formatAmount(selectedMedecin?.caBaseline ?? selectedMedecin?.caMois ?? 0)} MAD
                           </span>
                         </div>
-                        <div className="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl">
-                          <ActionsIcon name="target" size={18} />
+                        <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl shrink-0">
+                          <ActionsIcon name="target" size={16} />
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-indigo-800 font-extrabold block uppercase">CA Total Historique</span>
+                          <span className="text-sm font-black text-indigo-700">
+                            {formatAmount(selectedMedecin?.caTotal ?? selectedMedecin?.caMois ?? 0)} MAD
+                          </span>
+                        </div>
+                        <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl shrink-0">
+                          <ActionsIcon name="target" size={16} />
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-purple-800 font-extrabold block uppercase">Score de valeur</span>
+                          <span className="text-sm font-black text-purple-700">
+                            {selectedMedecin?.scoreValeur ? `${selectedMedecin.scoreValeur} / 100` : '—'}
+                          </span>
+                        </div>
+                        <div className="p-2 bg-purple-100 text-purple-700 rounded-xl shrink-0">
+                          <ActionsIcon name="heartbeat" size={16} />
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-teal-50/70 border border-teal-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-teal-800 font-extrabold block uppercase">Dossiers labo (Cas)</span>
+                          <span className="text-sm font-black text-teal-700">
+                            {selectedMedecin?.totalCas ? `${selectedMedecin.totalCas} cas` : '—'}
+                          </span>
+                        </div>
+                        <div className="p-2 bg-teal-100 text-teal-700 rounded-xl shrink-0">
+                          <ActionsIcon name="clipboard" size={16} />
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Commercial référent</span>
+                          <span className="text-xs font-extrabold text-slate-800 truncate block max-w-[110px]">
+                            {selectedMedecin?.commercialReferent || selectedAction?.commercial || 'Non attribué'}
+                          </span>
+                        </div>
+                        <div className="p-2 bg-slate-100 text-slate-600 rounded-xl shrink-0">
+                          <ActionsIcon name="users" size={16} />
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Organisme & Ville</span>
+                          <span className="text-xs font-extrabold text-slate-800 truncate block max-w-[110px]" title={`${selectedMedecin?.organisme || ''} ${selectedMedecin?.ville ? `(${selectedMedecin.ville})` : ''}`}>
+                            {selectedMedecin?.organisme ? `${selectedMedecin.organisme}${selectedMedecin.ville ? ` (${selectedMedecin.ville})` : ''}` : '—'}
+                          </span>
+                        </div>
+                        <div className="p-2 bg-slate-100 text-slate-600 rounded-xl shrink-0">
+                          <ActionsIcon name="building" size={16} />
                         </div>
                       </div>
                     </div>
@@ -1117,11 +1197,15 @@ export default function ActionsPage() {
                     </div>
                     <div className="text-xs text-slate-800 font-medium space-y-1 pt-1">
                       <p className="font-extrabold text-lg text-slate-900">
-                        {calculateDaysInactive(selectedMedecin?.dateDerniereActivite)} jours sans activité
+                        {calculateDaysInactive(selectedMedecin?.dateDerniereActivite) !== null
+                          ? `${calculateDaysInactive(selectedMedecin?.dateDerniereActivite)} jour${calculateDaysInactive(selectedMedecin?.dateDerniereActivite) > 1 ? 's' : ''} sans activité`
+                          : '—'}
                       </p>
-                      <p className="text-slate-500 text-[11px] uppercase tracking-wider font-bold pt-2">Fréquence habituelle détectée</p>
+                      <p className="text-slate-500 text-[11px] uppercase tracking-wider font-bold pt-2">Fréquence habituelle attendue</p>
                       <p className="text-slate-800 font-semibold text-sm">
-                        1 visite tous les {selectedMedecin?.frequenceJours ?? 10} jours
+                        {calculateFrequenceJours(selectedMedecin?.segment)
+                          ? `1 visite tous les ${calculateFrequenceJours(selectedMedecin?.segment)} jours`
+                          : 'Fréquence non définie'}
                       </p>
                     </div>
                   </div>
