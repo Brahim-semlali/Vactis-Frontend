@@ -46,3 +46,6 @@ export const createUser = (token, body) => request('/users', token, { method: 'P
 export const updateUser = (token, id, body) => request(`/users/${id}`, token, { method: 'PUT', body: JSON.stringify(body) });
 export const deleteUser = (token, id) => request(`/users/${id}`, token, { method: 'DELETE' });
 export const assignUserRole = (token, userId, roleId) => request(`/users/${userId}/role/${roleId}`, token, { method: 'PUT' });
+export const suspendUser = (token, userId, minutes) => request(`/users/${userId}/suspend?minutes=${minutes}`, token, { method: 'PUT' });
+export const blockUser = (token, userId) => request(`/users/${userId}/block`, token, { method: 'PUT' });
+export const unblockUser = (token, userId) => request(`/users/${userId}/unblock`, token, { method: 'PUT' });
