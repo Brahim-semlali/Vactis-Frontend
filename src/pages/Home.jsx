@@ -7,6 +7,7 @@ import ActionsPage from './Actions/ActionsPage.jsx';
 import Controle from './Controle/Controle.jsx';
 import LectureActivitePage from './LectureActivite/LectureActivitePage.jsx';
 import PlaceholderPage from './PlaceholderPage.jsx';
+import AdministrationPage from './Administration/AdministrationPage.jsx';
 
 function isPublicRoute(route) {
   return route === '/' || route === '/accueil';
@@ -35,6 +36,14 @@ function resolvePageContent(activeRoute, username, navigate) {
 
   if (activeRoute === '/lecture-activite') {
     return <LectureActivitePage />;
+  }
+
+  if (activeRoute === '/roles') {
+    return <AdministrationPage mode="roles" />;
+  }
+
+  if (activeRoute === '/users') {
+    return <AdministrationPage mode="users" />;
   }
 
 

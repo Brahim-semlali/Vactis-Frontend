@@ -108,6 +108,13 @@ const icons = {
       <path d="M12 17v4" />
     </svg>
   ),
+  roles: (
+    <svg {...iconProps}>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3 20a6 6 0 0 1 12 0" />
+      <path d="m17 11 1.5 1.5L22 9" />
+    </svg>
+  ),
   controle: (
     <svg {...iconProps}>
       <path d="M12 2 3 7v5c0 5.25 3.75 10.15 9 11.35C17.25 22.15 21 17.25 21 12V7L12 2z" />
@@ -158,6 +165,8 @@ const iconAliases = {
   shield: 'controle',
   controle: 'controle',
   'shield-check': 'controle',
+  role: 'roles',
+  users: 'users',
   regle: 'controle',
   regles: 'controle',
 };

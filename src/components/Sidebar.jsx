@@ -69,6 +69,7 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
   }, [token]);
 
   const visibleItems = useMemo(() => sortMenuItems(items), [items]);
+  const navigationItems = visibleItems;
 
   return (
     <aside
@@ -132,7 +133,7 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
 
         {!loading && !error && (
           <nav className="space-y-1" aria-label="Navigation principale">
-            {visibleItems.map((item) => {
+            {navigationItems.map((item) => {
               const isActive = isRouteActive(activeRoute, item.route);
 
               return (
