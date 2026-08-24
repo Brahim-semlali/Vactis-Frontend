@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   ResponsiveContainer,
+  Area,
   BarChart,
   Bar,
   Cell,
@@ -8,6 +10,9 @@ import {
   YAxis,
   Tooltip,
   Legend,
+  LabelList,
+  Line,
+  LineChart,
   CartesianGrid,
 } from 'recharts';
 import {
@@ -327,30 +332,32 @@ function CustomTooltipComparison({ active, payload, isCurrency }) {
   );
 }
 
-function ComparisonBarChart({ mMinus1, m, refRecente, isCurrency = false }) {
+function ComparisonLineChart({ mMinus1, m, refRecente, isCurrency = false, chartType = 'line' }) {
   const data = [
     {
       period: 'M-1',
       name: 'M-1',
       Valeur: mMinus1 ?? 0,
-      fill: 'url(#gradM1)',
+      variation: null,
     },
     {
       period: 'Mois M',
       name: 'Mois M (Courant)',
       Valeur: m ?? 0,
-      fill: 'url(#gradM)',
+      variation: mMinus1 ? ((m - mMinus1) / mMinus1) * 100 : null,
     },
     {
       period: 'Réf. récente',
       name: 'Réf. récente',
       Valeur: refRecente ?? 0,
-      fill: 'url(#gradRef)',
+      variation: m ? ((refRecente - m) / m) * 100 : null,
     },
   ];
 
+  const barColors = ['#94a3b8', '#14b8a6', '#2563eb'];
+
   return (
-    <div className="w-full bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-4">
+    <div key={chartType} className="comparison-chart-animated w-full bg-white rounded-2xl border border-slate-200/80 p-6 shadow-2xs space-y-4">
       {/* Legend Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div className="flex items-center gap-2">
@@ -373,19 +380,12 @@ function ComparisonBarChart({ mMinus1, m, refRecente, isCurrency = false }) {
       {/* Recharts Container */}
       <div className="w-full h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 25, right: 30, left: 10, bottom: 10 }}>
+          {chartType === 'line' ? (
+          <LineChart data={data} margin={{ top: 30, right: 30, left: 10, bottom: 10 }}>
             <defs>
-              <linearGradient id="gradM1" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#94a3b8" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="#cbd5e1" stopOpacity={0.6} />
-              </linearGradient>
-              <linearGradient id="gradM" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#0f766e" stopOpacity={1} />
-                <stop offset="100%" stopColor="#14b8a6" stopOpacity={0.8} />
-              </linearGradient>
-              <linearGradient id="gradRef" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2563eb" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="#60a5fa" stopOpacity={0.7} />
+              <linearGradient id="comparisonArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.2} />
+                <stop offset="100%" stopColor="#14b8a6" stopOpacity={0} />
               </linearGradient>
             </defs>
 
@@ -397,13 +397,36 @@ function ComparisonBarChart({ mMinus1, m, refRecente, isCurrency = false }) {
               tickLine={false}
               tickFormatter={(val) => (isCurrency ? `${(val / 1000).toFixed(0)}k` : val)}
             />
-            <Tooltip cursor={false} content={<CustomTooltipComparison isCurrency={isCurrency} />} />
-            <Bar dataKey="Valeur" radius={[10, 10, 0, 0]} maxBarSize={70}>
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.fill} className="hover:opacity-85 transition-opacity" />
-              ))}
+            <Tooltip cursor={{ stroke: '#cbd5e1', strokeDasharray: '4 4' }} content={<CustomTooltipComparison isCurrency={isCurrency} />} />
+            <Area type="monotone" dataKey="Valeur" stroke="none" fill="url(#comparisonArea)" />
+            <Line
+              type="monotone"
+              dataKey="Valeur"
+              stroke="#0f766e"
+              strokeWidth={3}
+              dot={({ cx, cy, index }) => <circle cx={cx} cy={cy} r={index === 1 ? 8 : 6} fill={barColors[index]} stroke="#ffffff" strokeWidth={3} />}
+              activeDot={{ r: 10, stroke: '#ffffff', strokeWidth: 3 }}
+            >
+              <LabelList
+                dataKey="Valeur"
+                position="top"
+                formatter={(value) => (isCurrency ? formatCurrency(value) : formatNumber(value))}
+                style={{ fill: '#334155', fontSize: 12, fontWeight: 800 }}
+              />
+            </Line>
+          </LineChart>
+          ) : (
+          <BarChart data={data} margin={{ top: 30, right: 30, left: 10, bottom: 10 }}>
+            <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#475569', fontWeight: 700 }} axisLine={{ stroke: '#cbd5e1' }} />
+            <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(val) => (isCurrency ? `${(val / 1000).toFixed(0)}k` : val)} />
+            <Tooltip cursor={{ fill: '#f8fafc' }} content={<CustomTooltipComparison isCurrency={isCurrency} />} />
+            <Bar dataKey="Valeur" radius={[8, 8, 0, 0]} maxBarSize={76}>
+              {data.map((entry, index) => <Cell key={entry.period} fill={barColors[index]} />)}
+              <LabelList dataKey="Valeur" position="top" formatter={(value) => (isCurrency ? formatCurrency(value) : formatNumber(value))} style={{ fill: '#334155', fontSize: 12, fontWeight: 800 }} />
             </Bar>
           </BarChart>
+          )}
         </ResponsiveContainer>
       </div>
     </div>
@@ -513,6 +536,7 @@ export default function LectureActivitePage() {
   const [kpis, setKpis] = useState(null);
   const [comparaison, setComparaison] = useState(null);
   const [metriqueTab, setMetriqueTab] = useState('cas');
+  const [chartType, setChartType] = useState('bar');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -707,9 +731,21 @@ export default function LectureActivitePage() {
 
   const activeCompData = metriqueTab === 'ca' ? comparaison?.ca : comparaison?.cas;
   const isCurrency = metriqueTab === 'ca';
+  const currentValue = activeCompData?.moisCourant ?? 0;
+  const previousValue = activeCompData?.moisPrecedent ?? 0;
+  const referenceValue = activeCompData?.referenceRecente ?? 0;
+  const vsPreviousPct = activeCompData?.variationVsMPrecedentPct ?? 0;
+  const vsReferencePct = activeCompData?.variationVsRefPct ?? 0;
+  const getTrendLabel = (value) => value > 0 ? 'hausse' : value < 0 ? 'baisse' : 'stabilité';
+  const getTrendClass = (value) => value > 0 ? 'activite-insight-card--up' : value < 0 ? 'activite-insight-card--down' : 'activite-insight-card--neutral';
 
   return (
-    <div className="activite-page">
+    <motion.div
+      className="activite-page"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+    >
       {/* Hero Section — style ANAPAT AMANA */}
       <section className="activite-hero">
         <div className="activite-hero-inner">
@@ -789,6 +825,15 @@ export default function LectureActivitePage() {
         </div>
       </div>
 
+      <nav className="activite-section-nav" aria-label="Sections de la lecture activité">
+        <span className="activite-section-nav-label">Lecture rapide</span>
+        <a href="#activite-synthese">Synthèse</a>
+        <a href="#activite-evolution">Évolution</a>
+        <a href="#activite-portefeuille">Portefeuille</a>
+        <a href="#activite-terrain">Terrain</a>
+        <a href="#activite-impact">Impact VACTIS</a>
+      </nav>
+
       {error && (
         <div className="activite-alert activite-alert--error">
           <ActiviteIcon name="alert" />
@@ -797,7 +842,7 @@ export default function LectureActivitePage() {
       )}
 
       {/* Bloc 1: Qualité data - activité labo complète */}
-      <section className="activite-card-section">
+      <section id="activite-synthese" className="activite-card-section activite-card-section--synthese">
         <div className="activite-section-header">
           <h2 className="activite-section-title">Qualité data - activité labo complète</h2>
           <p className="activite-section-subtitle">
@@ -887,14 +932,14 @@ export default function LectureActivitePage() {
       </section>
 
       {/* Bloc 2: Comparaison temporelle (Cas & CA) */}
-      <section className="activite-card-section">
+      <section id="activite-evolution" className="activite-card-section activite-card-section--evolution">
         <div className="activite-comparison-header">
           <div>
             <h2 className="activite-section-title">
               {metriqueTab === 'ca' ? 'Comparaison CA' : 'Comparaison cas'}
             </h2>
             <p className="activite-section-subtitle">
-              Lecture de la valeur du mois courant, du mois précédent et de la référence récente.
+              Analysez la performance du mois courant par rapport aux périodes précédentes.
             </p>
           </div>
 
@@ -938,11 +983,11 @@ export default function LectureActivitePage() {
               <div className="activite-comp-card-value">
                 {loading ? '…' : isCurrency ? formatCurrency(activeCompData?.moisCourant) : formatNumber(activeCompData?.moisCourant)}
               </div>
-              <div className="activite-comp-card-sub">Volume lu depuis l&apos;endpoint.</div>
+              <div className="activite-comp-card-sub">{isCurrency ? "Chiffre d'affaires du mois sélectionné." : 'Nombre de cas du mois sélectionné.'}</div>
             </div>
 
             {/* Card M-1 */}
-            <div className="activite-comp-card">
+            <div className="activite-comp-card activite-comp-card--previous" title="Valeur enregistrée pour la période précédente">
               <div className="activite-comp-card-header">
                 <span className="activite-comp-card-title">
                   {metriqueTab === 'ca' ? 'CA MOIS M-1' : 'CAS MOIS M-1'}
@@ -1033,27 +1078,78 @@ export default function LectureActivitePage() {
           {/* Graphique Comparatif */}
           <div className="activite-chart-section">
             <div className="activite-chart-header">
-              <span className="activite-chart-eyebrow">GRAPHIQUE COMPARATIF</span>
-              <h3 className="activite-chart-title">
-                {metriqueTab === 'ca' ? 'CA comparés' : 'Cas comparés'}
-              </h3>
-              <p className="activite-chart-subtitle">
-                Comparaison du mois précédent, du mois courant et de la référence récente : une valeur absente est indiquée comme non disponible.
-              </p>
+              <div>
+                <span className="activite-chart-eyebrow">GRAPHIQUE COMPARATIF</span>
+                <h3 className="activite-chart-title">
+                  {metriqueTab === 'ca' ? 'CA comparés' : 'Évolution des cas'}
+                </h3>
+                <p className="activite-chart-subtitle">
+                  Visualisez l&apos;évolution du mois courant par rapport au mois précédent et à la référence récente.
+                </p>
+              </div>
+              <div className="activite-chart-tools">
+                <div className="activite-chart-display" role="group" aria-label="Choisir le type de graphique">
+                  <span className="activite-chart-display-label">Affichage</span>
+                  <div className="activite-chart-mode">
+                    <button
+                      type="button"
+                      className={`activite-chart-mode-btn${chartType === 'line' ? ' activite-chart-mode-btn--active' : ''}`}
+                      aria-pressed={chartType === 'line'}
+                      title="Afficher l'évolution sous forme de courbe"
+                      onClick={() => setChartType('line')}
+                    >
+                      Courbe
+                    </button>
+                    <button
+                      type="button"
+                      className={`activite-chart-mode-btn${chartType === 'bar' ? ' activite-chart-mode-btn--active' : ''}`}
+                      aria-pressed={chartType === 'bar'}
+                      title="Afficher les valeurs sous forme de colonnes"
+                      onClick={() => setChartType('bar')}
+                    >
+                      Colonnes
+                    </button>
+                  </div>
+                </div>
+                <button type="button" className="activite-chart-menu" aria-label="Options du graphique" title="Options du graphique">⋮</button>
+              </div>
             </div>
 
-            <ComparisonBarChart
+            <ComparisonLineChart
               mMinus1={activeCompData?.moisPrecedent}
               m={activeCompData?.moisCourant}
               refRecente={activeCompData?.referenceRecente}
               isCurrency={isCurrency}
+              chartType={chartType}
             />
+          </div>
+          <div className="activite-insights-grid">
+            <div className={`activite-insight-card activite-insight-card--positive ${getTrendClass(vsPreviousPct)}`}>
+              <span className="activite-insight-icon" aria-hidden="true">{vsPreviousPct > 0 ? '↗' : vsPreviousPct < 0 ? '↘' : '→'}</span>
+              <div>
+                <h4>Points clés</h4>
+                <p>
+                  <strong>{isCurrency ? formatCurrency(currentValue) : formatNumber(currentValue)}</strong> ce mois-ci : <strong>{getTrendLabel(vsPreviousPct)} de {Math.abs(vsPreviousPct).toFixed(1)}%</strong> par rapport à M-1
+                  ({isCurrency ? formatCurrency(previousValue) : formatNumber(previousValue)}) et <strong>{getTrendLabel(vsReferencePct)} de {Math.abs(vsReferencePct).toFixed(1)}%</strong> par rapport à la référence.
+                </p>
+              </div>
+            </div>
+            <div className="activite-insight-card activite-insight-card--info">
+              <span className="activite-insight-icon" aria-hidden="true">i</span>
+              <div>
+                <h4>À savoir</h4>
+                <p>
+                  La référence récente est de <strong>{isCurrency ? formatCurrency(referenceValue) : formatNumber(referenceValue, 2)}</strong>.
+                  Elle correspond à la moyenne des 3 mois précédents et permet de lire la tendance actuelle sans la confondre avec une valeur cible.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Bloc 4 — Top mouvements */}
-      <section className="activite-card-section">
+      <section className="activite-card-section activite-card-section--mouvements">
         <div className="activite-comparison-header">
           <div>
             <h2 className="activite-section-title">Top mouvements</h2>
@@ -1167,7 +1263,7 @@ export default function LectureActivitePage() {
       {/* ================================================================ */}
 
       {/* Bloc 3 — Lecture statuts VACTIS */}
-      <section className="activite-card-section">
+      <section id="activite-portefeuille" className="activite-card-section activite-card-section--portefeuille">
         <div className="activite-section-header">
           <h2 className="activite-section-title">Lecture statuts VACTIS</h2>
           <p className="activite-section-subtitle">
@@ -1270,7 +1366,7 @@ export default function LectureActivitePage() {
 
 
       {/* Bloc 5 — Flux agrégés */}
-      <section className="activite-card-section">
+      <section className="activite-card-section activite-card-section--flux">
         <div className="activite-flux-header">
           <div>
             <h2 className="activite-section-title">Flux agrégés</h2>
@@ -1327,7 +1423,7 @@ export default function LectureActivitePage() {
       </section>
 
       {/* Bloc 6 — Lecture réalisation commerciale / actions VACTIS */}
-      <section className="activite-card-section">
+      <section id="activite-terrain" className="activite-card-section activite-card-section--terrain">
         <div className="activite-section-header">
           <h2 className="activite-section-title">Lecture réalisation commerciale / actions VACTIS</h2>
           <p className="activite-section-subtitle">
@@ -1467,7 +1563,7 @@ export default function LectureActivitePage() {
       </section>
 
       {/* Bloc 7 — Compte-rendu terrain du mois */}
-      <section className="activite-card-section">
+      <section className="activite-card-section activite-card-section--compte-rendu">
         <div className="activite-section-header">
           <h2 className="activite-section-title">Compte-rendu terrain du mois</h2>
           <p className="activite-section-subtitle">
@@ -1834,7 +1930,7 @@ export default function LectureActivitePage() {
       {/* ══════════════════════════════════════════════════════════════════════
           NIVEAU 4 — Impact des visites terrain
       ══════════════════════════════════════════════════════════════════════ */}
-      <section className="activite-card-section">
+      <section id="activite-impact" className="activite-card-section activite-card-section--impact">
         {loadingN4 && !rapportImpact ? (
           <div className="activite-n2-empty">
             <div className="activite-n2-empty-spinner" />
@@ -2479,6 +2575,6 @@ export default function LectureActivitePage() {
           </div>
         );
       })()}
-    </div>
+    </motion.div>
   );
 }
