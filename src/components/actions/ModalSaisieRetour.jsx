@@ -9,7 +9,7 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
   const [motifNonRealisation, setMotifNonRealisation] = useState('');
   const [qualification, setQualification] = useState('FAVORABLE');
   const [commentaire, setCommentaire] = useState('');
-  const [notePotentielle, setNotePotentielle] = useState('');
+  const [noteTerrain, setNoteTerrain] = useState('');
   const [prochaineAction, setProchaineAction] = useState('');
   const [dateProchaineAction, setDateProchaineAction] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -36,7 +36,7 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
       motifNonRealisation: !actionRealisee ? motifNonRealisation : null,
       qualification,
       commentaire,
-      notePotentielle: notePotentielle ? parseFloat(notePotentielle) : null,
+      noteTerrain: noteTerrain ? parseFloat(noteTerrain) : null,
       prochaineAction,
       dateProchaineAction: dateProchaineAction || null,
     });
@@ -145,16 +145,16 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Note de la visite (1 à 5)
+                  Note terrain (1 à 5)
                 </label>
                 <div className="flex items-center gap-1.5 pt-0.5">
                   {[1, 2, 3, 4, 5].map((n) => (
                     <button
                       key={n}
                       type="button"
-                      onClick={() => setNotePotentielle(n.toString())}
+                      onClick={() => setNoteTerrain(n.toString())}
                       className={`flex-1 h-10 rounded-xl font-extrabold text-xs transition-all border ${
-                        notePotentielle === n.toString()
+                        noteTerrain === n.toString()
                           ? 'bg-sky-500 text-white border-sky-600 shadow-md scale-[1.02]'
                           : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                       }`}

@@ -35,7 +35,7 @@ async function request(path, token, options = {}) {
 }
 
 export const getRoles = (token) => request('/roles/', token);
-export const getMenus = (token) => request('/api/menu/getAll', token);
+export const getMenus = (token) => request('/api/admin/menu-tree-complet', token);
 export const getUsers = (token) => request('/users/', token);
 
 export const createRole = (token, body) => request('/roles/add', token, { method: 'POST', body: JSON.stringify(body) });

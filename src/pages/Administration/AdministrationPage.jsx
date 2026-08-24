@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext.jsx";
 import {
   AdministrationError,
@@ -36,7 +36,9 @@ function normalizeRoleForm(role) {
     ...(role ?? {}),
     nameRole: role?.nameRole ?? "",
     description: role?.description ?? "",
-    menuIds: Array.isArray(role?.menuIds) ? role.menuIds : [],
+    menuIds: Array.isArray(role?.menuIds)
+      ? role.menuIds
+      : (role?.menuItems ?? []).map((menu) => menu.idMenu),
   };
 }
 
@@ -188,7 +190,7 @@ function Status({ message, type = "success" }) {
 }
 function TableActions({ onEdit, onDelete }) {
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-1" onClick={(event) => event.stopPropagation()}>
       <button
         title="Modifier"
         type="button"
@@ -307,16 +309,29 @@ function Pager({ table }) {
   );
 }
 
+function TreeCheckbox({ checked, indeterminate, onChange, children }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+  return (
+    <label className="flex cursor-pointer items-center gap-3 rounded-lg bg-white p-3 text-sm font-semibold text-slate-700 shadow-sm">
+      <input ref={ref} type="checkbox" checked={checked} onChange={onChange} className="h-4 w-4 accent-teal-600" />
+      {children}
+    </label>
+  );
+}
+
 function RoleDrawer({ role, menus, saving, onClose, onSave }) {
   const [form, setForm] = useState(() => normalizeRoleForm(role));
   const set = (key, value) =>
     setForm((current) => ({ ...current, [key]: value }));
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-slate-950/40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <section className="h-full w-full max-w-xl overflow-y-auto bg-white p-6 shadow-2xl">
+      <section className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
         <div className="mb-7 flex items-start justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[.2em] text-teal-600">
@@ -360,31 +375,31 @@ function RoleDrawer({ role, menus, saving, onClose, onSave }) {
             <legend className="mb-2 text-sm font-semibold text-slate-700">
               Menus associés
             </legend>
-            <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2">
+            <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
               {menus.length ? (
-                menus.map((menu) => (
-                  <label
-                    key={menu.idMenu ?? menu.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg bg-white p-3 text-sm font-semibold text-slate-700 shadow-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={form.menuIds.includes(menu.idMenu ?? menu.id)}
-                      onChange={(e) =>
-                        set(
-                          "menuIds",
-                          e.target.checked
-                            ? [...form.menuIds, menu.idMenu ?? menu.id]
-                            : form.menuIds.filter(
-                                (id) => id !== (menu.idMenu ?? menu.id),
-                              ),
-                        )
-                      }
-                      className="h-4 w-4 accent-teal-600"
-                    />
-                    {menu.label ?? menu.name}
-                  </label>
-                ))
+                menus.map((section) => {
+                  const children = section.sousMenus ?? [];
+                  const selected = children.filter((menu) => form.menuIds.some((id) => String(id) === String(menu.idMenu)));
+                  const allSelected = children.length > 0 && selected.length === children.length;
+                  const toggleSection = (checked) => set("menuIds", checked
+                    ? [...new Set([...form.menuIds, ...children.map((menu) => menu.idMenu)])]
+                    : form.menuIds.filter((id) => !children.some((menu) => String(menu.idMenu) === String(id))));
+                  return (
+                    <div key={section.idMenuPrinc} className="rounded-lg border border-slate-200 bg-white p-2">
+                      <TreeCheckbox checked={allSelected} indeterminate={selected.length > 0 && !allSelected} onChange={(e) => toggleSection(e.target.checked)}>
+                        {section.nom}
+                      </TreeCheckbox>
+                      <div className="ml-7 grid gap-1 border-l border-slate-200 pl-3 pt-1">
+                        {children.map((menu) => (
+                          <label key={menu.idMenu} className="flex cursor-pointer items-center gap-2 py-1.5 text-sm text-slate-600">
+                            <input type="checkbox" checked={form.menuIds.some((id) => String(id) === String(menu.idMenu))} onChange={(e) => set("menuIds", e.target.checked ? [...form.menuIds, menu.idMenu] : form.menuIds.filter((id) => String(id) !== String(menu.idMenu)))} className="h-4 w-4 accent-teal-600" />
+                            {menu.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
               ) : (
                 <p className="p-2 text-sm text-slate-500">
                   Aucun menu disponible.
@@ -430,6 +445,13 @@ function UserDrawer({ user, roles, menus, saving, onClose, onSave }) {
   const locked = user?.accountLocked;
   const selectedRole = roles.find((role) => String(role.idRole) === String(form.roleId));
   const accessibleMenus = selectedRole?.menuItems ?? [];
+  const accessibleMenuIds = new Set(accessibleMenus.map((menu) => String(menu.idMenu ?? menu.id)));
+  const accessibleSections = menus
+    .map((section) => ({
+      ...section,
+      sousMenus: (section.sousMenus ?? []).filter((menu) => accessibleMenuIds.has(String(menu.idMenu ?? menu.id))),
+    }))
+    .filter((section) => section.sousMenus.length > 0);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
@@ -542,12 +564,19 @@ function UserDrawer({ user, roles, menus, saving, onClose, onSave }) {
           {user?.id && (
             <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
               <h3 className="text-sm font-black text-slate-800">Menus accessibles</h3>
-              {accessibleMenus.length ? (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {accessibleMenus.map((menu) => (
-                    <span key={menu.idMenu ?? menu.id} className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-teal-700 shadow-sm">
-                      {menu.label ?? menu.name}
-                    </span>
+              {accessibleSections.length ? (
+                <div className="mt-3 grid gap-2">
+                  {accessibleSections.map((section) => (
+                    <div key={section.idMenuPrinc} className="rounded-lg border border-slate-200 bg-white p-3">
+                      <p className="text-sm font-bold text-slate-800">{section.nom}</p>
+                      <div className="mt-2 flex flex-wrap gap-2 border-l-2 border-teal-100 pl-3">
+                        {section.sousMenus.map((menu) => (
+                          <span key={menu.idMenu ?? menu.id} className="rounded-full bg-teal-50 px-3 py-1.5 text-xs font-bold text-teal-700">
+                            {menu.label ?? menu.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -897,7 +926,18 @@ export default function AdministrationPage({ mode = "roles" }) {
                 <tbody className="divide-y divide-slate-100">
                   {table.visible.map((item) =>
                     isRoles ? (
-                      <tr key={item.idRole} className="hover:bg-teal-50/30">
+                      <tr
+                        key={item.idRole}
+                        className="cursor-pointer hover:bg-teal-50/30"
+                        onClick={() =>
+                          setEditing({
+                            ...item,
+                            menuIds: (item.menuItems ?? []).map(
+                              (menu) => menu.idMenu ?? menu.id,
+                            ),
+                          })
+                        }
+                      >
                         <td className="px-5 py-4 font-bold text-slate-500">
                           #{item.idRole}
                         </td>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { getActions, reserverActionApi, soumettreRetourTerrainApi, creerVisiteLibreApi, getVisitesLibresApi } from '../../api/actions.js';
+import { getMedecins } from '../../api/medecins.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 import ModalSaisieRetour from '../../components/actions/ModalSaisieRetour.jsx';
@@ -38,6 +39,7 @@ const TABLE_COLUMNS = [
   'Médecin',
   'Statut',
   'Segment',
+  'Dernière note terrain',
   'Action recommandée',
   'Urgence',
   'État',
@@ -207,16 +209,22 @@ function calculateDaysRemaining(dateStr) {
   return `Échéance dépassée (${Math.abs(diffDays)} j)`;
 }
 
-function calculateDaysInactive(dateStr) {
-  if (!dateStr) return null;
-  const lastAct = new Date(dateStr);
-  if (isNaN(lastAct.getTime())) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  lastAct.setHours(0, 0, 0, 0);
-  const diffTime = today - lastAct;
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays >= 0 ? diffDays : 0;
+function getVisitDateLabel(action) {
+  return action?.etatAction === 'REALISEE' ? 'Date de réalisation' : 'Date planifiée';
+}
+
+function getVisitTimingLabel(action) {
+  if (action?.etatAction === 'REALISEE') {
+    const date = new Date(action.dateVisite);
+    if (Number.isNaN(date.getTime())) return 'Réalisée';
+    const today = new Date();
+    date.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((today - date) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return "Réalisée aujourd'hui";
+    return `Réalisée il y a ${diffDays} j`;
+  }
+  return calculateDaysRemaining(action?.dateVisite);
 }
 
 /** Fréquence de visite attendue selon le segment (même logique que le backend) */
@@ -243,6 +251,38 @@ function getActionDescription(action, medecin) {
     return 'Médecin nouvellement intégré : réaliser la première visite de présentation et d\'accompagnement.';
   }
   return 'Maintenir le rythme d\'échanges commercial régulier avec le médecin.';
+}
+
+function formatExplanationScore(value) {
+  return value == null || Number.isNaN(Number(value))
+    ? '—'
+    : Number(value).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+}
+
+function formatWeightedExplanation(value, weight) {
+  return value == null ? '—' : formatExplanationScore(Number(value) * weight);
+}
+
+function getActionRule(statut) {
+  const normalized = String(statut ?? '').toUpperCase();
+  if (['SILENCE_CRITIQUE', 'SURVEILLANCE', 'RETENTION'].includes(normalized)) return 'statut de baisse ou de silence → visite urgence silence';
+  if (normalized === 'PROGRESSION') return 'statut en progression → visite suivi progression';
+  if (normalized === 'ONBOARDING') return 'nouveau médecin → visite onboarding';
+  return 'statut stable → visite suivi régulier';
+}
+
+function getActionUrgencyReason(action, medecin) {
+  const statut = action.statut || medecin?.statut || 'Non renseigné';
+  if (action.urgence === 'ELEVE') return `Élevé — statut ${formatEnumLabel(statut)}, action prioritaire à traiter sous 7 jours.`;
+  if (action.urgence === 'SILENCE_CRITIQUE') return action.urgenceSilence
+    ? `Silence critique — ${action.joursSansActivite ?? '—'} jours depuis le dernier dossier laboratoire, au-delà de la fréquence attendue.`
+    : `Silence critique — statut ${formatEnumLabel(statut)}, baisse ou absence d'activité détectée.`;
+  return `${formatEnumLabel(action.urgence)} — niveau déterminé par le statut ${formatEnumLabel(statut)}.`;
+}
+
+function getActionStateReason(action) {
+  if (!action.dateVisite) return `${formatEnumLabel(action.etatAction)} — date de planification non renseignée.`;
+  return `${formatEnumLabel(action.etatAction)} le ${formatDate(action.dateVisite)} — échéance de l'action.`;
 }
 
 function formatAmount(val) {
@@ -318,6 +358,7 @@ export default function ActionsPage() {
 
   // Selection & View Mode state: 'table' or 'detail'
   const [selectedAction, setSelectedAction] = useState(null);
+  const [isExplanationOpen, setIsExplanationOpen] = useState(false);
   const [viewMode, setViewMode] = useState('table');
 
   // Sauvegarde de la position exacte de scroll avant sélection
@@ -377,6 +418,7 @@ export default function ActionsPage() {
   };
 
   const [visitesLibresList, setVisitesLibresList] = useState([]);
+  const [medecinsList, setMedecinsList] = useState([]);
   const [loadingVisitesLibres, setLoadingVisitesLibres] = useState(false);
 
   const loadVisitesLibres = useCallback(async () => {
@@ -392,11 +434,22 @@ export default function ActionsPage() {
     }
   }, [token]);
 
+  const loadMedecinsList = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await getMedecins(token);
+      setMedecinsList(data?.items ?? []);
+    } catch (err) {
+      console.error('Erreur chargement portefeuille médecins', err);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (activeTab === 'LIBRES') {
       loadVisitesLibres();
+      loadMedecinsList();
     }
-  }, [activeTab, loadVisitesLibres]);
+  }, [activeTab, loadVisitesLibres, loadMedecinsList]);
 
   // Submit Visite Libre
   const handleSubmitVisiteLibre = async (payload) => {
@@ -498,6 +551,7 @@ export default function ActionsPage() {
     lastScrollPosition.current = currentScroll;
     lastSelectedActionIdRef.current = action.id;
 
+    setIsExplanationOpen(false);
     setSelectedAction(action);
     setViewMode('detail');
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -790,6 +844,15 @@ export default function ActionsPage() {
                               {action.segment ? `SEGMENT ${action.segment}` : '—'}
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            {action.derniereNoteTerrain != null ? (
+                              <span className="inline-flex rounded-full border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-bold text-teal-700">
+                                {action.derniereNoteTerrain}/5
+                              </span>
+                            ) : (
+                              <span className="text-xs font-semibold text-slate-400">—</span>
+                            )}
+                          </TableCell>
                           <TableCell className="font-semibold text-slate-800">
                             {action.actionRecommandee ?? '—'}
                           </TableCell>
@@ -1052,6 +1115,55 @@ export default function ActionsPage() {
                 </div>
               </div>
 
+              <section className="rounded-2xl border border-sky-100 bg-sky-50/60 p-5 space-y-4">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between text-left"
+                  aria-expanded={isExplanationOpen}
+                  onClick={() => setIsExplanationOpen((open) => !open)}
+                >
+                  <span className="text-sm font-black text-sky-950">Pourquoi ces valeurs ?</span>
+                  <span className="text-lg font-bold text-sky-700" aria-hidden="true">{isExplanationOpen ? '−' : '+'}</span>
+                </button>
+                {isExplanationOpen && <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Valeur du médecin</h4>
+                    <ol className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600">
+                      <li><strong className="text-slate-900">1. Potentiel :</strong> {formatExplanationScore(selectedMedecin?.potentielSur100)} × 0,40 = {formatWeightedExplanation(selectedMedecin?.potentielSur100, 0.4)}.</li>
+                      <li><strong className="text-slate-900">2. Performance :</strong> CA mensuel moyen = {selectedMedecin?.caMensuelMoyen == null ? '—' : `${formatAmount(selectedMedecin.caMensuelMoyen)} MAD`}; rang = {formatExplanationScore(selectedMedecin?.performanceSur100)} × 0,40 = {formatWeightedExplanation(selectedMedecin?.performanceSur100, 0.4)}.</li>
+                      <li><strong className="text-slate-900">3. Poids économique :</strong> {formatExplanationScore(selectedMedecin?.poidsEcoSur100)} × 0,20 = {formatWeightedExplanation(selectedMedecin?.poidsEcoSur100, 0.2)}.</li>
+                      <li><strong className="text-slate-900">4. Score final :</strong> {formatWeightedExplanation(selectedMedecin?.potentielSur100, 0.4)} + {formatWeightedExplanation(selectedMedecin?.performanceSur100, 0.4)} + {formatWeightedExplanation(selectedMedecin?.poidsEcoSur100, 0.2)} = <strong className="text-slate-900">{formatExplanationScore(selectedMedecin?.scoreValeur)} / 100</strong>, soit le segment <strong className="text-slate-900">{selectedMedecin?.segment || selectedAction.segment || '—'}</strong>.</li>
+                    </ol>
+                  </div>
+                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Action recommandée</h4>
+                    <p className="mt-3 text-xs leading-relaxed text-slate-600">
+                      <strong className="text-slate-900">{selectedAction.actionRecommandee || '—'}</strong>{' '}
+                      {selectedAction.urgenceSilence
+                        ? <>déclenchée par le silence radio ({selectedAction.joursSansActivite ?? '—'} jours sans dossier laboratoire) : visite prioritaire.</>
+                        : <>déclenchée par le statut <strong className="text-slate-900">{formatEnumLabel(selectedAction.statut || selectedMedecin?.statut)}</strong> : {getActionRule(selectedAction.statut || selectedMedecin?.statut)}.</>}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Urgence</h4>
+                    <p className="mt-3 text-xs leading-relaxed text-slate-600">{getActionUrgencyReason(selectedAction, selectedMedecin)}</p>
+                  </div>
+                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Silence radio</h4>
+                    <ol className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600">
+                      <li><strong className="text-slate-900">1. Mesure :</strong> {selectedAction.joursSansActivite ?? '—'} jours depuis le dernier dossier envoyé au laboratoire.</li>
+                      <li><strong className="text-slate-900">2. Rythme attendu :</strong> 1 dossier tous les {calculateFrequenceJours(selectedMedecin?.segment) ?? '—'} jours selon le segment {selectedMedecin?.segment || selectedAction.segment || '—'}.</li>
+                      <li><strong className="text-slate-900">3. Niveau :</strong> au-delà de la fréquence attendue = <strong className="text-slate-900">SILENCE CRITIQUE</strong>; au-delà de 70% = <strong className="text-slate-900">ALERTE SILENCE</strong>; sinon = <strong className="text-slate-900">SUIVI REGULIER</strong>.</li>
+                      <li><strong className="text-slate-900">4. Résultat :</strong> {selectedAction.joursSansActivite ?? '—'} jours {selectedAction.urgenceSilence ? 'dépassent le seuil, donc SILENCE CRITIQUE et visite prioritaire.' : 'déterminent le niveau de silence affiché.'}</li>
+                    </ol>
+                  </div>
+                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">État</h4>
+                    <p className="mt-3 text-xs leading-relaxed text-slate-600">{getActionStateReason(selectedAction)}</p>
+                  </div>
+                </div>}
+              </section>
+
               {/* Grid 2 Colonnes */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* Colonne Gauche (6 cols) : Action recommandée & Métriques */}
@@ -1075,7 +1187,7 @@ export default function ActionsPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
                         <div>
-                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Date planifiée</span>
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">{getVisitDateLabel(selectedAction)}</span>
                           <span className="text-sm font-bold text-slate-900">{formatDate(selectedAction.dateVisite)}</span>
                         </div>
                         <div className="p-2 bg-amber-50 text-amber-700 rounded-xl shrink-0">
@@ -1085,9 +1197,9 @@ export default function ActionsPage() {
 
                       <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
                         <div>
-                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Jours restants</span>
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">{selectedAction.etatAction === 'REALISEE' ? 'Statut visite' : 'Jours restants'}</span>
                           <span className="text-sm font-bold text-slate-900">
-                            {calculateDaysRemaining(selectedAction.dateVisite)}
+                            {getVisitTimingLabel(selectedAction)}
                           </span>
                         </div>
                         <div className="p-2 bg-slate-100 text-slate-600 rounded-xl shrink-0">
@@ -1197,8 +1309,8 @@ export default function ActionsPage() {
                     </div>
                     <div className="text-xs text-slate-800 font-medium space-y-1 pt-1">
                       <p className="font-extrabold text-lg text-slate-900">
-                        {calculateDaysInactive(selectedMedecin?.dateDerniereActivite) !== null
-                          ? `${calculateDaysInactive(selectedMedecin?.dateDerniereActivite)} jour${calculateDaysInactive(selectedMedecin?.dateDerniereActivite) > 1 ? 's' : ''} sans activité`
+                        {selectedAction.joursSansActivite != null
+                          ? `${selectedAction.joursSansActivite} jour${selectedAction.joursSansActivite > 1 ? 's' : ''} sans activité`
                           : '—'}
                       </p>
                       <p className="text-slate-500 text-[11px] uppercase tracking-wider font-bold pt-2">Fréquence habituelle attendue</p>
@@ -1227,7 +1339,7 @@ export default function ActionsPage() {
       />
 
       <ModalVisiteLibre
-        medecinsList={actions.map((a) => a.medecin).filter(Boolean)}
+        medecinsList={medecinsList}
         isOpen={isVisiteLibreOpen}
         onClose={() => setIsVisiteLibreOpen(false)}
         onSubmit={handleSubmitVisiteLibre}

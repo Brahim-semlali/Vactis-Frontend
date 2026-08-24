@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getMedecinByCode, getMedecins, getRetoursTerrain, patchNoteInput, postRetourTerrain } from '../../api/medecins.js';
+import { getMedecinByCode, getMedecins, patchNoteInput } from '../../api/medecins.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 
@@ -172,14 +172,54 @@ function formatCaMois(value) {
   return `${Number(value).toLocaleString('fr-FR')} MAD`;
 }
 
-function getTodayString() {
-  return new Date().toISOString().split('T')[0];
+function formatScore(value) {
+  return value == null || Number.isNaN(Number(value)) ? '—' : Number(value).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 }
 
-function formatDateFr(dateStr) {
-  if (!dateStr) return '';
-  const [year, month, day] = String(dateStr).split('T')[0].split('-');
-  return `${day}/${month}/${year}`;
+function calculateFrequenceJours(segment) {
+  if (!segment) return null;
+  switch (String(segment).trim().toUpperCase()) {
+    case 'A': return 7;
+    case 'B': return 10;
+    case 'C': return 15;
+    case 'D': return 30;
+    default: return null;
+  }
+}
+
+function formatWeightedScore(value, weight) {
+  return value == null ? '—' : formatScore(Number(value) * weight);
+}
+
+function formatDateTooltip(value) {
+  if (!value) return 'date inconnue';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'date inconnue' : date.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+}
+
+function variationPct(medecin) {
+  if (medecin.caBaseline == null || Number(medecin.caBaseline) === 0) return null;
+  return ((Number(medecin.caMois ?? 0) - Number(medecin.caBaseline)) / Number(medecin.caBaseline)) * 100;
+}
+
+function segmentTooltip(medecin) {
+  const segment = medecin.segment || 'Non renseigné';
+  if ([medecin.scoreValeur, medecin.potentielSur100, medecin.performanceSur100, medecin.poidsEcoSur100].some((value) => value == null)) {
+    return `Segment ${segment} — détail du score indisponible.`;
+  }
+  return `Segment ${segment} (score ${formatScore(medecin.scoreValeur)}/100) — Potentiel ${formatScore(medecin.potentielSur100)}/100 (40%) + Performance ${formatScore(medecin.performanceSur100)}/100 (40%) + Poids économique ${formatScore(medecin.poidsEcoSur100)}/100 (20%)`;
+}
+
+function statutTooltip(medecin) {
+  const statut = (medecin.statut || medecin.statutPilotage || 'Non renseigné').replace(/_/g, ' ');
+  const normalized = statut.toUpperCase();
+  if (normalized === 'ONBOARDING') return `Onboarding — nouveau médecin, première collaboration en ${formatDateTooltip(medecin.datePremiereCollaboration)}.`;
+  if (normalized === 'EXCLU') return `Exclu — aucune activité depuis 6 mois (dernière activité : ${formatDateTooltip(medecin.dateDerniereActivite)}).`;
+  if (normalized === 'A REACTIVER' || normalized === 'A_REACTIVER') return `À réactiver — aucune activité ce mois, dernière activité en ${formatDateTooltip(medecin.dateDerniereActivite)}.`;
+  const variation = variationPct(medecin);
+  if (variation == null) return `${statut} — premier mois d'activité, pas de comparaison possible.`;
+  const threshold = normalized === 'SURVEILLANCE' ? 'entre -10% et -40%' : normalized === 'RETENTION' ? 'entre -40% et -70%' : normalized === 'SILENCE CRITIQUE' ? 'inférieure à -70%' : normalized === 'PROGRESSION' ? 'supérieure à +20%' : 'entre -10% et +20%';
+  return `${statut} — CA courant : ${formatCaMois(medecin.caMois)}, CA précédent : ${formatCaMois(medecin.caBaseline)}, variation ${formatScore(variation)}% (seuil : ${threshold}).`;
 }
 
 function getBadgeVariant(type, value) {
@@ -242,13 +282,14 @@ function KpiCardComponent({ label, icon, tone, value, active, onClick }) {
 }
 
 export default function MedecinsPage() {
-  const { token, username } = useAuth();
+  const { token } = useAuth();
   const [filters, setFilters] = useState(FILTER_DEFAULTS);
   const [pageData, setPageData] = useState(null);
 
   // Selection & View Mode state: 'table' or 'detail'
   const [selectedMedecin, setSelectedMedecin] = useState(null);
   const [viewMode, setViewMode] = useState('table');
+  const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
   // Sauvegarde de la position exacte de scroll avant sélection
   const lastScrollPosition = useRef(0);
@@ -263,21 +304,6 @@ export default function MedecinsPage() {
   const [noteError, setNoteError] = useState(null);
   const [noteSaved, setNoteSaved] = useState(false);
   const noteSavedTimer = useRef(null);
-
-  // — Note terrain (RetourTerrain) —
-  const [retoursTerrain, setRetoursTerrain] = useState([]);
-  const [loadingRetours, setLoadingRetours] = useState(false);
-  const [terrainNote, setTerrainNote] = useState(null);
-  const [terrainDate, setTerrainDate] = useState(getTodayString());
-  const [terrainVisiteur, setTerrainVisiteur] = useState(username || '');
-  const [terrainCommentaire, setTerrainCommentaire] = useState('');
-  const [terrainStatutVisite, setTerrainStatutVisite] = useState('REALISEE');
-  const [terrainQualification, setTerrainQualification] = useState('NON_RENSEIGNE');
-  const [terrainReclamation, setTerrainReclamation] = useState(false);
-  const [terrainSaving, setTerrainSaving] = useState(false);
-  const [terrainError, setTerrainError] = useState(null);
-  const [terrainSaved, setTerrainSaved] = useState(false);
-  const terrainSavedTimer = useRef(null);
 
   const loadMedecins = useCallback(async () => {
     if (!token) return;
@@ -295,7 +321,12 @@ export default function MedecinsPage() {
       };
 
       if (code) {
-        const medecin = await getMedecinByCode(token, code);
+        let medecin = null;
+        try {
+          medecin = await getMedecinByCode(token, code);
+        } catch (err) {
+          if (err?.status !== 404) throw err;
+        }
 
         if (medecin) {
           let items = [medecin];
@@ -358,6 +389,7 @@ export default function MedecinsPage() {
 
   useEffect(() => {
     if (selectedMedecin) {
+      setIsExplanationOpen(false);
       setNoteInputDraft(selectedMedecin?.noteInput ?? null);
       setNoteError(null);
       setNoteSaved(false);
@@ -410,40 +442,6 @@ export default function MedecinsPage() {
     }
   }, [viewMode, selectedMedecin?.id, scrollToSelectedDoctorRow]);
 
-  useEffect(() => {
-    if (!selectedMedecin?.id || !token) {
-      setRetoursTerrain([]);
-      return;
-    }
-    let isMounted = true;
-    setLoadingRetours(true);
-    getRetoursTerrain(token, selectedMedecin.id)
-      .then((data) => {
-        if (isMounted) setRetoursTerrain(data || []);
-      })
-      .catch((err) => {
-        console.error('Erreur chargement retours terrain:', err);
-        if (isMounted) setRetoursTerrain([]);
-      })
-      .finally(() => {
-        if (isMounted) setLoadingRetours(false);
-      });
-
-    setTerrainNote(null);
-    setTerrainDate(getTodayString());
-    setTerrainVisiteur(username || '');
-    setTerrainCommentaire('');
-    setTerrainStatutVisite('REALISEE');
-    setTerrainQualification('NON_RENSEIGNE');
-    setTerrainReclamation(false);
-    setTerrainError(null);
-    setTerrainSaved(false);
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedMedecin?.id, token, username]);
-
   const handleSelectMedecin = (medecin) => {
     // Sauvegarder la position exacte de scroll avant d'ouvrir la fiche
     const currentScroll = window.scrollY || document.documentElement.scrollTop;
@@ -491,58 +489,6 @@ export default function MedecinsPage() {
     }
   };
 
-  const handleSaveRetourTerrain = async (e) => {
-    if (e) e.preventDefault();
-    if (!selectedMedecin) return;
-    setTerrainError(null);
-    setTerrainSaved(false);
-
-    if (!terrainNote) {
-      setTerrainError('Veuillez sélectionner une note (entre 1 et 5).');
-      return;
-    }
-    if (!terrainDate) {
-      setTerrainError('Veuillez sélectionner la date de la visite.');
-      return;
-    }
-    const today = getTodayString();
-    if (terrainDate > today) {
-      setTerrainError('La date de visite ne peut pas être dans le futur.');
-      return;
-    }
-
-    setTerrainSaving(true);
-    try {
-      const newRetour = await postRetourTerrain(token, selectedMedecin.id, {
-        note: Number(terrainNote),
-        dateVisite: terrainDate,
-        visiteur: terrainVisiteur,
-        commentaire: terrainCommentaire,
-        statutVisite: terrainStatutVisite,
-        qualification: terrainQualification,
-        reclamation: terrainReclamation,
-      });
-
-      setRetoursTerrain((prev) => [newRetour, ...prev]);
-
-      setTerrainNote(null);
-      setTerrainDate(getTodayString());
-      setTerrainVisiteur(username || '');
-      setTerrainCommentaire('');
-      setTerrainStatutVisite('REALISEE');
-      setTerrainQualification('NON_RENSEIGNE');
-      setTerrainReclamation(false);
-
-      setTerrainSaved(true);
-      clearTimeout(terrainSavedTimer.current);
-      terrainSavedTimer.current = setTimeout(() => setTerrainSaved(false), 3000);
-    } catch (err) {
-      setTerrainError(err.message ?? "Erreur lors de l'enregistrement de la visite.");
-    } finally {
-      setTerrainSaving(false);
-    }
-  };
-
   const updateFilter = (key) => (event) => {
     setFilters((current) => ({ ...current, [key]: event.target.value }));
   };
@@ -557,7 +503,6 @@ export default function MedecinsPage() {
   const kpis = pageData?.kpis ?? {};
   const meta = pageData?.meta ?? {};
   const filterOptions = pageData?.filters ?? {};
-  const derniereVisite = retoursTerrain && retoursTerrain.length > 0 ? retoursTerrain[0] : null;
 
   const countSansNote = kpis.sansNoteInput ?? (pageData?.items ? pageData.items.filter((m) => m.noteInput == null).length : 0);
 
@@ -762,12 +707,12 @@ export default function MedecinsPage() {
                   Array.from({ length: 6 }).map((_, idx) => (
                     <TableRow key={idx} className="hover:bg-transparent">
                       <TableCell><Skeleton className="h-4 w-36 mb-1.5" /><Skeleton className="h-3 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-12 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20 rounded-lg" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-24 rounded-lg" /></TableCell>
                     </TableRow>
                   ))
                 )}
@@ -922,6 +867,65 @@ export default function MedecinsPage() {
                 </div>
               </div>
 
+              <section className="rounded-2xl border border-sky-100 bg-sky-50/60 p-5 space-y-4">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between text-left"
+                  aria-expanded={isExplanationOpen}
+                  onClick={() => setIsExplanationOpen((open) => !open)}
+                >
+                  <span className="text-sm font-black text-sky-950">Pourquoi ces valeurs ?</span>
+                  <span className="text-lg font-bold text-sky-700" aria-hidden="true">{isExplanationOpen ? '−' : '+'}</span>
+                </button>
+                {isExplanationOpen && <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <div className="flex items-center justify-between gap-3">
+                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Segment {selectedMedecin.segment || '—'}</h4>
+                      <strong className="text-sm text-slate-900">Score {formatScore(selectedMedecin.scoreValeur)} / 100</strong>
+                    </div>
+                    <ol className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600">
+                      <li><strong className="text-slate-900">1. Potentiel :</strong> note / 5 × 100 = {formatScore(selectedMedecin.potentielSur100)} / 100; contribution = {formatScore(selectedMedecin.potentielSur100)} × 0,40 = {formatWeightedScore(selectedMedecin.potentielSur100, 0.4)}.</li>
+                      <li><strong className="text-slate-900">2. Performance :</strong> CA mensuel moyen = {formatCaMois(selectedMedecin.caMensuelMoyen)}; rang dans le portefeuille = {formatScore(selectedMedecin.performanceSur100)} / 100; contribution = {formatScore(selectedMedecin.performanceSur100)} × 0,40 = {formatWeightedScore(selectedMedecin.performanceSur100, 0.4)}.</li>
+                      <li><strong className="text-slate-900">3. Poids économique :</strong> 50% CA normalisé + 50% volume normalisé = {formatScore(selectedMedecin.poidsEcoSur100)} / 100; contribution = {formatScore(selectedMedecin.poidsEcoSur100)} × 0,20 = {formatWeightedScore(selectedMedecin.poidsEcoSur100, 0.2)}.</li>
+                      <li><strong className="text-slate-900">4. Score final :</strong> {formatWeightedScore(selectedMedecin.potentielSur100, 0.4)} + {formatWeightedScore(selectedMedecin.performanceSur100, 0.4)} + {formatWeightedScore(selectedMedecin.poidsEcoSur100, 0.2)} = <strong className="text-slate-900">{formatScore(selectedMedecin.scoreValeur)} / 100</strong>, puis le seuil donne le segment {selectedMedecin.segment || '—'}.</li>
+                    </ol>
+                  </div>
+                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Statut {formatEnumLabel(selectedMedecin.statut || selectedMedecin.statutPilotage)}</h4>
+                    <ol className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600">
+                      <li><strong className="text-slate-900">1. Référence :</strong> moyenne CA des 3 mois précédents = {formatScore(selectedMedecin.referenceCa)} MAD; moyenne volume = {formatScore(selectedMedecin.referenceVolume)} cas.</li>
+                      <li><strong className="text-slate-900">2. Variations :</strong> CA = (CA courant - référence) / max(référence, 300) × 100 = {formatScore(selectedMedecin.variationCa)}%; volume = (volume courant - référence) / max(référence, 1) × 100 = {formatScore(selectedMedecin.variationVolume)}%.</li>
+                      <li><strong className="text-slate-900">3. Variation mixte :</strong> ({formatScore(selectedMedecin.variationCa)} × 0,60) + ({formatScore(selectedMedecin.variationVolume)} × 0,40) = <strong className="text-slate-900">{formatScore(selectedMedecin.variationMixteSur100)}%</strong>.</li>
+                      <li><strong className="text-slate-900">4. Statut :</strong> la variation mixte est comparée aux seuils: progression &gt; 20%, stable de -10% à 20%, surveillance de -40% à -10%, rétention de -70% à -40%, silence critique &lt; -70%.</li>
+                    </ol>
+                  </div>
+                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Fiabilité & silence</h4>
+                    <ol className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600">
+                      <li><strong className="text-slate-900">1. Fiabilité :</strong> {formatEnumLabel(selectedMedecin.fiabilite)} selon le nombre de dates d’activité disponibles.</li>
+                      <li><strong className="text-slate-900">2. Intervalle :</strong> moyenne des écarts entre les dernières dates = {selectedMedecin.intervalleEffectif ?? '—'} jours.</li>
+                      <li><strong className="text-slate-900">3. Silence :</strong> min(100, {selectedMedecin.joursSansActivite ?? '—'} jours ÷ {selectedMedecin.intervalleEffectif ?? '—'} jours × 20) = <strong className="text-slate-900">{formatScore(selectedMedecin.scoreSilence)} / 100</strong>.</li>
+                    </ol>
+                  </div>
+                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Pourquoi ce niveau de silence ?</h4>
+                    <ol className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600">
+                      <li><strong className="text-slate-900">1. Activité :</strong> {selectedMedecin.joursSansActivite ?? '—'} jours depuis le dernier dossier envoyé au laboratoire.</li>
+                      <li><strong className="text-slate-900">2. Seuil :</strong> fréquence attendue de 1 dossier tous les {calculateFrequenceJours(selectedMedecin.segment) ?? '—'} jours pour le segment {selectedMedecin.segment || '—'}.</li>
+                      <li><strong className="text-slate-900">3. Décision :</strong> au-delà du seuil = <strong className="text-slate-900">SILENCE CRITIQUE</strong>; au-delà de 70% du seuil = <strong className="text-slate-900">ALERTE SILENCE</strong>; sinon = <strong className="text-slate-900">SUIVI REGULIER</strong>.</li>
+                    </ol>
+                  </div>
+                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Risque</h4>
+                    <ol className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600">
+                      <li><strong className="text-slate-900">1. Baisse :</strong> référence = {formatScore(selectedMedecin.baisseReference)}%; courte = {formatScore(selectedMedecin.baisseCourte)}%.</li>
+                      <li><strong className="text-slate-900">2. Tendance :</strong> ({formatScore(selectedMedecin.baisseReference)} × 0,40) + ({formatScore(selectedMedecin.baisseCourte)} × 0,60).</li>
+                      <li><strong className="text-slate-900">3. Risque final :</strong> tendance et silence pondérés par le poids économique = <strong className="text-slate-900">{formatScore(selectedMedecin.scoreRisque)} / 100</strong>; niveau = <strong className="text-slate-900">{formatEnumLabel(selectedMedecin.risqueUrgence)}</strong>.</li>
+                    </ol>
+                  </div>
+                </div>}
+              </section>
+
               {/* Grid 2 Colonnes */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* Colonne Gauche (5 cols) : Lieux & Infos Générales */}
@@ -967,7 +971,7 @@ export default function MedecinsPage() {
                   </div>
                 </div>
 
-                {/* Colonne Droite (7 cols) : Formulaires Potentiel Commercial & Note Terrain */}
+                {/* Colonne Droite (7 cols) : Potentiel Commercial */}
                 <div className="lg:col-span-7 space-y-6">
                   {/* Potentiel commercial */}
                   <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
@@ -1020,134 +1024,6 @@ export default function MedecinsPage() {
                     </button>
                   </div>
 
-                  {/* Note terrain & Visites */}
-                  <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-5">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Note terrain & Visites</h4>
-                      <div className="text-xs text-slate-500">
-                        Dernière visite :{' '}
-                        {loadingRetours ? (
-                          <Skeleton className="h-4 w-20 inline-block align-middle" />
-                        ) : derniereVisite ? (
-                          <strong className="text-slate-900">{derniereVisite.note} / 5 ({formatDateFr(derniereVisite.dateVisite)})</strong>
-                        ) : (
-                          <span className="italic">Aucune</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Formulaire d'ajout d'une visite */}
-                    <form onSubmit={handleSaveRetourTerrain} className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-semibold text-slate-700 block">Note de la visite (1 à 5)</label>
-                        <div className="flex items-center gap-2">
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <button
-                              key={n}
-                              type="button"
-                              className={`flex-1 h-9 rounded-xl font-bold text-xs transition-all border ${
-                                terrainNote === n
-                                  ? 'bg-sky-50 text-sky-700 border-sky-300 font-black shadow-2xs'
-                                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                              }`}
-                              onClick={() => setTerrainNote(n)}
-                            >
-                              {n}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-700 block">Date de visite</label>
-                          <input
-                            type="date"
-                            className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-sky-400 focus:outline-none"
-                            value={terrainDate}
-                            max={getTodayString()}
-                            onChange={(e) => setTerrainDate(e.target.value)}
-                            required
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-700 block">Visiteur</label>
-                          <input
-                            type="text"
-                            placeholder="Nom du visiteur..."
-                            className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-sky-400 focus:outline-none"
-                            value={terrainVisiteur}
-                            onChange={(e) => setTerrainVisiteur(e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-700 block">Statut visite</label>
-                          <select
-                            className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-sky-400 focus:outline-none"
-                            value={terrainStatutVisite}
-                            onChange={(e) => setTerrainStatutVisite(e.target.value)}
-                          >
-                            <option value="REALISEE">Réalisée</option>
-                            <option value="NON_REALISEE">Non réalisée</option>
-                            <option value="NON_RENSEIGNE">Non renseigné</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-slate-700 block">Qualification</label>
-                          <select
-                            className="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-sky-400 focus:outline-none"
-                            value={terrainQualification}
-                            onChange={(e) => setTerrainQualification(e.target.value)}
-                          >
-                            <option value="NON_RENSEIGNE">Non renseigné</option>
-                            <option value="FAVORABLE">Favorable</option>
-                            <option value="DEFAVORABLE">Défavorable / Refus</option>
-                            <option value="NEUTRE">Neutre</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 pt-1">
-                        <input
-                          id="terrain-reclamation-checkbox-full"
-                          type="checkbox"
-                          className="rounded border-slate-300 text-sky-500 focus:ring-sky-400 h-4 w-4"
-                          checked={terrainReclamation}
-                          onChange={(e) => setTerrainReclamation(e.target.checked)}
-                        />
-                        <label htmlFor="terrain-reclamation-checkbox-full" className="text-xs text-slate-700 cursor-pointer font-medium">
-                          Visite avec réclamation médecin
-                        </label>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-xs font-semibold text-slate-700 block">Commentaire</label>
-                        <textarea
-                          rows="3"
-                          placeholder="Remarques complémentaires du visiteur..."
-                          className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-sky-400 focus:outline-none"
-                          value={terrainCommentaire}
-                          onChange={(e) => setTerrainCommentaire(e.target.value)}
-                        />
-                      </div>
-
-                      {terrainError && <p className="text-xs font-semibold text-rose-600">{terrainError}</p>}
-                      {terrainSaved && <p className="text-xs font-semibold text-emerald-600">Visite enregistrée ✓</p>}
-
-                      <button
-                        type="submit"
-                        className="w-full py-3.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 font-extrabold text-sm shadow-2xs hover:shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                        disabled={terrainSaving}
-                      >
-                        {terrainSaving ? 'Enregistrement…' : 'Enregistrer la visite'}
-                      </button>
-                    </form>
-                  </div>
                 </div>
               </div>
             </Card>

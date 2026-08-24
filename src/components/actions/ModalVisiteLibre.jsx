@@ -14,9 +14,10 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
   // Visite fields
   const [dateVisite, setDateVisite] = useState(new Date().toISOString().split('T')[0]);
   const [actionRealisee, setActionRealisee] = useState(true);
+  const [motifNonRealisation, setMotifNonRealisation] = useState('');
   const [qualification, setQualification] = useState('FAVORABLE');
   const [commentaire, setCommentaire] = useState('');
-  const [notePotentielle, setNotePotentielle] = useState('');
+  const [noteTerrain, setNoteTerrain] = useState('');
   const [prochaineAction, setProchaineAction] = useState('');
   const [dateProchaineAction, setDateProchaineAction] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -37,6 +38,16 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
       return;
     }
 
+    if (!actionRealisee && !motifNonRealisation.trim()) {
+      setErrorMsg('Le motif de non-réalisation est obligatoire.');
+      return;
+    }
+
+    if (qualification === 'RECLAMATION' && !commentaire.trim()) {
+      setErrorMsg('Le commentaire est obligatoire en cas de réclamation.');
+      return;
+    }
+
     onSubmit({
       medecinId: useExisting ? parseInt(selectedMedecinId, 10) : null,
       nomMedecin: !useExisting ? nomMedecin : null,
@@ -45,9 +56,10 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
       organisme: !useExisting ? organisme : null,
       dateVisite,
       actionRealisee,
+      motifNonRealisation: actionRealisee ? null : motifNonRealisation,
       qualification,
       commentaire,
-      notePotentielle: notePotentielle ? parseFloat(notePotentielle) : null,
+      noteTerrain: noteTerrain ? parseFloat(noteTerrain) : null,
       prochaineAction,
       dateProchaineAction: dateProchaineAction || null,
     });
@@ -177,7 +189,7 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
           )}
 
           {/* Details Visite */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Date de la visite</label>
               <input
@@ -187,6 +199,17 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
                 onChange={(e) => setDateVisite(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-semibold"
               />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Action réalisée <span className="text-rose-500">*</span></label>
+              <select
+                value={actionRealisee ? 'OUI' : 'NON'}
+                onChange={(e) => setActionRealisee(e.target.value === 'OUI')}
+                className="w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-semibold"
+              >
+                <option value="OUI">Oui</option>
+                <option value="NON">Non</option>
+              </select>
             </div>
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Qualification</label>
@@ -203,8 +226,38 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
             </div>
           </div>
 
+          {!actionRealisee && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Motif de non-réalisation <span className="text-rose-500">*</span></label>
+              <input
+                type="text"
+                required
+                value={motifNonRealisation}
+                onChange={(e) => setMotifNonRealisation(e.target.value)}
+                className="w-full rounded-xl border border-amber-300 p-2.5 bg-amber-50 font-medium"
+              />
+            </div>
+          )}
+
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Commentaire libre</label>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Note potentielle du médecin (1 à 5)</label>
+            <div className="flex items-center gap-1.5">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setNoteTerrain(n.toString())}
+                  className={`flex-1 h-10 rounded-xl font-extrabold text-xs border ${noteTerrain === n.toString() ? 'bg-amber-400 text-slate-900 border-amber-500' : 'bg-slate-50 text-slate-700 border-slate-200'}`}
+                >
+                  {n}
+                </button>
+              ))}
+              <button type="button" onClick={() => setNoteTerrain('')} className="h-10 px-4 rounded-xl font-bold text-xs border border-slate-200">—</button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Commentaire {qualification === 'RECLAMATION' && <span className="text-rose-500">* (Obligatoire)</span>}</label>
             <textarea
               rows={3}
               placeholder="Remarques et détails de la visite commerciale libre..."

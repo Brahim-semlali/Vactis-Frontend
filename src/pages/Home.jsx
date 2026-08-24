@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getAllMenu } from '../api/menu.js';
+import { getMonMenu } from '../api/menu.js';
 import AppLayout from '../components/AppLayout.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import MedecinsPage from './Medecins/MedecinsPage.jsx';
@@ -129,9 +129,9 @@ export default function Home() {
 
     async function loadAllowedRoutes() {
       try {
-        const items = await getAllMenu(token);
+        const sections = await getMonMenu(token);
         if (!cancelled) {
-          setAllowedRoutes(items.map((item) => item.route));
+          setAllowedRoutes(sections.flatMap((section) => section.sousMenus ?? []).map((item) => item.route));
         }
       } catch {
         if (!cancelled) {

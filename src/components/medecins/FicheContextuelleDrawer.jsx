@@ -6,6 +6,7 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedVisitId, setSelectedVisitId] = useState(null);
 
   useEffect(() => {
     if (isOpen && medecinId && token) {
@@ -14,6 +15,7 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
       getFicheContextuelleApi(token, medecinId)
         .then((res) => {
           setData(res);
+          setSelectedVisitId(null);
           setLoading(false);
         })
         .catch((err) => {
@@ -126,18 +128,43 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
                 ) : (
                   <div className="space-y-2.5">
                     {historique.map((v) => (
-                      <div key={v.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs space-y-1">
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setSelectedVisitId((current) => current === v.id ? null : v.id)}
+                        className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs space-y-1 text-left hover:border-teal-300 hover:bg-teal-50/30 transition-colors"
+                        aria-expanded={selectedVisitId === v.id}
+                      >
                         <div className="flex items-center justify-between font-bold text-slate-900">
                           <span>{v.dateVisite ? new Date(v.dateVisite).toLocaleDateString('fr-FR') : 'Date NC'}</span>
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase font-bold ${
+                          <span className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase font-bold ${
                             v.statutVisite === 'REALISEE' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                          }`}>
-                            {v.statutVisite}
+                            }`}>
+                              {v.statutVisite || 'NON_RENSEIGNE'}
+                            </span>
+                            <span className="text-slate-400">{selectedVisitId === v.id ? '−' : '+'}</span>
                           </span>
                         </div>
-                        <p className="text-slate-600 font-medium">{v.commentaire || 'Aucun commentaire'}</p>
+                        <p className="text-slate-600 font-medium">Note terrain : <strong className="text-slate-800">{v.note != null ? `${v.note} / 5` : 'Non renseignée'}</strong></p>
                         {v.visiteur && <p className="text-[11px] text-slate-400">Visiteur : {v.visiteur}</p>}
-                      </div>
+                        {selectedVisitId === v.id && (
+                          <div className="mt-3 grid gap-2 border-t border-slate-200 pt-3 text-[11px] text-slate-600 sm:grid-cols-2">
+                            <p><strong className="text-slate-800">ID visite :</strong> {v.id ?? '—'}</p>
+                            <p><strong className="text-slate-800">Médecin :</strong> {v.nomMedecin || `${medecin?.nom ?? ''} ${medecin?.prenom ?? ''}`.trim() || '—'}</p>
+                            <p><strong className="text-slate-800">Date :</strong> {v.dateVisite ? new Date(v.dateVisite).toLocaleDateString('fr-FR') : '—'}</p>
+                            <p><strong className="text-slate-800">Note terrain :</strong> {v.note != null ? `${v.note} / 5` : 'Non renseignée'}</p>
+                            <p><strong className="text-slate-800">Statut :</strong> {v.statutVisite || 'Non renseigné'}</p>
+                            <p><strong className="text-slate-800">Qualification :</strong> {v.reclamation ? 'RECLAMATION' : (v.qualification || 'Non renseignée')}</p>
+                            <p><strong className="text-slate-800">Réclamation :</strong> {v.reclamation ? 'Oui' : 'Non'}</p>
+                            <p><strong className="text-slate-800">Visiteur :</strong> {v.visiteur || 'Non renseigné'}</p>
+                            <p><strong className="text-slate-800">Type de visite :</strong> {v.typeVisite || 'Non renseigné'}</p>
+                            <p><strong className="text-slate-800">Créée le :</strong> {v.createdAt ? new Date(v.createdAt).toLocaleString('fr-FR') : 'Non renseignée'}</p>
+                            {v.action && <p><strong className="text-slate-800">Action :</strong> #{v.action.id ?? '—'} {v.action.actionRecommandee || ''}</p>}
+                            <p className="sm:col-span-2"><strong className="text-slate-800">Commentaire :</strong> {v.commentaire || 'Aucun commentaire'}</p>
+                          </div>
+                        )}
+                      </button>
                     ))}
                   </div>
                 )}

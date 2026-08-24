@@ -108,6 +108,25 @@ const icons = {
       <path d="M12 17v4" />
     </svg>
   ),
+  compass: (
+    <svg {...iconProps}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" />
+    </svg>
+  ),
+  users: (
+    <svg {...iconProps}>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M3 20a6 6 0 0 1 12 0" />
+      <path d="M16 5.5a3 3 0 0 1 0 5.8M18 14a5 5 0 0 1 3 4" />
+    </svg>
+  ),
+  database: (
+    <svg {...iconProps}>
+      <ellipse cx="12" cy="5" rx="8" ry="3" />
+      <path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7" />
+    </svg>
+  ),
   roles: (
     <svg {...iconProps}>
       <circle cx="9" cy="8" r="3" />
@@ -131,6 +150,11 @@ const icons = {
 };
 
 const iconAliases = {
+  pilotage: 'compass',
+  'portefeuille-medecins': 'stethoscope',
+  'terrain-actions': 'clipboard',
+  'qualite-des-donnees': 'database',
+  administration: 'roles',
   accueil: 'home',
   house: 'home',
   'bar-chart': 'dashboard',

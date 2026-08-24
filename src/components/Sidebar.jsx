@@ -1,15 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { getAllMenu } from '../api/menu.js';
+import { getMonMenu } from '../api/menu.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { MenuIcon, VactisLogo } from './icons/MenuIcons.jsx';
 import { Skeleton } from './ui/skeleton.jsx';
-
-function sortMenuItems(items) {
-  return [...items]
-    .filter((item) => item.isVisible !== false)
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-}
 
 function isRouteActive(activeRoute, itemRoute) {
   if (!itemRoute) return false;
@@ -30,9 +23,9 @@ function isRouteActive(activeRoute, itemRoute) {
   return false;
 }
 
-export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCollapse }) {
-  const { token } = useAuth();
-  const [items, setItems] = useState([]);
+export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCollapse, mobileOpen = false, onMobileClose }) {
+  const { token, username } = useAuth();
+  const [menu, setMenu] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -46,9 +39,9 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
       setError(null);
 
       try {
-        const data = await getAllMenu(token);
+        const data = await getMonMenu(token);
         if (!cancelled) {
-          setItems(sortMenuItems(data));
+          setMenu(data);
         }
       } catch (err) {
         if (!cancelled) {
@@ -68,114 +61,162 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
     };
   }, [token]);
 
-  const visibleItems = useMemo(() => sortMenuItems(items), [items]);
-  const navigationItems = visibleItems;
+  const activeSection = useMemo(
+    () => menu.find((section) => section.sousMenus?.some((item) => isRouteActive(activeRoute, item.route)))?.idMenuPrinc,
+    [activeRoute, menu],
+  );
+  const [openSections, setOpenSections] = useState(new Set());
+
+  const getSectionTone = (name) => {
+    const key = String(name ?? '').toLowerCase();
+    if (key.includes('pilotage')) return 'pilotage';
+    if (key.includes('portefeuille')) return 'medecins';
+    if (key.includes('terrain')) return 'actions';
+    if (key.includes('qualite')) return 'qualite';
+    return 'administration';
+  };
+
+  useEffect(() => {
+    if (activeSection == null) return;
+    setOpenSections((current) => new Set(current).add(activeSection));
+  }, [activeSection]);
+
+  const toggleSection = (sectionId) => {
+    setOpenSections((current) => {
+      const next = new Set(current);
+      if (next.has(sectionId)) next.delete(sectionId);
+      else next.add(sectionId);
+      return next;
+    });
+  };
 
   return (
-    <aside
-      className={`sidebar flex flex-col h-screen bg-white border-r border-slate-200/80 sticky top-0 z-40 transition-all duration-300 shadow-xs ${
-        collapsed ? 'w-[72px]' : 'w-[260px]'
-      }`}
-    >
-      {/* Header / Brand */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-slate-100 bg-white">
-        {!collapsed ? (
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="text-teal-700 p-1.5 bg-teal-50 rounded-xl shrink-0 shadow-2xs">
-              <VactisLogo size={22} />
-            </div>
-            <div className="flex flex-col truncate">
-              <span className="font-extrabold text-slate-900 text-sm tracking-tight leading-none">VACTIS</span>
-              <span className="text-[9px] font-bold text-teal-700 tracking-wider truncate pt-1">
-                DE LA DONNÉE À L&apos;ACTION
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="w-full flex items-center justify-center text-teal-700">
-            <VactisLogo size={24} />
-          </div>
-        )}
+    <>
+      <div
+        className={`sidebar-backdrop ${mobileOpen ? 'is-visible' : ''}`}
+        onClick={onMobileClose}
+        aria-hidden="true"
+      />
 
-        <button
-          type="button"
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none shrink-0"
-          onClick={onToggleCollapse}
-          aria-label={collapsed ? 'Ouvrir le menu' : 'Réduire le menu'}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d={collapsed ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'} />
-          </svg>
-        </button>
-      </div>
+      <aside
+        className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'sidebar-mobile-open' : ''}`}
+        aria-label="Sidebar principale"
+      >
+        <div className="sidebar-brand">
+          {!collapsed ? (
+            <div className="sidebar-brand-content">
+              <div className="sidebar-brand-mark">
+                <VactisLogo size={22} />
+              </div>
+              <div className="sidebar-brand-copy">
+                <span className="sidebar-brand-name">VACTIS</span>
+                <span className="sidebar-brand-subtitle">DE LA DONNÉE À L&apos;ACTION</span>
+              </div>
+            </div>
+          ) : (
+            <div className="sidebar-brand-collapsed">
+              <VactisLogo size={24} />
+            </div>
+          )}
 
-      {/* Body / Navigation */}
-      <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+          <button
+            type="button"
+            className="sidebar-collapse-button"
+            onClick={onToggleCollapse}
+            aria-label={collapsed ? 'Ouvrir le menu' : 'Réduire le menu'}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d={collapsed ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'} />
+            </svg>
+          </button>
+        </div>
+
+        <div className="sidebar-body">
+          {!collapsed && <p className="sidebar-label">NAVIGATION</p>}
+
+          {loading && (
+            <div className="sidebar-skeletons">
+              {Array.from({ length: 8 }).map((_, idx) => (
+                <Skeleton key={idx} className="h-11 w-full rounded-xl" />
+              ))}
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="sidebar-error">
+              {!collapsed && <span>{error}</span>}
+            </div>
+          )}
+
+          {!loading && !error && (
+            <nav className="sidebar-nav" aria-label="Navigation principale">
+              {menu.map((section) => {
+                const isOpen = openSections.has(section.idMenuPrinc);
+                const isSectionActive = section.idMenuPrinc === activeSection;
+                const sectionItems = section.sousMenus ?? [];
+
+                return (
+                  <div key={section.idMenuPrinc} className={`menu-section menu-section--${getSectionTone(section.nom)}`}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(section.idMenuPrinc)}
+                      title={collapsed ? section.nom : undefined}
+                      className={`menu-section-header ${collapsed ? 'menu-section-header-collapsed' : ''} ${isSectionActive ? 'menu-section-active' : ''}`}
+                      aria-expanded={isOpen}
+                    >
+                      <span className="menu-section-icon">
+                        <MenuIcon name={section.icone || section.icon || section.nom} />
+                      </span>
+                      {!collapsed && <span className="menu-section-title">{section.nom}</span>}
+                      {!collapsed && (
+                        <span className={`menu-chevron ${isOpen ? 'menu-chevron-open' : ''}`} aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="m6 9 6 6 6-6" />
+                          </svg>
+                        </span>
+                      )}
+                    </button>
+
+                    {!collapsed && (
+                      <div className={`menu-section-content ${isOpen ? 'menu-section-content-open' : ''}`}>
+                        <div className="menu-section-items">
+                          {sectionItems.map((item) => {
+                            const isActive = isRouteActive(activeRoute, item.route);
+                            return (
+                              <button
+                                key={item.idMenu}
+                                type="button"
+                                onClick={() => onNavigate(item.route)}
+                                className={`menu-subitem ${isActive ? 'menu-subitem-active' : ''}`}
+                              >
+                                <span className="menu-subitem-icon">
+                                  <MenuIcon name={item.icon || item.icone || item.label} />
+                                </span>
+                                <span className="menu-subitem-label">{item.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </nav>
+          )}
+        </div>
+
         {!collapsed && (
-          <p className="px-3 pb-2 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-            PILOTAGE TERRAIN
-          </p>
-        )}
-
-        {loading && (
-          <div className="space-y-2 px-1">
-            {Array.from({ length: 8 }).map((_, idx) => (
-              <Skeleton key={idx} className="h-10 w-full rounded-xl" />
-            ))}
+          <div className="sidebar-profile" role="button" tabIndex={0}>
+            <div className="sidebar-profile-avatar">{String(username ?? 'U').slice(0, 2).toUpperCase()}</div>
+            <div className="sidebar-profile-meta">
+              <p className="sidebar-profile-name">{username ?? 'Utilisateur'}</p>
+              <p className="sidebar-profile-role">Directeur</p>
+            </div>
+            <span className="sidebar-profile-arrow" aria-hidden="true">›</span>
           </div>
         )}
-
-        {!loading && error && (
-          <div className="p-3 text-xs text-rose-600 bg-rose-50 rounded-xl">
-            {!collapsed && <span>{error}</span>}
-          </div>
-        )}
-
-        {!loading && !error && (
-          <nav className="space-y-1" aria-label="Navigation principale">
-            {navigationItems.map((item) => {
-              const isActive = isRouteActive(activeRoute, item.route);
-
-              return (
-                <button
-                  key={item.idMenu}
-                  type="button"
-                  onClick={() => onNavigate(item.route)}
-                  title={collapsed ? item.label : undefined}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 relative group ${
-                    collapsed ? 'justify-center px-0' : 'justify-start'
-                  } ${
-                    isActive
-                      ? 'bg-emerald-100/90 text-emerald-900 font-extrabold border-l-4 border-emerald-500 shadow-2xs'
-                      : 'text-slate-600 hover:text-emerald-800 hover:bg-emerald-50/80 font-medium'
-                  }`}
-                >
-                  {/* Indicator border in expanded mode */}
-                  {isActive && !collapsed && (
-                    <span className="absolute left-0 top-2 bottom-2 w-1 bg-emerald-500 rounded-r-full" />
-                  )}
-
-                  <span
-                    className={`p-1 rounded-lg transition-colors shrink-0 ${
-                      isActive
-                        ? 'text-emerald-700 bg-emerald-200/60'
-                        : 'text-slate-400 group-hover:text-emerald-600'
-                    }`}
-                  >
-                    <MenuIcon name={item.icon} />
-                  </span>
-
-                  {!collapsed && (
-                    <span className="text-[13px] tracking-tight truncate leading-none">
-                      {item.label}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        )}
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

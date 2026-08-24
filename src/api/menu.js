@@ -1,6 +1,7 @@
 import { logger } from '../utils/logger.js';
 
 const API_BASE = '';
+const menuCache = new Map();
 
 export class MenuError extends Error {
   constructor(message, status = null) {
@@ -23,22 +24,22 @@ async function parseError(response) {
   return new MenuError(message, response.status);
 }
 
-export async function getAllMenu(token) {
-  logger.info('Chargement du menu');
-
-  const response = await fetch(`${API_BASE}/api/menu/getAll`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+async function getTree(path, token) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
-
-  if (!response.ok) {
-    const error = await parseError(response);
-    logger.warn('Échec chargement menu', { status: error.status });
-    throw error;
-  }
-
-  const items = await response.json();
-  logger.info('Menu chargé', { count: items.length });
-  return items;
+  if (!response.ok) throw await parseError(response);
+  return response.json();
 }
+
+export function getMonMenu(token) {
+  if (!token) return Promise.resolve([]);
+  if (!menuCache.has(token)) {
+    menuCache.set(token, getTree('/api/menu/mon-menu', token).catch((error) => {
+      menuCache.delete(token);
+      throw error;
+    }));
+  }
+  return menuCache.get(token);
+}
+
