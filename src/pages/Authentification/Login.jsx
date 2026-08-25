@@ -181,8 +181,8 @@ export default function Login({ onShowRegister }) {
 
   return (
     <AuthLayout
-      title="Connexion"
-      subtitle="Accédez à votre espace personnel"
+      title="Bienvenue !"
+      subtitle="Connectez-vous à votre espace personnel"
       footer={
         <p>
           Pas encore de compte ?{' '}
@@ -226,7 +226,7 @@ export default function Login({ onShowRegister }) {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           onBlur={(e) => refreshAccountStatus(e.target.value)}
-          placeholder="votre_nom"
+          placeholder="Entrez votre nom d'utilisateur"
           disabled={formDisabled}
         />
 
@@ -240,13 +240,24 @@ export default function Login({ onShowRegister }) {
           minLength={6}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
+          placeholder="Entrez votre mot de passe"
           disabled={formDisabled}
         />
 
-        <button type="submit" className="btn btn-primary btn-block" disabled={formDisabled}>
+        <div className="auth-options">
+          <label className="remember-option">
+            <input type="checkbox" name="remember" />
+            <span>Se souvenir de moi</span>
+          </label>
+          <button type="button" className="forgot-link" disabled={formDisabled}>
+            Mot de passe oublié ?
+          </button>
+        </div>
+
+        <button type="submit" className="btn btn-primary btn-block auth-submit" disabled={formDisabled}>
           {loading && <span className="btn-spinner" aria-hidden="true" />}
           {loading ? 'Connexion…' : isLocked ? 'Compte suspendu' : 'Se connecter'}
+          {!loading && !isLocked && <span className="auth-submit-arrow" aria-hidden="true">→</span>}
         </button>
       </form>
     </AuthLayout>

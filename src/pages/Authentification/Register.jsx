@@ -204,9 +204,10 @@ export default function Register({ onShowLogin }) {
           <p className="field-hint field-hint--error">Les mots de passe ne correspondent pas</p>
         )}
 
-        <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+        <button type="submit" className="btn btn-primary btn-block auth-submit" disabled={loading}>
           {loading && <span className="btn-spinner" aria-hidden="true" />}
           {loading ? 'Création…' : 'Créer mon compte'}
+          {!loading && <span className="auth-submit-arrow" aria-hidden="true">→</span>}
         </button>
       </form>
     </AuthLayout>

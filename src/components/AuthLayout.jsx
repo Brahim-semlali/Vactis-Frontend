@@ -1,24 +1,20 @@
+const logo = new URL('./icons/logo.png', import.meta.url).href;
+export const showcaseLogo = new URL('./icons/logo1.png', import.meta.url).href;
+
 export default function AuthLayout({ title, subtitle, children, footer }) {
   return (
     <div className="auth-page">
       <aside className="auth-showcase" aria-hidden="true">
-        <span className="auth-showcase-kicker">VACTIS / 01</span>
-        <div className="auth-showcase-mark">v</div>
-        <h2>Pilotage médical<br /><em>avec précision.</em></h2>
-        <div className="auth-showcase-line" />
-        <span className="auth-showcase-caption">Performance · Terrain · Décision</span>
+        <div className="auth-showcase-content">
+          <img className="auth-showcase-logo" src={showcaseLogo} alt="" />
+          <h2>VACTIS</h2>
+          <p>Smart Data. <span>Smarter Decisions.</span></p>
+        </div>
       </aside>
-      <div className="auth-card">
+      <div className={`auth-card ${title === 'Inscription' ? 'auth-card--register' : ''}`}>
         <header className="auth-header">
           <div className="auth-mark">
-            <span className="auth-mark-icon" aria-hidden="true">
-              <svg viewBox="0 0 32 32" fill="none">
-                <rect x="3" y="6" width="26" height="20" rx="4" stroke="currentColor" strokeWidth="1.75" />
-                <path d="M3 13h26" stroke="currentColor" strokeWidth="1.75" />
-                <path d="M10 22h6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
-              </svg>
-            </span>
-            <span className="auth-mark-name">vactis</span>
+            <img className="auth-logo" src={showcaseLogo} alt="VACTIS" />
           </div>
           <h1>{title}</h1>
           {subtitle && <p className="auth-subtitle">{subtitle}</p>}

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getMonMenu } from '../api/menu.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { MenuIcon, VactisLogo } from './icons/MenuIcons.jsx';
+import { MenuIcon } from './icons/MenuIcons.jsx';
+import { showcaseLogo } from './AuthLayout.jsx';
+const logo = new URL('./icons/logo.png', import.meta.url).href;
 import { Skeleton } from './ui/skeleton.jsx';
 
 function isRouteActive(activeRoute, itemRoute) {
@@ -24,10 +26,11 @@ function isRouteActive(activeRoute, itemRoute) {
 }
 
 export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCollapse, mobileOpen = false, onMobileClose }) {
-  const { token, username } = useAuth();
+  const { token, username, logout } = useAuth();
   const [menu, setMenu] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,21 +106,13 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
         aria-label="Sidebar principale"
       >
         <div className="sidebar-brand">
-          {!collapsed ? (
-            <div className="sidebar-brand-content">
-              <div className="sidebar-brand-mark">
-                <VactisLogo size={22} />
-              </div>
-              <div className="sidebar-brand-copy">
-                <span className="sidebar-brand-name">VACTIS</span>
-                <span className="sidebar-brand-subtitle">DE LA DONNÉE À L&apos;ACTION</span>
-              </div>
-            </div>
-          ) : (
-            <div className="sidebar-brand-collapsed">
-              <VactisLogo size={24} />
-            </div>
-          )}
+          <div className={`sidebar-brand-content ${collapsed ? 'sidebar-brand-content--collapsed' : ''}`}>
+            <img
+              className={`sidebar-brand-logo ${collapsed ? 'sidebar-brand-logo--collapsed' : ''}`}
+              src={collapsed ? showcaseLogo : logo}
+              alt="VACTIS"
+            />
+          </div>
 
           <button
             type="button"
@@ -207,13 +202,31 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
         </div>
 
         {!collapsed && (
-          <div className="sidebar-profile" role="button" tabIndex={0}>
-            <div className="sidebar-profile-avatar">{String(username ?? 'U').slice(0, 2).toUpperCase()}</div>
-            <div className="sidebar-profile-meta">
-              <p className="sidebar-profile-name">{username ?? 'Utilisateur'}</p>
-              <p className="sidebar-profile-role">Directeur</p>
-            </div>
-            <span className="sidebar-profile-arrow" aria-hidden="true">›</span>
+          <div className="sidebar-profile-wrapper">
+            {profileMenuOpen && (
+              <div className="sidebar-profile-menu" role="menu">
+                <button type="button" role="menuitem" onClick={logout}>
+                  Déconnexion
+                </button>
+                <button type="button" role="menuitem" disabled>
+                  Paramètres
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              className={`sidebar-profile ${profileMenuOpen ? 'sidebar-profile--open' : ''}`}
+              onClick={() => setProfileMenuOpen((open) => !open)}
+              aria-expanded={profileMenuOpen}
+              aria-haspopup="menu"
+            >
+              <span className="sidebar-profile-avatar">{String(username ?? 'U').slice(0, 2).toUpperCase()}</span>
+              <span className="sidebar-profile-meta">
+                <span className="sidebar-profile-name">{username ?? 'Utilisateur'}</span>
+                <span className="sidebar-profile-role">Directeur</span>
+              </span>
+              <span className="sidebar-profile-arrow" aria-hidden="true">›</span>
+            </button>
           </div>
         )}
       </aside>
