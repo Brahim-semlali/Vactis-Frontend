@@ -690,6 +690,10 @@ export default function LectureActivitePage() {
   }, [loadData]);
 
   useEffect(() => {
+    setDetailPage(0);
+  }, [selectedMois]);
+
+  useEffect(() => {
     loadDataN2();
   }, [loadDataN2]);
 

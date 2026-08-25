@@ -1,6 +1,13 @@
 export default function AuthLayout({ title, subtitle, children, footer }) {
   return (
     <div className="auth-page">
+      <aside className="auth-showcase" aria-hidden="true">
+        <span className="auth-showcase-kicker">VACTIS / 01</span>
+        <div className="auth-showcase-mark">v</div>
+        <h2>Pilotage médical<br /><em>avec précision.</em></h2>
+        <div className="auth-showcase-line" />
+        <span className="auth-showcase-caption">Performance · Terrain · Décision</span>
+      </aside>
       <div className="auth-card">
         <header className="auth-header">
           <div className="auth-mark">

@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8082';
+import { API_BASE } from './config.js';
 
 export class AdministrationError extends Error {
   constructor(message, status) {

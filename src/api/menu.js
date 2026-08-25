@@ -1,6 +1,5 @@
 import { logger } from '../utils/logger.js';
-
-const API_BASE = '';
+import { API_BASE } from './config.js';
 const menuCache = new Map();
 
 export class MenuError extends Error {

@@ -5,6 +5,7 @@
   "scripts": {
     "start": "parcel index.html --port 5173",
     "dev": "parcel index.html --port 5173",
+    "test": "vitest run",
     "build": "parcel build index.html --dist-dir dist",
     "preview": "npm run build && serve dist -l 4173"
   },
@@ -24,8 +25,13 @@
     "tailwindcss": "^3.4.19"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
+    "jsdom": "^29.1.1",
+    "lightningcss": "^1.33.0",
     "parcel": "^2.15.4",
-    "serve": "^14.2.4"
+    "serve": "^14.2.4",
+    "vitest": "^4.1.11"
   },
   "alias": {
     "@radix-ui/primitive/is-development": "@radix-ui/primitive/dist/internal/is-development.true.mjs"

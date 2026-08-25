@@ -1,4 +1,4 @@
-const API_BASE = '';
+import { API_BASE } from './config.js';
 
 async function activiteRequest(endpoint, token) {
   const response = await fetch(`${API_BASE}${endpoint}`, {
