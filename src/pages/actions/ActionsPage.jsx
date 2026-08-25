@@ -154,6 +154,33 @@ function ActionsIcon({ name, size = 18 }) {
           <path d="M3 12h3l3 -9l6 18l3 -9h3" />
         </svg>
       );
+    case 'trend':
+      return (
+        <svg {...props}>
+          <path d="m4 16 6-6 4 3 6-7" />
+          <path d="M15 6h5v5" />
+        </svg>
+      );
+    case 'performance':
+      return (
+        <svg {...props}>
+          <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+        </svg>
+      );
+    case 'pie':
+      return (
+        <svg {...props}>
+          <path d="M12 3v9h9" />
+          <path d="M20.5 15a9 9 0 1 1-11.5-11" />
+        </svg>
+      );
+    case 'trophy':
+      return (
+        <svg {...props}>
+          <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+          <path d="M7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4" />
+        </svg>
+      );
     case 'arrow-right':
       return (
         <svg {...props}>
@@ -259,8 +286,23 @@ function formatExplanationScore(value) {
     : Number(value).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 }
 
+function formatPotentialSource(source) {
+  if (source === 'NOTE_TERRAIN') return 'note terrain';
+  if (source === 'INPUT_PROFIL') return 'input profil';
+  return 'défaut 3/5';
+}
+
 function formatWeightedExplanation(value, weight) {
   return value == null ? '—' : formatExplanationScore(Number(value) * weight);
+}
+
+function CalculationLine({ label, children, muted = false }) {
+  return (
+    <div className={`grid grid-cols-[5.5rem_1fr] items-start gap-2 ${muted ? 'text-sky-700' : 'font-semibold text-teal-800'}`}>
+      <span className="font-bold">{label}</span>
+      <span className="font-mono text-[11px] leading-relaxed">{children}</span>
+    </div>
+  );
 }
 
 function getActionRule(statut) {
@@ -359,6 +401,8 @@ export default function ActionsPage() {
   // Selection & View Mode state: 'table' or 'detail'
   const [selectedAction, setSelectedAction] = useState(null);
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
+  const [openActionBlocks, setOpenActionBlocks] = useState({ valeur: true, action: true, urgence: true, silence: true, etat: true });
+  const toggleActionBlock = (block) => setOpenActionBlocks((current) => ({ ...current, [block]: !current[block] }));
   const [viewMode, setViewMode] = useState('table');
 
   // Sauvegarde de la position exacte de scroll avant sélection
@@ -1075,9 +1119,9 @@ export default function ActionsPage() {
 
           {/* Contenu complet de l'action sur 100% de la largeur */}
           {selectedAction && (
-            <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-md overflow-hidden p-6 md:p-8 space-y-8">
+            <Card className="action-detail-card flex flex-col bg-white border border-slate-200/90 rounded-2xl shadow-md overflow-hidden p-6 md:p-8 space-y-8">
               {/* Hero Header Pure White */}
-              <div className="p-6 rounded-2xl bg-white border border-slate-200/80 text-slate-900 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="action-detail-hero order-1 p-6 rounded-2xl bg-white border border-slate-200/80 text-slate-900 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
                     <div className="p-3 bg-sky-50 text-sky-700 border border-sky-200 rounded-2xl shadow-xs">
@@ -1115,7 +1159,7 @@ export default function ActionsPage() {
                 </div>
               </div>
 
-              <section className="rounded-2xl border border-sky-100 bg-sky-50/60 p-5 space-y-4">
+              <section className="action-detail-explanation calculation-explanation order-3 rounded-2xl border border-sky-100 bg-sky-50/60 p-5 space-y-4">
                 <button
                   type="button"
                   className="flex w-full items-center justify-between text-left"
@@ -1125,47 +1169,70 @@ export default function ActionsPage() {
                   <span className="text-sm font-black text-sky-950">Pourquoi ces valeurs ?</span>
                   <span className="text-lg font-bold text-sky-700" aria-hidden="true">{isExplanationOpen ? '−' : '+'}</span>
                 </button>
-                {isExplanationOpen && <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Valeur du médecin</h4>
-                    <ol className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600">
-                      <li><strong className="text-slate-900">1. Potentiel :</strong> {formatExplanationScore(selectedMedecin?.potentielSur100)} × 0,40 = {formatWeightedExplanation(selectedMedecin?.potentielSur100, 0.4)}.</li>
-                      <li><strong className="text-slate-900">2. Performance :</strong> CA mensuel moyen = {selectedMedecin?.caMensuelMoyen == null ? '—' : `${formatAmount(selectedMedecin.caMensuelMoyen)} MAD`}; rang = {formatExplanationScore(selectedMedecin?.performanceSur100)} × 0,40 = {formatWeightedExplanation(selectedMedecin?.performanceSur100, 0.4)}.</li>
-                      <li><strong className="text-slate-900">3. Poids économique :</strong> {formatExplanationScore(selectedMedecin?.poidsEcoSur100)} × 0,20 = {formatWeightedExplanation(selectedMedecin?.poidsEcoSur100, 0.2)}.</li>
-                      <li><strong className="text-slate-900">4. Score final :</strong> {formatWeightedExplanation(selectedMedecin?.potentielSur100, 0.4)} + {formatWeightedExplanation(selectedMedecin?.performanceSur100, 0.4)} + {formatWeightedExplanation(selectedMedecin?.poidsEcoSur100, 0.2)} = <strong className="text-slate-900">{formatExplanationScore(selectedMedecin?.scoreValeur)} / 100</strong>, soit le segment <strong className="text-slate-900">{selectedMedecin?.segment || selectedAction.segment || '—'}</strong>.</li>
-                    </ol>
+                {isExplanationOpen && <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
+                  <div className="action-detail-value-panel rounded-xl border border-sky-100 bg-white p-4 shadow-2xs">
+                    <button type="button" onClick={() => toggleActionBlock('valeur')} className="flex w-full items-center justify-between text-left text-xs font-extrabold uppercase tracking-wider text-sky-800"><span>Valeur du médecin</span><span className="text-base text-sky-700">{openActionBlocks.valeur ? '⌃' : '⌄'}</span></button>
+                    <div className={`${openActionBlocks.valeur ? '' : 'hidden'} mt-3 space-y-2 text-xs leading-relaxed`}>
+                      <details open className="action-metric action-metric--potential group rounded-lg border border-sky-100 bg-sky-50/50">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span className="flex items-center gap-2"><span className="explanation-metric-icon explanation-metric-icon--blue"><ActionsIcon name="trend" size={18} /></span><span>1. Potentiel</span></span><span className="text-base text-sky-700 transition-transform group-open:rotate-180" aria-hidden="true">⌄</span></summary>
+                        <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><CalculationLine label="Relation" muted>potentiel = (note / 5) × 100 ; contribution = potentiel × 0,40</CalculationLine><CalculationLine label="Valeur">note utilisée = {formatExplanationScore(Number(selectedMedecin?.potentielSur100) / 20)} / 5</CalculationLine><CalculationLine label="Calcul">({formatExplanationScore(Number(selectedMedecin?.potentielSur100) / 20)} / 5) × 100 = {formatExplanationScore(selectedMedecin?.potentielSur100)}</CalculationLine><CalculationLine label="Résultat">{formatExplanationScore(selectedMedecin?.potentielSur100)} × 0,40 = {formatWeightedExplanation(selectedMedecin?.potentielSur100, 0.4)}</CalculationLine><div className="action-contribution action-contribution--blue"><span>Contribution</span><strong>{formatWeightedExplanation(selectedMedecin?.potentielSur100, 0.4)}</strong><small>40% du score final</small></div></div>
+                      </details>
+                      <details open className="action-metric action-metric--performance group rounded-lg border border-sky-100 bg-sky-50/50">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span className="flex items-center gap-2"><span className="explanation-metric-icon explanation-metric-icon--violet"><ActionsIcon name="performance" size={18} /></span><span>2. Performance</span></span><span className="text-base text-sky-700 transition-transform group-open:rotate-180" aria-hidden="true">⌄</span></summary>
+                        <div className="px-3 pt-2 text-xs font-bold text-indigo-700">Position CA : {selectedMedecin?.rangPerformance ?? '—'} / {selectedMedecin?.totalPortefeuillePerformance ?? '—'} ; N − 1 = {selectedMedecin?.totalPortefeuillePerformance != null ? selectedMedecin.totalPortefeuillePerformance - 1 : '—'}</div>
+                        <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><CalculationLine label="Relation" muted>performance = 100 × (rang − 1) / (N − 1) ; contribution = performance × 0,40</CalculationLine><CalculationLine label="Valeur">CA moyen = {selectedMedecin?.caMensuelMoyen == null ? '—' : `${formatAmount(selectedMedecin.caMensuelMoyen)} MAD`} ; performance = {formatExplanationScore(selectedMedecin?.performanceSur100)} / 100</CalculationLine><CalculationLine label="Calcul">{formatExplanationScore(selectedMedecin?.performanceSur100)} × 0,40 = {formatWeightedExplanation(selectedMedecin?.performanceSur100, 0.4)}</CalculationLine><CalculationLine label="Sens">0 = CA moyen le plus faible ; 100 = CA moyen le plus élevé ; position relative dans le portefeuille.</CalculationLine><CalculationLine label="Résultat">contribution performance = {formatWeightedExplanation(selectedMedecin?.performanceSur100, 0.4)}</CalculationLine><div className="action-contribution action-contribution--violet"><span>Contribution</span><strong>{formatWeightedExplanation(selectedMedecin?.performanceSur100, 0.4)}</strong><small>40% du score final</small></div></div>
+                      </details>
+                      <details open className="action-metric action-metric--economic group rounded-lg border border-sky-100 bg-sky-50/50">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span className="flex items-center gap-2"><span className="explanation-metric-icon explanation-metric-icon--teal"><ActionsIcon name="pie" size={18} /></span><span>3. Poids économique</span></span><span className="text-base text-sky-700 transition-transform group-open:rotate-180" aria-hidden="true">⌄</span></summary>
+                        <div className="economic-weight-breakdown"><div><strong>CA normalisé</strong><span>{formatExplanationScore(selectedMedecin?.caNormaliseSur100)} / 100</span><small>CA médecin {formatAmount(selectedMedecin?.caMois ?? 0)} MAD / maximum portefeuille {formatAmount(selectedMedecin?.maxCaPortefeuille ?? 0)} MAD</small></div><div><strong>Volume normalisé</strong><span>{formatExplanationScore(selectedMedecin?.volumeNormaliseSur100)} / 100</span><small>{selectedMedecin?.totalCas ?? '—'} cas / maximum portefeuille {formatExplanationScore(selectedMedecin?.maxVolumePortefeuille)} cas</small></div></div>
+                        <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><CalculationLine label="Relation" muted>poids économique = 50% CA normalisé + 50% volume normalisé ; contribution = poids × 0,20</CalculationLine><CalculationLine label="Valeur">poids économique = {formatExplanationScore(selectedMedecin?.poidsEcoSur100)} / 100</CalculationLine><CalculationLine label="Calcul">{formatExplanationScore(selectedMedecin?.poidsEcoSur100)} × 0,20 = {formatWeightedExplanation(selectedMedecin?.poidsEcoSur100, 0.2)}</CalculationLine><CalculationLine label="Résultat">contribution économique = {formatWeightedExplanation(selectedMedecin?.poidsEcoSur100, 0.2)}</CalculationLine><div className="action-contribution action-contribution--teal"><span>Contribution</span><strong>{formatWeightedExplanation(selectedMedecin?.poidsEcoSur100, 0.2)}</strong><small>20% du score final</small></div></div>
+                      </details>
+                      <details open className="action-metric action-metric--final group rounded-lg border border-sky-100 bg-sky-50/50">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span className="flex items-center gap-2"><span className="explanation-metric-icon explanation-metric-icon--orange"><ActionsIcon name="trophy" size={18} /></span><span>4. Score final</span></span><span className="text-base text-sky-700 transition-transform group-open:rotate-180" aria-hidden="true">⌄</span></summary>
+                        <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><CalculationLine label="Relation" muted>score final = 40% potentiel + 40% performance + 20% poids économique</CalculationLine><CalculationLine label="Étape 1">potentiel × 0,40 = {formatWeightedExplanation(selectedMedecin?.potentielSur100, 0.4)}</CalculationLine><CalculationLine label="Étape 2">performance × 0,40 = {formatWeightedExplanation(selectedMedecin?.performanceSur100, 0.4)}</CalculationLine><CalculationLine label="Étape 3">poids économique × 0,20 = {formatWeightedExplanation(selectedMedecin?.poidsEcoSur100, 0.2)}</CalculationLine><CalculationLine label="Résultat">{formatWeightedExplanation(selectedMedecin?.potentielSur100, 0.4)} + {formatWeightedExplanation(selectedMedecin?.performanceSur100, 0.4)} + {formatWeightedExplanation(selectedMedecin?.poidsEcoSur100, 0.2)} = <strong className="text-slate-900">{formatExplanationScore(selectedMedecin?.scoreValeur)} / 100</strong> ; segment <strong className="text-slate-900">{selectedMedecin?.segment || selectedAction.segment || '—'}</strong></CalculationLine><div className="action-score-donut" style={{ background: `conic-gradient(#f97316 ${Math.min(100, Math.max(0, Number(selectedMedecin?.scoreValeur ?? 0)))}%, #e5e7eb 0)` }}><div><strong>{formatExplanationScore(selectedMedecin?.scoreValeur)}</strong><span>/ 100</span></div></div><span className="action-score-segment">SEGMENT&nbsp; {selectedMedecin?.segment || selectedAction.segment || '—'}</span></div>
+                      </details>
+                    </div>
                   </div>
-                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Action recommandée</h4>
-                    <p className="mt-3 text-xs leading-relaxed text-slate-600">
-                      <strong className="text-slate-900">{selectedAction.actionRecommandee || '—'}</strong>{' '}
-                      {selectedAction.urgenceSilence
-                        ? <>déclenchée par le silence radio ({selectedAction.joursSansActivite ?? '—'} jours sans dossier laboratoire) : visite prioritaire.</>
-                        : <>déclenchée par le statut <strong className="text-slate-900">{formatEnumLabel(selectedAction.statut || selectedMedecin?.statut)}</strong> : {getActionRule(selectedAction.statut || selectedMedecin?.statut)}.</>}
-                    </p>
+                  <div className="action-detail-alerts space-y-3">
+                    <div className="action-detail-recommendation self-start rounded-xl border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-4 shadow-2xs">
+                    <button type="button" onClick={() => toggleActionBlock('action')} className="flex w-full items-center justify-between text-left text-xs font-extrabold uppercase tracking-wider text-sky-800"><span className="flex items-center gap-2"><ActionsIcon name="heartbeat" size={15} />Action recommandée</span><span className="text-base text-sky-700">{openActionBlocks.action ? '⌃' : '⌄'}</span></button>
+                    {openActionBlocks.action && <><p className="mt-3 text-sm font-black text-sky-950">{selectedAction.actionRecommandee || '—'}</p><p className="mt-1 text-xs leading-relaxed text-slate-600">{selectedAction.commentaire || getActionDescription(selectedAction, selectedMedecin)}</p></>}
+                    </div>
+                    <div className="action-detail-urgency rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <button type="button" onClick={() => toggleActionBlock('urgence')} className="flex w-full items-center justify-between text-left text-xs font-extrabold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-2"><ActionsIcon name="alert" size={18} />Urgence</span><span className="text-base text-sky-700">{openActionBlocks.urgence ? '⌃' : '⌄'}</span></button>
+                    {openActionBlocks.urgence && <p className="mt-3 text-xs leading-relaxed text-slate-600">{getActionUrgencyReason(selectedAction, selectedMedecin)}</p>}
+                    </div>
                   </div>
-                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Urgence</h4>
-                    <p className="mt-3 text-xs leading-relaxed text-slate-600">{getActionUrgencyReason(selectedAction, selectedMedecin)}</p>
+                  <div className="action-detail-silence rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <button type="button" onClick={() => toggleActionBlock('silence')} className="flex w-full items-center justify-between text-left text-xs font-extrabold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-2"><ActionsIcon name="heartbeat" size={18} />Silence radio</span><span className="text-base text-sky-700">{openActionBlocks.silence ? '⌃' : '⌄'}</span></button>
+                    <div className={`${openActionBlocks.silence ? '' : 'hidden'} mt-3 space-y-1 text-xs leading-relaxed`}>
+                      <CalculationLine label="Relation" muted>niveau = jours sans activité / fréquence attendue</CalculationLine>
+                      <CalculationLine label="Seuil" muted>ratio &gt; 1 : SILENCE CRITIQUE ; ratio &gt; 0,70 : ALERTE SILENCE ; sinon : SUIVI REGULIER</CalculationLine>
+                      <CalculationLine label="Valeur">jours sans activité = {selectedAction.joursSansActivite ?? '—'} ; fréquence = {calculateFrequenceJours(selectedMedecin?.segment) ?? '—'} jours ; segment = {selectedMedecin?.segment || selectedAction.segment || '—'}</CalculationLine>
+                      <CalculationLine label="Calcul">{selectedAction.joursSansActivite ?? '—'} / {calculateFrequenceJours(selectedMedecin?.segment) ?? '—'} = {selectedAction.joursSansActivite != null && calculateFrequenceJours(selectedMedecin?.segment) ? formatExplanationScore(selectedAction.joursSansActivite / calculateFrequenceJours(selectedMedecin?.segment)) : '—'} ; score = {formatExplanationScore(selectedMedecin?.scoreSilence)} / 100</CalculationLine>
+                      <CalculationLine label="Résultat">{selectedAction.joursSansActivite ?? '—'} jours {selectedAction.urgenceSilence ? 'dépassent le seuil : SILENCE CRITIQUE et visite prioritaire.' : 'déterminent le niveau de silence affiché.'}</CalculationLine>
+                    </div>
                   </div>
-                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Silence radio</h4>
-                    <ol className="mt-3 space-y-2 text-xs leading-relaxed text-slate-600">
-                      <li><strong className="text-slate-900">1. Mesure :</strong> {selectedAction.joursSansActivite ?? '—'} jours depuis le dernier dossier envoyé au laboratoire.</li>
-                      <li><strong className="text-slate-900">2. Rythme attendu :</strong> 1 dossier tous les {calculateFrequenceJours(selectedMedecin?.segment) ?? '—'} jours selon le segment {selectedMedecin?.segment || selectedAction.segment || '—'}.</li>
-                      <li><strong className="text-slate-900">3. Niveau :</strong> au-delà de la fréquence attendue = <strong className="text-slate-900">SILENCE CRITIQUE</strong>; au-delà de 70% = <strong className="text-slate-900">ALERTE SILENCE</strong>; sinon = <strong className="text-slate-900">SUIVI REGULIER</strong>.</li>
-                      <li><strong className="text-slate-900">4. Résultat :</strong> {selectedAction.joursSansActivite ?? '—'} jours {selectedAction.urgenceSilence ? 'dépassent le seuil, donc SILENCE CRITIQUE et visite prioritaire.' : 'déterminent le niveau de silence affiché.'}</li>
-                    </ol>
+                  <div className="action-detail-state rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
+                    <button type="button" onClick={() => toggleActionBlock('etat')} className="flex w-full items-center justify-between text-left text-xs font-extrabold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-2"><ActionsIcon name="check" size={18} />État</span><span className="text-base text-sky-700">{openActionBlocks.etat ? '⌃' : '⌄'}</span></button>
+                    {openActionBlocks.etat && <p className="mt-3 text-xs leading-relaxed text-slate-600">{getActionStateReason(selectedAction)}</p>}
                   </div>
-                  <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">État</h4>
-                    <p className="mt-3 text-xs leading-relaxed text-slate-600">{getActionStateReason(selectedAction)}</p>
+                  <div className="action-score-summary rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">Résumé du score</span>
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <div><span className="block text-[10px] font-bold text-slate-400">Score final</span><strong className="text-sm text-indigo-700">{formatExplanationScore(selectedMedecin?.scoreValeur)} / 100</strong></div>
+                      <div><span className="block text-[10px] font-bold text-slate-400">Segment</span><strong className="text-sm text-slate-800">{selectedMedecin?.segment || selectedAction.segment || '—'}</strong></div>
+                      <div><span className="block text-[10px] font-bold text-slate-400">Pondération</span><strong className="text-sm text-slate-800">40% / 40% / 20%</strong></div>
+                      <div><span className="block text-[10px] font-bold text-slate-400">Dernière MAJ</span><strong className="text-sm text-slate-800">{formatDate(selectedAction.dateVisite)}</strong></div>
+                    </div>
+                    <div className="action-score-gauge mt-4"><span className="action-score-gauge-marker" style={{ left: `${Math.min(100, Math.max(0, Number(selectedMedecin?.scoreValeur ?? 0)))}%` }} /></div>
+                    <div className="mt-1 flex justify-between text-[9px] font-bold text-slate-400"><span>D</span><span>C</span><span>B</span><span>A</span></div>
                   </div>
                 </div>}
               </section>
 
               {/* Grid 2 Colonnes */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              <div className="order-2 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* Colonne Gauche (6 cols) : Action recommandée & Métriques */}
                 <div className="lg:col-span-6 space-y-6">
                   {/* Action Recommandée */}
@@ -1221,7 +1288,7 @@ export default function ActionsPage() {
 
                       <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 flex items-center justify-between">
                         <div>
-                          <span className="text-[10px] text-emerald-800 font-extrabold block uppercase">Baseline (M-1)</span>
+                          <span className="text-[10px] text-emerald-800 font-extrabold block uppercase">CA mois précédent (M-1)</span>
                           <span className="text-sm font-black text-emerald-700">
                             {formatAmount(selectedMedecin?.caBaseline ?? selectedMedecin?.caMois ?? 0)} MAD
                           </span>
