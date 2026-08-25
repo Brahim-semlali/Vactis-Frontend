@@ -44,6 +44,7 @@ export function AuthProvider({ children }) {
 
   const persistToken = useCallback((newToken) => {
     localStorage.setItem(TOKEN_KEY, newToken);
+    window.history.replaceState({}, '', '/accueil');
     setToken(newToken);
   }, []);
 

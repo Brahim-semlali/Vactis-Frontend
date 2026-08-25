@@ -1,27 +1,27 @@
 const VACTIS_STATUT_META = {
   progression: {
     label: 'Progression',
-    description: 'CA du mois en hausse de plus de +20 % par rapport au mois précédent.',
+    description: 'Variation mixte en hausse de plus de +20 % : 60 % CA et 40 % volume, par rapport à la référence récente.',
     tone: 'green',
   },
   actif_stable: {
     label: 'Actif stable',
-    description: 'Activité régulière : variation de CA entre −10 % et +20 % par rapport au mois précédent.',
+    description: 'Activité régulière : variation mixte entre −10 % et +20 %, calculée avec 60 % CA et 40 % volume.',
     tone: 'green',
   },
   surveillance: {
     label: 'Surveillance',
-    description: 'Légère baisse d\'activité : variation de CA entre −40 % et −10 % par rapport au mois précédent.',
+    description: 'Baisse à surveiller : variation mixte entre −40 % et −10 %, calculée avec 60 % CA et 40 % volume.',
     tone: 'amber',
   },
   retention: {
     label: 'Rétention',
-    description: 'Risque commercial : baisse de CA entre −40 % et −70 % par rapport au mois précédent.',
+    description: 'Risque commercial : variation mixte entre −70 % et −40 %, calculée avec 60 % CA et 40 % volume.',
     tone: 'red',
   },
   silence_critique: {
     label: 'Silence critique',
-    description: 'Signal radio critique : CA en chute de plus de 70 % par rapport au mois précédent.',
+    description: 'Signal radio critique : variation mixte inférieure à −70 %, calculée avec 60 % CA et 40 % volume.',
     tone: 'red',
   },
   onboarding: {

@@ -8,6 +8,78 @@ import Controle from './Controle/Controle.jsx';
 import LectureActivitePage from './LectureActivite/LectureActivitePage.jsx';
 import PlaceholderPage from './PlaceholderPage.jsx';
 import AdministrationPage from './Administration/AdministrationPage.jsx';
+import VactisWorkflow from '../components/VactisWorkflow.tsx';
+
+const workflowSteps = [
+  ['Entrée DATA', 'Facturation, profils et retours terrain', 'Collecte des signaux disponibles pour chaque médecin.'],
+  ['Normalisation', 'Mise à l’échelle du portefeuille', 'Toutes les métriques sont rendues comparables.'],
+  ['Agrégation', 'CA mensuel moyen par médecin', 'Les données sont regroupées par médecin et par mois.'],
+  ['Références', 'Moyenne glissante M-1 à M-3', 'Une base de comparaison robuste est construite.'],
+  ['Variations', 'Delta CA et volume', 'Les mouvements significatifs sont détectés.'],
+  ['Statut', '8 statuts VACTIS automatiques', 'La dynamique commerciale de chaque médecin est résumée.'],
+  ['Silence & risque', 'Indice de rupture du rythme', 'Les décrochages potentiels sont anticipés.'],
+  ['Segment & fiabilité', 'Segment ABCD, score sur 100', 'Le portefeuille est segmenté et évalué.'],
+  ['Score de valeur', 'Potentiel, performance et économie', 'Un score composite synthétise la valeur commerciale.'],
+  ['Actions', 'Plan commercial généré', 'L’analyse devient un plan d’action priorisé.'],
+];
+
+function HomeWorkflow() {
+  const [selectedStep, setSelectedStep] = useState(0);
+  const selected = workflowSteps[selectedStep];
+
+  return (
+    <section className="home-workflow">
+      <div className="home-workflow-header">
+        <div>
+          <span className="home-eyebrow"><i /> MOTEUR VACTIS · EN CYCLE</span>
+          <h2>La donnée brute devient plan d’action</h2>
+          <p>Un flux continu de 10 transformations. Chaque donnée se raffine le long du moteur, puis reboucle au recalcul mensuel de chaque médecin.</p>
+        </div>
+        <div className="home-cycle-badge"><span>10</span> étapes · cycle mensuel</div>
+      </div>
+
+      <div className="home-workflow-track" aria-label="Étapes du moteur VACTIS">
+        <svg className="home-track-line" viewBox="0 0 1000 420" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="workflow-gradient" x1="0" x2="1">
+              <stop offset="0" stopColor="#0d9488" />
+              <stop offset="0.45" stopColor="#2563eb" />
+              <stop offset="0.75" stopColor="#9333ea" />
+              <stop offset="1" stopColor="#ea580c" />
+            </linearGradient>
+          </defs>
+          <path d="M80 120 C220 65 360 65 500 120 S780 175 920 120 C970 205 970 215 920 300 C780 355 640 355 500 300 S220 245 80 300 C30 215 30 205 80 120" />
+        </svg>
+        <div className="home-workflow-hint"><span>↗</span> Cliquez une étape pour explorer</div>
+        <div className="home-cycle-loop"><span>↻</span> Cycle mensuel</div>
+        {workflowSteps.map((step, index) => (
+          <button
+            type="button"
+            key={step[0]}
+            className={`home-step home-step--${index < 5 ? 'top' : 'bottom'} home-step--${index} ${selectedStep === index ? 'is-selected' : ''}`}
+            onClick={() => setSelectedStep(index)}
+            aria-label={`Étape ${index + 1}: ${step[0]}`}
+          >
+            <span className="home-step-dot">{index + 1}</span>
+            <strong>{step[0]}</strong>
+            <small>{step[1]}</small>
+          </button>
+        ))}
+      </div>
+
+      <div className="home-workflow-detail">
+        <div className="home-detail-index">{String(selectedStep + 1).padStart(2, '0')} / 10</div>
+        <div>
+          <h3>{selected[0]}</h3>
+          <p>{selected[2]}</p>
+        </div>
+        <button type="button" onClick={() => setSelectedStep((selectedStep + 1) % workflowSteps.length)}>
+          Étape suivante <span>→</span>
+        </button>
+      </div>
+    </section>
+  );
+}
 
 function isPublicRoute(route) {
   return route === '/' || route === '/accueil';
@@ -19,6 +91,10 @@ function isRouteAllowed(route, allowedRoutes) {
   }
 
   return allowedRoutes.includes(route);
+}
+
+function getFirstAllowedRoute(allowedRoutes) {
+  return allowedRoutes[0] ?? '/accueil';
 }
 
 function resolvePageContent(activeRoute, username, navigate) {
@@ -49,36 +125,8 @@ function resolvePageContent(activeRoute, username, navigate) {
 
   if (isPublicRoute(activeRoute)) {
     return (
-      <div className="space-y-6">
-        <div className="p-8 bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl shadow-xl border border-slate-800 relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative z-10 space-y-3 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-xs font-bold border border-teal-500/30">
-              <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-              PLATEFORME DE PILOTAGE VACTIS
-            </div>
-            <h1 className="text-3xl font-black tracking-tight">Bienvenue, {username} 👋</h1>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              De la donnée à l&apos;action terrain. Sélectionnez un module dans le menu de navigation pour consulter vos analyses, prioriser vos médecins et exécuter vos actions commerciales.
-            </p>
-            <div className="flex flex-wrap gap-3 pt-4">
-              <button
-                type="button"
-                onClick={() => navigate('/medecins')}
-                className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs transition-all shadow-md shadow-teal-600/30 active:scale-95 flex items-center gap-2"
-              >
-                Accéder au Portefeuille Médecins →
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/actions')}
-                className="px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-all border border-white/20 active:scale-95 flex items-center gap-2"
-              >
-                Voir les Actions →
-              </button>
-            </div>
-          </div>
-        </div>
+      <div className="home-page">
+        <VactisWorkflow />
       </div>
     );
   }
@@ -100,7 +148,7 @@ function HomeContent({ activeRoute, navigate, username, allowedRoutes, menuLoade
     }
 
     if (!isRouteAllowed(activeRoute, allowedRoutes)) {
-      navigate('/accueil');
+      navigate(getFirstAllowedRoute(allowedRoutes));
     }
   }, [activeRoute, allowedRoutes, menuLoaded, navigate]);
 

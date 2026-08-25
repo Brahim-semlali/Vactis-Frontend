@@ -16,6 +16,7 @@ import {
   blockUser,
   unblockUser,
 } from "../../api/administration.js";
+import { logger } from "../../utils/logger.js";
 
 const EMPTY_ROLE = { nameRole: "", description: "", menuIds: [] };
 const EMPTY_USER = {
@@ -322,7 +323,7 @@ function TreeCheckbox({ checked, indeterminate, onChange, children }) {
   );
 }
 
-function RoleDrawer({ role, menus, saving, onClose, onSave }) {
+function RoleDrawer({ role, menus, saving, formError, onClose, onSave }) {
   const [form, setForm] = useState(() => normalizeRoleForm(role));
   const set = (key, value) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -350,6 +351,7 @@ function RoleDrawer({ role, menus, saving, onClose, onSave }) {
             {icon("close")}
           </button>
         </div>
+        <Status message={formError} type="error" />
         <form
           className="space-y-5"
           onSubmit={(e) => {
@@ -428,7 +430,7 @@ function RoleDrawer({ role, menus, saving, onClose, onSave }) {
   );
 }
 
-function UserDrawer({ user, roles, menus, saving, onClose, onSave }) {
+function UserDrawer({ user, roles, menus, saving, formError, onClose, onSave }) {
   const [form, setForm] = useState(() => normalizeUserForm(user));
   const { token } = useAuth();
   const [stateSaving, setStateSaving] = useState(false);
@@ -476,6 +478,7 @@ function UserDrawer({ user, roles, menus, saving, onClose, onSave }) {
             {icon("close")}
           </button>
         </div>
+        <Status message={formError} type="error" />
         <form
           className="grid gap-4 sm:grid-cols-2"
           onSubmit={(e) => {
@@ -722,6 +725,12 @@ export default function AdministrationPage({ mode = "roles" }) {
         );
       }
     } catch (err) {
+      logger.warn("Échec enregistrement administration", {
+        mode: isRoles ? "role" : "user",
+        status: err.status,
+        code: err.code,
+        message: err.message,
+      });
       setError(errorMessage(err));
     } finally {
       setLoading(false);
@@ -730,6 +739,9 @@ export default function AdministrationPage({ mode = "roles" }) {
   useEffect(() => {
     if (token) load();
   }, [token, isRoles, currentUsername]);
+  useEffect(() => {
+    if (editing) setError("");
+  }, [editing]);
   const roleFields = [(r) => r.idRole, (r) => r.nameRole, (r) => r.description];
   const userFields = [
     (u) => u.id,
@@ -853,7 +865,7 @@ export default function AdministrationPage({ mode = "roles" }) {
         </Button>
       </div>
       <Status message={notice} />
-      <Status message={error} type="error" />
+      {!editing && <Status message={error} type="error" />}
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-black text-slate-900">
@@ -1024,6 +1036,7 @@ export default function AdministrationPage({ mode = "roles" }) {
             role={editing.idRole ? editing : null}
             menus={menus}
             saving={saving}
+            formError={error}
             onClose={() => setEditing(null)}
             onSave={save}
           />
@@ -1033,6 +1046,7 @@ export default function AdministrationPage({ mode = "roles" }) {
             roles={roles}
             menus={menus}
             saving={saving}
+            formError={error}
             onClose={() => setEditing(null)}
             onSave={save}
           />

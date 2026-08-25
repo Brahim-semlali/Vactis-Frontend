@@ -1,10 +1,12 @@
 import { API_BASE } from './config.js';
+import { logger } from '../utils/logger.js';
 
 export class AdministrationError extends Error {
-  constructor(message, status) {
+  constructor(message, status, code = null) {
     super(message);
     this.name = 'AdministrationError';
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -20,13 +22,23 @@ async function request(path, token, options = {}) {
 
   if (!response.ok) {
     let message = response.statusText || 'Une erreur est survenue';
+    let code = null;
     try {
       const body = await response.json();
       message = body?.message ?? body?.error ?? message;
+      code = body?.code ?? null;
     } catch {
       // Some Spring errors have no JSON body.
     }
-    throw new AdministrationError(message, response.status);
+    const error = new AdministrationError(message, response.status, code);
+    logger.warn('Échec requête administration', {
+      method: options.method ?? 'GET',
+      path,
+      status: response.status,
+      code,
+      message,
+    });
+    throw error;
   }
 
   if (response.status === 204) return null;
