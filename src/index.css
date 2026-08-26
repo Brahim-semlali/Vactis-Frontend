@@ -13,6 +13,9 @@
   --primary-hover: #0d9488;
   --primary-light: #E8F8F4;
   --primary-soft: #F1F8F6;
+  --success: #10b981;
+  --error-text: #dc2626;
+  --error-bg: #fef2f2;
   --sidebar-bg: #ffffff;
   --sidebar-secondary: #f8fafc;
   --sidebar-border: #e5eaf0;
@@ -5388,30 +5391,13 @@ input {
   display: inline-block;
   flex-shrink: 0;
 
-  &--green {
-    background-color: #10b981;
-    box-shadow: 0 0 6px rgba(16, 185, 129, 0.4);
-  }
-
-  &--orange {
-    background-color: #f59e0b;
-    box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
-  }
-
-  &--red {
-    background-color: #ef4444;
-    box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
-  }
-
-  &--blue {
-    background-color: #3b82f6;
-    box-shadow: 0 0 6px rgba(59, 130, 246, 0.4);
-  }
-
-  &--gray {
-    background-color: #64748b;
-  }
 }
+
+.activite-statut-dot--green { background-color: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.4); }
+.activite-statut-dot--orange { background-color: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); }
+.activite-statut-dot--red { background-color: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
+.activite-statut-dot--blue { background-color: #3b82f6; box-shadow: 0 0 6px rgba(59, 130, 246, 0.4); }
+.activite-statut-dot--gray { background-color: #64748b; }
 
 .activite-statut-count {
   font-size: 1.5rem;
