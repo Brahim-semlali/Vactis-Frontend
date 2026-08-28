@@ -17,6 +17,7 @@ import {
   unblockUser,
 } from "../../api/administration.js";
 import { logger } from "../../utils/logger.js";
+import { getSettings } from "../../api/settings.js";
 
 const EMPTY_ROLE = { nameRole: "", description: "", menuIds: [] };
 const EMPTY_USER = {
@@ -430,7 +431,7 @@ function RoleDrawer({ role, menus, saving, formError, onClose, onSave }) {
   );
 }
 
-function UserDrawer({ user, roles, menus, saving, formError, onClose, onSave }) {
+function UserDrawer({ user, roles, menus, saving, formError, passwordPolicy, onClose, onSave }) {
   const [form, setForm] = useState(() => normalizeUserForm(user));
   const { token } = useAuth();
   const [stateSaving, setStateSaving] = useState(false);
@@ -512,7 +513,7 @@ function UserDrawer({ user, roles, menus, saving, formError, onClose, onSave }) 
             <Input
               type="password"
               required={!user}
-              minLength="6"
+              minLength={passwordPolicy.mdpLongueurMinimale}
               value={form.password}
               onChange={(e) => set("password", e.target.value)}
               placeholder={user ? "Laisser vide pour conserver" : ""}
@@ -522,7 +523,7 @@ function UserDrawer({ user, roles, menus, saving, formError, onClose, onSave }) 
             <Input
               type="password"
               required={!user}
-              minLength="6"
+              minLength={passwordPolicy.mdpLongueurMinimale}
               value={form.passwordConfirmation}
               onChange={(e) => set("passwordConfirmation", e.target.value)}
             />
@@ -693,6 +694,7 @@ export default function AdministrationPage({ mode = "roles" }) {
   const [notice, setNotice] = useState("");
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState(null);
+  const [passwordPolicy, setPasswordPolicy] = useState({ mdpLongueurMinimale: 8, mdpExigeMajuscule: false, mdpExigeChiffre: false, mdpExigeCaractereSpecial: false });
   const [suspendTarget, setSuspendTarget] = useState(null);
   const load = async () => {
     setLoading(true);
@@ -740,6 +742,10 @@ export default function AdministrationPage({ mode = "roles" }) {
     if (token) load();
   }, [token, isRoles, currentUsername]);
   useEffect(() => {
+    if (!token || isRoles) return;
+    getSettings(token).then((settings) => setPasswordPolicy(settings)).catch(() => {});
+  }, [token, isRoles]);
+  useEffect(() => {
     if (editing) setError("");
   }, [editing]);
   const roleFields = [(r) => r.nameRole, (r) => r.description];
@@ -770,6 +776,12 @@ export default function AdministrationPage({ mode = "roles" }) {
           throw new AdministrationError(
             "Les deux mots de passe doivent être identiques.",
           );
+        if (form.password && (form.password.length < passwordPolicy.mdpLongueurMinimale
+          || (passwordPolicy.mdpExigeMajuscule && !/[A-Z]/.test(form.password))
+          || (passwordPolicy.mdpExigeChiffre && !/\d/.test(form.password))
+          || (passwordPolicy.mdpExigeCaractereSpecial && !/[^a-zA-Z0-9]/.test(form.password)))) {
+          throw new AdministrationError("Le mot de passe ne respecte pas la politique de sécurité configurée.");
+        }
         const body = {
           username: form.username.trim(),
           firstName: form.firstName.trim(),
@@ -1028,6 +1040,7 @@ export default function AdministrationPage({ mode = "roles" }) {
             user={editing.id ? editing : null}
             roles={roles}
             menus={menus}
+            passwordPolicy={passwordPolicy}
             saving={saving}
             formError={error}
             onClose={() => setEditing(null)}

@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { login as loginApi, register as registerApi } from '../api/auth.js';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { login as loginApi, logout as logoutApi, register as registerApi } from '../api/auth.js';
 import { logger } from '../utils/logger.js';
 
 const TOKEN_KEY = 'stagelabo_token';
@@ -62,9 +62,28 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     logger.info('Déconnexion');
+    if (token) {
+      logoutApi(token).catch(() => logger.warn('Impossible de journaliser la déconnexion'));
+    }
     localStorage.removeItem(TOKEN_KEY);
+    window.history.replaceState({}, '', '/');
     setToken(null);
-  }, []);
+  }, [token]);
+
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      const request = args[0];
+      const headers = args[1]?.headers ?? (request instanceof Request ? request.headers : undefined);
+      const hasBearer = headers && (typeof headers.get === 'function' ? headers.get('Authorization') : headers.Authorization);
+      if (response.status === 401 && hasBearer) {
+        logout();
+      }
+      return response;
+    };
+    return () => { window.fetch = originalFetch; };
+  }, [logout, token]);
 
   const value = useMemo(
     () => ({

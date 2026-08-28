@@ -64,6 +64,13 @@ export async function login(username, password) {
   return data;
 }
 
+export async function logout(token) {
+  await fetch(`${API_BASE}/api/auth/logout`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function getAccountStatus(username) {
   const params = new URLSearchParams({ username: username.trim() });
   const response = await fetch(`${API_BASE}/api/auth/account-status?${params}`);

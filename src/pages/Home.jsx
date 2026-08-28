@@ -8,6 +8,7 @@ import Controle from './Controle/Controle.jsx';
 import LectureActivitePage from './LectureActivite/LectureActivitePage.jsx';
 import PlaceholderPage from './PlaceholderPage.jsx';
 import AdministrationPage from './Administration/AdministrationPage.jsx';
+import SettingsPage from './Administration/SettingsPage.jsx';
 import VactisWorkflow from '../components/VactisWorkflow.tsx';
 
 const workflowSteps = [
@@ -120,6 +121,10 @@ function resolvePageContent(activeRoute, username, navigate) {
 
   if (activeRoute === '/users') {
     return <AdministrationPage mode="users" />;
+  }
+
+  if (activeRoute === '/parametres-systeme') {
+    return <SettingsPage />;
   }
 
 
