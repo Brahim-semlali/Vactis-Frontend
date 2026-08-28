@@ -742,9 +742,8 @@ export default function AdministrationPage({ mode = "roles" }) {
   useEffect(() => {
     if (editing) setError("");
   }, [editing]);
-  const roleFields = [(r) => r.idRole, (r) => r.nameRole, (r) => r.description];
+  const roleFields = [(r) => r.nameRole, (r) => r.description];
   const userFields = [
-    (u) => u.id,
     (u) => u.username,
     (u) => u.firstName,
     (u) => u.lastName,
@@ -902,11 +901,6 @@ export default function AdministrationPage({ mode = "roles" }) {
                       <>
                         <th className="px-5 py-4">
                           <SortHead onClick={() => table.toggle(roleFields[0])}>
-                            ID
-                          </SortHead>
-                        </th>
-                        <th className="px-5 py-4">
-                          <SortHead onClick={() => table.toggle(roleFields[1])}>
                             Nom du rôle
                           </SortHead>
                         </th>
@@ -917,11 +911,6 @@ export default function AdministrationPage({ mode = "roles" }) {
                       <>
                         <th className="px-5 py-4">
                           <SortHead onClick={() => table.toggle(userFields[0])}>
-                            ID
-                          </SortHead>
-                        </th>
-                        <th className="px-5 py-4">
-                          <SortHead onClick={() => table.toggle(userFields[1])}>
                             Utilisateur
                           </SortHead>
                         </th>
@@ -950,9 +939,6 @@ export default function AdministrationPage({ mode = "roles" }) {
                           })
                         }
                       >
-                        <td className="px-5 py-4 font-bold text-slate-500">
-                          #{item.idRole}
-                        </td>
                         <td className="px-5 py-4 font-bold text-slate-900">
                           {item.nameRole}
                         </td>
@@ -981,9 +967,6 @@ export default function AdministrationPage({ mode = "roles" }) {
                       </tr>
                     ) : (
                       <tr key={item.id} className="cursor-pointer hover:bg-teal-50/30" onClick={() => setEditing({ ...item, roleId: item.roles?.idRole ?? "" })}>
-                        <td className="px-5 py-4 font-bold text-slate-500">
-                          #{item.id}
-                        </td>
                         <td className="px-5 py-4 font-bold text-slate-900">
                           {item.username}
                         </td>
