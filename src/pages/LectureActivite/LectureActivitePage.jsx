@@ -311,6 +311,14 @@ function ActiviteIcon({ name, size = 18 }) {
           <line x1="12" y1="17" x2="12.01" y2="17" />
         </svg>
       );
+    case 'userMinus':
+      return (
+        <svg {...props}>
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <line x1="22" y1="11" x2="16" y2="11" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -918,7 +926,7 @@ export default function LectureActivitePage() {
             <div className="activite-kpi-header">
               <span className="activite-kpi-title">NON AFFECTÉS MÉDECIN</span>
               <span className="activite-kpi-badge activite-kpi-badge--red">
-                <ActiviteIcon name="alert" />
+                <ActiviteIcon name="userMinus" />
               </span>
             </div>
             <div className="activite-kpi-value">
