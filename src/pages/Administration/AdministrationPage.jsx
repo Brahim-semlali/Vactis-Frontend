@@ -178,6 +178,25 @@ function Input({ className = "", ...props }) {
     />
   );
 }
+
+function PasswordRequirements({ password, policy }) {
+  const requirements = [
+    [`Au moins ${policy.mdpLongueurMinimale} caractères`, password.length >= policy.mdpLongueurMinimale],
+    ['Une lettre majuscule', !policy.mdpExigeMajuscule || /[A-Z]/.test(password)],
+    ['Un chiffre', !policy.mdpExigeChiffre || /\d/.test(password)],
+    ['Un caractère spécial', !policy.mdpExigeCaractereSpecial || /[^a-zA-Z0-9]/.test(password)],
+  ];
+
+  return (
+    <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg bg-slate-50 px-3 py-2 text-[11px] font-medium">
+      {requirements.map(([label, valid]) => (
+        <span key={label} className={valid ? 'text-emerald-700' : 'text-rose-600'}>
+          <span className="mr-1 font-bold">{valid ? '✓' : '!'}</span>{label}
+        </span>
+      ))}
+    </div>
+  );
+}
 function Status({ message, type = "success" }) {
   return (
     message && (
@@ -333,7 +352,7 @@ function RoleDrawer({ role, menus, saving, formError, onClose, onSave }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <section className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+      <section className="max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl sm:p-7">
         <div className="mb-7 flex items-start justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[.2em] text-teal-600">
@@ -460,8 +479,8 @@ function UserDrawer({ user, roles, menus, saving, formError, passwordPolicy, onC
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <section className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="mb-7 flex items-start justify-between">
+      <section className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="flex shrink-0 items-start justify-between border-b border-slate-100 bg-white px-6 py-5 sm:px-7">
           <div>
             <p className="text-xs font-black uppercase tracking-[.2em] text-teal-600">
               Administration
@@ -479,8 +498,9 @@ function UserDrawer({ user, roles, menus, saving, formError, passwordPolicy, onC
             {icon("close")}
           </button>
         </div>
+        <div className="min-h-0 overflow-y-auto px-6 py-5 sm:px-7">
         <Status message={formError} type="error" />
-        <form
+          <form
           className="grid gap-4 sm:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
@@ -518,6 +538,7 @@ function UserDrawer({ user, roles, menus, saving, formError, passwordPolicy, onC
               onChange={(e) => set("password", e.target.value)}
               placeholder={user ? "Laisser vide pour conserver" : ""}
             />
+            {form.password && <PasswordRequirements password={form.password} policy={passwordPolicy} />}
           </Field>
           <Field label="Confirmation" required={!user}>
             <Input
@@ -527,6 +548,9 @@ function UserDrawer({ user, roles, menus, saving, formError, passwordPolicy, onC
               value={form.passwordConfirmation}
               onChange={(e) => set("passwordConfirmation", e.target.value)}
             />
+            {form.passwordConfirmation && form.password !== form.passwordConfirmation && (
+              <span className="text-[11px] font-medium text-rose-600">Les mots de passe ne correspondent pas.</span>
+            )}
           </Field>
           <Field label="Prénom" required>
             <Input
@@ -607,7 +631,7 @@ function UserDrawer({ user, roles, menus, saving, formError, passwordPolicy, onC
               </Button>
             </div>
           )}
-          <div className="flex justify-end gap-3 border-t border-slate-100 pt-5 sm:col-span-2">
+          <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-100 bg-white py-4 sm:col-span-2">
             <Button
               type="button"
               onClick={onClose}
@@ -623,6 +647,7 @@ function UserDrawer({ user, roles, menus, saving, formError, passwordPolicy, onC
             </Button>
           </div>
         </form>
+        </div>
       </section>
       {suspendOpen && (
         <SuspendDialog

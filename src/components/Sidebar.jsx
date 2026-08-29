@@ -5,6 +5,7 @@ import { MenuIcon } from './icons/MenuIcons.jsx';
 import { showcaseLogo } from './AuthLayout.jsx';
 const logo = new URL('./icons/logo.png', import.meta.url).href;
 import { Skeleton } from './ui/skeleton.jsx';
+import ChangePasswordModal from './ChangePasswordModal.jsx';
 
 function isRouteActive(activeRoute, itemRoute) {
   if (!itemRoute) return false;
@@ -31,6 +32,7 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -208,8 +210,8 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
                 <button type="button" role="menuitem" onClick={logout}>
                   Déconnexion
                 </button>
-                <button type="button" role="menuitem" disabled>
-                  Paramètres
+                <button type="button" role="menuitem" onClick={() => { setChangePasswordOpen(true); setProfileMenuOpen(false); }}>
+                  Changer le mot de passe
                 </button>
               </div>
             )}
@@ -230,6 +232,7 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
           </div>
         )}
       </aside>
+      {changePasswordOpen && <ChangePasswordModal onClose={() => setChangePasswordOpen(false)} />}
     </>
   );
 }

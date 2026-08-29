@@ -71,6 +71,26 @@ export async function logout(token) {
   });
 }
 
+export async function changePassword(token, currentPassword, newPassword) {
+  const response = await fetch(`${API_BASE}/api/auth/change-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  if (!response.ok) {
+    const error = await parseError(response);
+    throw error;
+  }
+}
+
+export async function getPasswordPolicy(token) {
+  const response = await fetch(`${API_BASE}/api/auth/password-policy`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw await parseError(response);
+  return response.json();
+}
+
 export async function getAccountStatus(username) {
   const params = new URLSearchParams({ username: username.trim() });
   const response = await fetch(`${API_BASE}/api/auth/account-status?${params}`);
