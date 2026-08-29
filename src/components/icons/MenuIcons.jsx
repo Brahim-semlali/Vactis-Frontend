@@ -1,3 +1,5 @@
+import { cloneElement } from 'react';
+
 const iconProps = {
   width: 18,
   height: 18,
@@ -140,6 +142,32 @@ const icons = {
       <path d="m9 12 2 2 4-4" />
     </svg>
   ),
+  settings: (
+    <svg {...iconProps}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+    </svg>
+  ),
+  chart: (
+    <svg {...iconProps}>
+      <path d="M3 3v18h18" />
+      <path d="m7 14 4-4 4 4 6-8" />
+    </svg>
+  ),
+  target: (
+    <svg {...iconProps}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1.5" />
+    </svg>
+  ),
+  building: (
+    <svg {...iconProps}>
+      <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18" />
+      <path d="M4 22h16" />
+      <path d="M10 8h4M10 12h4M10 16h4" />
+    </svg>
+  ),
   default: (
     <svg {...iconProps}>
       <circle cx="12" cy="12" r="9" />
@@ -152,13 +180,18 @@ const icons = {
 const iconAliases = {
   pilotage: 'compass',
   'portefeuille-medecins': 'stethoscope',
-  'terrain-actions': 'clipboard',
-  'qualite-des-donnees': 'database',
-  administration: 'roles',
+  'terrain-actions': 'target',
+  'qualite-des-donnees': 'controle',
+  administration: 'building',
   accueil: 'home',
   house: 'home',
+  chart: 'chart',
   'bar-chart': 'dashboard',
+  'bar-chart-3': 'dashboard',
+  'layout-dashboard': 'dashboard',
+  'pie-chart': 'chart',
   gauge: 'dashboard',
+  'gauge-circle': 'compass',
   rapport: 'mail',
   envelope: 'mail',
   document: 'mail',
@@ -169,6 +202,9 @@ const iconAliases = {
   doctor: 'stethoscope',
   actions: 'clipboard',
   checklist: 'clipboard',
+  'clipboard-list': 'clipboard',
+  'clipboard-check': 'clipboard',
+  'list-todo': 'clipboard',
   alertes: 'alert',
   bell: 'alert',
   warning: 'alert',
@@ -193,14 +229,27 @@ const iconAliases = {
   users: 'users',
   regle: 'controle',
   regles: 'controle',
+  settings: 'settings',
+  cog: 'settings',
+  gear: 'settings',
+  sliders: 'settings',
+  'sliders-horizontal': 'settings',
+  parametres: 'settings',
+  'parametres-systeme': 'settings',
+  wrench: 'settings',
+  target: 'target',
+  crosshair: 'target',
+  building: 'building',
+  'building-2': 'building',
 };
 
 function normalizeIconKey(icon) {
-  if (!icon) return 'default';
+  if (!icon) return '';
 
-  const key = icon
-    .toLowerCase()
+  const key = String(icon)
     .trim()
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
@@ -209,9 +258,17 @@ function normalizeIconKey(icon) {
   return iconAliases[key] ?? key;
 }
 
-export function MenuIcon({ name }) {
-  const key = normalizeIconKey(name);
-  return icons[key] ?? icons.default;
+function resolveIconKey(...candidates) {
+  for (const candidate of candidates) {
+    const key = normalizeIconKey(candidate);
+    if (key && icons[key]) return key;
+  }
+  return 'default';
+}
+
+export function MenuIcon({ name, fallback }) {
+  const key = resolveIconKey(name, fallback);
+  return cloneElement(icons[key] ?? icons.default);
 }
 
 export function VactisLogo({ size = 28 }) {

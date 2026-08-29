@@ -162,7 +162,7 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
                       aria-expanded={isOpen}
                     >
                       <span className="menu-section-icon">
-                        <MenuIcon name={section.icone || section.icon || section.nom} />
+                        <MenuIcon name={section.icone || section.icon} fallback={section.nom} />
                       </span>
                       {!collapsed && <span className="menu-section-title">{section.nom}</span>}
                       {!collapsed && (
@@ -187,7 +187,7 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
                                 className={`menu-subitem ${isActive ? 'menu-subitem-active' : ''}`}
                               >
                                 <span className="menu-subitem-icon">
-                                  <MenuIcon name={item.icon || item.icone || item.label} />
+                                  <MenuIcon name={item.icon || item.icone} fallback={item.label} />
                                 </span>
                                 <span className="menu-subitem-label">{item.label}</span>
                               </button>
