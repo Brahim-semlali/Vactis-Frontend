@@ -9,6 +9,7 @@ import LectureActivitePage from './LectureActivite/LectureActivitePage.jsx';
 import PlaceholderPage from './PlaceholderPage.jsx';
 import AdministrationPage from './Administration/AdministrationPage.jsx';
 import SettingsPage from './Administration/SettingsPage.jsx';
+import UserSettingsPage from './UserSettings/UserSettingsPage.jsx';
 import VactisWorkflow from '../components/VactisWorkflow.tsx';
 
 const workflowSteps = [
@@ -83,7 +84,7 @@ function HomeWorkflow() {
 }
 
 function isPublicRoute(route) {
-  return route === '/' || route === '/accueil';
+  return route === '/' || route === '/accueil' || route === '/parametres' || route === '/settings';
 }
 
 function isRouteAllowed(route, allowedRoutes) {
@@ -99,6 +100,10 @@ function getFirstAllowedRoute(allowedRoutes) {
 }
 
 function resolvePageContent(activeRoute, username, navigate) {
+  if (activeRoute === '/parametres' || activeRoute === '/settings') {
+    return <UserSettingsPage />;
+  }
+
   if (activeRoute === '/medecins') {
     return <MedecinsPage />;
   }

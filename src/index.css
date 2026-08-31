@@ -33,17 +33,42 @@
   line-height: 1.5;
   font-weight: 400;
   color: var(--text);
-  background-color: var(--bg) !important;
-  background: var(--bg) !important;
+  background-color: var(--bg);
+  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
+html.dark, body.dark, :root[data-theme="dark"] {
+  --bg: #0b1329;
+  --bg-soft: #111c38;
+  --card: #131f3f;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --primary: #14b8a6;
+  --primary-dark: #0d9488;
+  --primary-hover: #2dd4bf;
+  --primary-light: #134e4a;
+  --primary-soft: #0f2d29;
+  --sidebar-bg: #0c152e;
+  --sidebar-secondary: #111c38;
+  --sidebar-border: #1e293b;
+  --sidebar-text: #e2e8f0;
+  --sidebar-muted: #94a3b8;
+  --sidebar-hover: #17254b;
+  --sidebar-active-bg: #0f3d38;
+  --sidebar-active-text: #5eead4;
+  --sidebar-icon: #94a3b8;
+  --shadow-base: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --shadow-soft: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
 html, body, #root {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg) !important;
+  background-color: var(--bg);
+  background: var(--bg);
   color: var(--text);
 }
 
@@ -60,7 +85,6 @@ html, body, #root {
 header {
   position: relative !important;
   top: auto !important;
-  background-color: #ffffff !important;
   opacity: 1 !important;
   isolation: isolate !important;
 }
@@ -466,6 +490,10 @@ input {
   font-size: 0.75rem;
   text-align: left;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .sidebar-profile-menu button:hover:not(:disabled) {
@@ -477,6 +505,33 @@ input {
   color: var(--sidebar-muted);
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.dark .sidebar-profile {
+  background: linear-gradient(180deg, #131f3f, #0d162e);
+  border-color: #1e293b;
+  color: #f1f5f9;
+}
+
+.dark .sidebar-profile:hover,
+.dark .sidebar-profile--open {
+  border-color: rgba(20, 184, 166, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.dark .sidebar-profile-menu {
+  background: #111c38;
+  border-color: #1e293b;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.5);
+}
+
+.dark .sidebar-profile-menu button {
+  color: #e2e8f0;
+}
+
+.dark .sidebar-profile-menu button:hover:not(:disabled) {
+  background: #17254b;
+  color: #2dd4bf;
 }
 
 .sidebar-profile-avatar {

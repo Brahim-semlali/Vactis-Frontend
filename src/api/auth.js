@@ -83,6 +83,27 @@ export async function changePassword(token, currentPassword, newPassword) {
   }
 }
 
+export async function getProfile(token) {
+  const response = await fetch(`${API_BASE}/api/auth/profile`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw await parseError(response);
+  return response.json();
+}
+
+export async function updateProfile(token, profileData) {
+  const response = await fetch(`${API_BASE}/api/auth/profile`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(profileData),
+  });
+  if (!response.ok) {
+    const error = await parseError(response);
+    throw error;
+  }
+  return response.json();
+}
+
 export async function getPasswordPolicy(token) {
   const response = await fetch(`${API_BASE}/api/auth/password-policy`, {
     headers: { Authorization: `Bearer ${token}` },

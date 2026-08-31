@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { login as loginApi, logout as logoutApi, register as registerApi } from '../api/auth.js';
+import { getProfile as getProfileApi, login as loginApi, logout as logoutApi, register as registerApi, updateProfile as updateProfileApi } from '../api/auth.js';
 import { logger } from '../utils/logger.js';
 
 const TOKEN_KEY = 'stagelabo_token';
@@ -35,11 +35,36 @@ function getStoredToken() {
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(getStoredToken);
+  const [userProfile, setUserProfile] = useState(null);
 
   const username = useMemo(() => {
     if (!token) return null;
     const data = decodeTokenPayload(token);
     return data?.sub ?? data?.username ?? null;
+  }, [token]);
+
+  const refreshProfile = useCallback(async () => {
+    if (!token) {
+      setUserProfile(null);
+      return;
+    }
+    try {
+      const profile = await getProfileApi(token);
+      setUserProfile(profile);
+    } catch (err) {
+      logger.warn('Impossible de charger le profil utilisateur', err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    refreshProfile();
+  }, [refreshProfile]);
+
+  const updateUserProfile = useCallback(async (data) => {
+    if (!token) return null;
+    const updated = await updateProfileApi(token, data);
+    setUserProfile(updated);
+    return updated;
   }, [token]);
 
   const persistToken = useCallback((newToken) => {
@@ -68,6 +93,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem(TOKEN_KEY);
     window.history.replaceState({}, '', '/');
     setToken(null);
+    setUserProfile(null);
   }, [token]);
 
   useEffect(() => {
@@ -89,12 +115,15 @@ export function AuthProvider({ children }) {
     () => ({
       token,
       username,
+      userProfile,
       isAuthenticated: Boolean(token),
       login,
       register,
       logout,
+      updateUserProfile,
+      refreshProfile,
     }),
-    [token, username, login, register, logout],
+    [token, username, userProfile, login, register, logout, updateUserProfile, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

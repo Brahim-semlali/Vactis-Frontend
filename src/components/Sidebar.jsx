@@ -5,7 +5,6 @@ import { MenuIcon } from './icons/MenuIcons.jsx';
 import { showcaseLogo } from './AuthLayout.jsx';
 const logo = new URL('./icons/logo.png', import.meta.url).href;
 import { Skeleton } from './ui/skeleton.jsx';
-import ChangePasswordModal from './ChangePasswordModal.jsx';
 
 function isRouteActive(activeRoute, itemRoute) {
   if (!itemRoute) return false;
@@ -27,12 +26,11 @@ function isRouteActive(activeRoute, itemRoute) {
 }
 
 export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCollapse, mobileOpen = false, onMobileClose }) {
-  const { token, username, logout } = useAuth();
+  const { token, username, userProfile, logout } = useAuth();
   const [menu, setMenu] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,32 +205,72 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
           <div className="sidebar-profile-wrapper">
             {profileMenuOpen && (
               <div className="sidebar-profile-menu" role="menu">
-                <button type="button" role="menuitem" onClick={logout}>
-                  Déconnexion
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onNavigate('/parametres');
+                    setProfileMenuOpen(false);
+                  }}
+                  className="sidebar-profile-menu-item flex items-center gap-2"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-teal-600 dark:text-teal-400">
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  <span>Paramètres</span>
                 </button>
-                <button type="button" role="menuitem" onClick={() => { setChangePasswordOpen(true); setProfileMenuOpen(false); }}>
-                  Changer le mot de passe
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={logout}
+                  className="sidebar-profile-menu-item flex items-center gap-2 text-rose-600 dark:text-rose-400"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                  </svg>
+                  <span>Déconnexion</span>
                 </button>
               </div>
             )}
             <button
               type="button"
-              className={`sidebar-profile ${profileMenuOpen ? 'sidebar-profile--open' : ''}`}
+              className={`sidebar-profile ${profileMenuOpen ? 'sidebar-profile--open' : ''} ${
+                activeRoute === '/parametres' || activeRoute === '/settings' ? 'sidebar-profile--active border-teal-500/50 bg-teal-50/50 dark:bg-teal-950/30' : ''
+              }`}
               onClick={() => setProfileMenuOpen((open) => !open)}
               aria-expanded={profileMenuOpen}
               aria-haspopup="menu"
             >
-              <span className="sidebar-profile-avatar">{String(username ?? 'U').slice(0, 2).toUpperCase()}</span>
+              {userProfile?.avatar ? (
+                <img
+                  src={userProfile.avatar}
+                  alt={userProfile.firstName || username || 'Utilisateur'}
+                  className="sidebar-profile-avatar object-cover rounded-xl border border-slate-200 dark:border-slate-700"
+                />
+              ) : (
+                <span className="sidebar-profile-avatar">
+                  {(userProfile?.firstName
+                    ? (userProfile.firstName[0] + (userProfile.lastName?.[0] || ''))
+                    : (username ?? 'U').slice(0, 2)
+                  ).toUpperCase()}
+                </span>
+              )}
               <span className="sidebar-profile-meta">
-                <span className="sidebar-profile-name">{username ?? 'Utilisateur'}</span>
-                <span className="sidebar-profile-role">Directeur</span>
+                <span className="sidebar-profile-name truncate">
+                  {userProfile?.firstName
+                    ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
+                    : (username ?? 'Utilisateur')}
+                </span>
+                <span className="sidebar-profile-role">
+                  {userProfile?.role || 'Directeur'}
+                </span>
               </span>
               <span className="sidebar-profile-arrow" aria-hidden="true">›</span>
             </button>
           </div>
         )}
       </aside>
-      {changePasswordOpen && <ChangePasswordModal onClose={() => setChangePasswordOpen(false)} />}
     </>
   );
 }
