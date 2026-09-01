@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import Sidebar from './Sidebar.jsx';
-import UserSettingsModal from './UserSettingsModal.jsx';
 
 export default function AppLayout({ children }) {
   const { username, userProfile, logout } = useAuth();
@@ -11,7 +10,6 @@ export default function AppLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeRoute, setActiveRoute] = useState(() => window.location.pathname || '/');
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Reset scroll to top on page change
   useEffect(() => {
@@ -102,9 +100,9 @@ export default function AppLayout({ children }) {
             {/* Profile Button in Header */}
             <button
               type="button"
-              onClick={() => setSettingsOpen(true)}
+              onClick={() => navigate('/parametres')}
               className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
-              title="Ouvrir les paramètres"
+              title="Accéder à mes paramètres"
             >
               {userProfile?.avatar ? (
                 <img
@@ -144,8 +142,6 @@ export default function AppLayout({ children }) {
           </AnimatePresence>
         </main>
       </div>
-
-      {settingsOpen && <UserSettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }

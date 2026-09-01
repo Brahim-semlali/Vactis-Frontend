@@ -52,7 +52,18 @@ export function AuthProvider({ children }) {
       const profile = await getProfileApi(token);
       setUserProfile(profile);
     } catch (err) {
-      logger.warn('Impossible de charger le profil utilisateur', err);
+      logger.warn('Impossible de charger le profil utilisateur depuis l\'API', err);
+      const data = decodeTokenPayload(token);
+      const fallbackName = data?.sub ?? data?.username ?? 'Utilisateur';
+      setUserProfile((prev) => prev || {
+        username: fallbackName,
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        avatar: '',
+        role: 'Directeur',
+      });
     }
   }, [token]);
 
