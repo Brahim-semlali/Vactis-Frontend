@@ -8,14 +8,16 @@ async function activiteRequest(endpoint, token) {
   });
 
   if (!response.ok) {
-    let message = response.statusText || `Erreur API: ${response.status}`;
+    let message = response.statusText || `Erreur API (${response.status})`;
     try {
       const data = await response.json();
       message = data?.message ?? data?.error ?? message;
     } catch {
       // ignore parse errors
     }
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   return response.json();
