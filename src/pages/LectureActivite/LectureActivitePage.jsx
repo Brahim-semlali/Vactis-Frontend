@@ -738,7 +738,8 @@ export default function LectureActivitePage() {
   }, [loadDataN4]);
 
   function logError(err) {
-    console.error('Erreur Activite:', err);
+    const message = err instanceof Error ? err.message : 'Erreur lors du chargement de l’activité.';
+    setError(err?.status === 401 ? 'Session expirée. Veuillez vous reconnecter.' : message);
   }
 
   const activeCompData = metriqueTab === 'ca' ? comparaison?.ca : comparaison?.cas;
