@@ -7170,3 +7170,321 @@ input {
   color: #fff;
   border-color: #2563eb;
 }
+
+/* ========================================================================== 
+   MODULE LECTURE ACTIVITE - MODE SOMBRE
+   ========================================================================== */
+
+html.dark .activite-info-banner {
+  background: linear-gradient(100deg, #102e32, #123b3b);
+  border-color: #1f5b5b;
+}
+
+html.dark .activite-info-icon {
+  background: #164e4b;
+  color: #5eead4;
+}
+
+html.dark .activite-info-label,
+html.dark .activite-section-nav-label {
+  color: #5eead4;
+}
+
+html.dark .activite-info-text,
+html.dark .activite-section-subtitle,
+html.dark .activite-kpi-sub,
+html.dark .activite-comp-card-sub,
+html.dark .activite-chart-subtitle,
+html.dark .activite-modal-subtitle,
+html.dark .activite-modal-pag-info,
+html.dark .activite-modal-comment {
+  color: #94a3b8;
+}
+
+html.dark .activite-section-nav,
+html.dark .activite-card-section,
+html.dark .activite-kpi-card,
+html.dark .activite-comp-card,
+html.dark .activite-statut-card,
+html.dark .activite-transition-item,
+html.dark .activite-flux-row,
+html.dark .activite-top-col,
+html.dark .activite-commercial-card,
+html.dark .activite-cr-card,
+html.dark .activite-table-container,
+html.dark .activite-n4-table-container {
+  background: #111c2d;
+  border-color: #26364d;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}
+
+html.dark .activite-section-nav {
+  background: rgba(15, 23, 42, 0.94);
+}
+
+html.dark .activite-section-nav-label {
+  border-color: #26364d;
+}
+
+html.dark .activite-section-nav a,
+html.dark .activite-kpi-title,
+html.dark .activite-comp-card-title,
+html.dark .activite-statut-label,
+html.dark .activite-transition-label,
+html.dark .activite-cr-title,
+html.dark .activite-subblock-title,
+html.dark .activite-flux-statut,
+html.dark .activite-top-specialite,
+html.dark .activite-commercial-stat,
+html.dark .activite-n4-type-item,
+html.dark .activite-n4-evo-label,
+html.dark .activite-n4-comm-evo-sub {
+  color: #94a3b8;
+}
+
+html.dark .activite-section-nav a:hover,
+html.dark .activite-section-nav a:focus-visible {
+  background: #164e4b;
+  color: #99f6e4;
+}
+
+html.dark .activite-section-title,
+html.dark .activite-kpi-value,
+html.dark .activite-comp-card-value,
+html.dark .activite-statut-count,
+html.dark .activite-transition-value,
+html.dark .activite-top-col-title,
+html.dark .activite-top-nom,
+html.dark .activite-commercial-name,
+html.dark .activite-cr-value,
+html.dark .activite-clickable-card-value,
+html.dark .activite-n4-comm-name,
+html.dark .activite-n4-comm-total,
+html.dark .activite-n4-type-count,
+html.dark .activite-n4-evo-count,
+html.dark .activite-n4-comm-evo-title {
+  color: #e2e8f0;
+}
+
+html.dark .activite-kpi-footer-note,
+html.dark .activite-n2-loading,
+html.dark .activite-n2-empty,
+html.dark .activite-transitions-bloc,
+html.dark .activite-n4-legend,
+html.dark .activite-n4-comm-card,
+html.dark .activite-n4-comm-evo-card {
+  background: #0f1a2b;
+  border-color: #26364d;
+  color: #94a3b8;
+}
+
+html.dark .activite-tab-group,
+html.dark .activite-chart-display,
+html.dark .activite-flux-badge,
+html.dark .activite-n4-table-badge {
+  background: #172337;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+html.dark .activite-tab-btn--active,
+html.dark .activite-chart-mode-btn--active,
+html.dark .activite-chart-menu,
+html.dark .activite-modal-pag-btn,
+html.dark .activite-n4-page-btn {
+  background: #1e293b;
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+html.dark .activite-tab-btn:hover:not(.activite-tab-btn--active),
+html.dark .activite-chart-mode-btn:hover,
+html.dark .activite-modal-pag-btn:hover:not(:disabled),
+html.dark .activite-n4-page-btn:hover:not(:disabled) {
+  background: #26364d;
+  color: #f1f5f9;
+}
+
+html.dark .activite-comp-card--ref {
+  background: linear-gradient(145deg, #123432, #142b34);
+  border-color: #26756c;
+}
+
+html.dark .activite-comp-card--positive,
+html.dark .activite-insight-card--up,
+html.dark .activite-cr-card--green {
+  background: linear-gradient(110deg, #123528, #142a32);
+  border-color: #236344;
+}
+
+html.dark .activite-comp-card--negative,
+html.dark .activite-insight-card--down {
+  background: linear-gradient(110deg, #3a202a, #241d2a);
+  border-color: #713242;
+}
+
+html.dark .activite-insight-card,
+html.dark .activite-insight-card--neutral,
+html.dark .activite-insight-card--info {
+  background: #172337;
+  border-color: #334155;
+}
+
+html.dark .activite-top-row:hover,
+html.dark .activite-comm-row:hover,
+html.dark .activite-n4-table tr:hover td {
+  background: #1a2940;
+}
+
+html.dark .activite-commercial-table th,
+html.dark .activite-n4-table th,
+html.dark .activite-comm-total-row td,
+html.dark .activite-modal-header,
+html.dark .activite-modal-pagination {
+  background: #172337;
+  color: #94a3b8;
+  border-color: #334155;
+}
+
+html.dark .activite-commercial-table td,
+html.dark .activite-modal-table td,
+html.dark .activite-n4-table td {
+  color: #cbd5e1;
+  border-color: #26364d;
+}
+
+html.dark .activite-th-content,
+html.dark .activite-comm-total-label,
+html.dark .activite-modal-table th {
+  color: #94a3b8;
+}
+
+html.dark .activite-comm-name,
+html.dark .activite-modal-title,
+html.dark .activite-modal-nom,
+html.dark .activite-n4-statut-text {
+  color: #e2e8f0;
+}
+
+html.dark .activite-select,
+html.dark .activite-modal-search-input {
+  background: #172337;
+  color: #e2e8f0;
+  border-color: #475569;
+}
+
+html.dark .activite-modal-card {
+  background: #111c2d;
+  border-color: #334155;
+}
+
+html.dark .activite-modal-close:hover {
+  background: #26364d;
+  color: #f1f5f9;
+}
+
+html.dark .activite-alert--error {
+  background: #3a202a;
+  border-color: #713242;
+  color: #fda4af;
+}
+
+html.dark .activite-n4-stacked-bar,
+html.dark .activite-n4-evo-bar-bg,
+html.dark .activite-n4-comm-evo-bar {
+  background-color: #26364d;
+}
+
+html.dark .activite-page .bg-white {
+  background-color: #111c2d !important;
+  border-color: #26364d !important;
+}
+
+html.dark .activite-page .border-slate-100 {
+  border-color: #26364d !important;
+}
+
+html.dark .activite-page .text-slate-800,
+html.dark .activite-page .text-slate-900 {
+  color: #e2e8f0 !important;
+}
+
+html.dark .activite-page .text-slate-600,
+html.dark .activite-page .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .activite-page .activite-kpi-card[style] {
+  background: #172337 !important;
+  border-color: #334155 !important;
+}
+
+html.dark .activite-page .activite-kpi-card[style] .activite-kpi-title,
+html.dark .activite-page .activite-kpi-card[style] .activite-kpi-value,
+html.dark .activite-page .activite-kpi-card[style] .activite-kpi-sub {
+  color: #cbd5e1 !important;
+}
+
+html.dark .activite-page .recharts-text {
+  fill: #cbd5e1 !important;
+}
+
+html.dark .activite-page .recharts-cartesian-grid line {
+  stroke: #334155 !important;
+}
+
+html.dark .activite-page .recharts-cartesian-axis-line {
+  stroke: #475569 !important;
+}
+
+html.dark .activite-page .activite-clickable-card {
+  background: #172337;
+  border-color: #334155;
+}
+
+html.dark .activite-page .activite-clickable-card-title {
+  color: #f1f5f9 !important;
+}
+
+html.dark .activite-page .activite-clickable-card-value {
+  color: #e2e8f0 !important;
+}
+
+html.dark .activite-page .activite-clickable-card-sub {
+  color: #94a3b8 !important;
+}
+
+html.dark .activite-page .activite-clickable-card--red {
+  border-color: #713242;
+}
+
+html.dark .activite-page .activite-clickable-card--amber {
+  border-color: #765b25;
+}
+
+html.dark .activite-page .activite-clickable-card--green {
+  border-color: #236344;
+}
+
+html.dark .activite-page .activite-clickable-card--gray {
+  border-color: #334155;
+}
+
+html.dark .activite-page .activite-insight-card h4 {
+  color: #5eead4 !important;
+}
+
+html.dark .activite-page .activite-insight-card--info h4 {
+  color: #93c5fd !important;
+}
+
+html.dark .activite-page .activite-insight-card p,
+html.dark .activite-page .activite-insight-card p strong {
+  color: #cbd5e1 !important;
+}
+
+html.dark .activite-page .activite-n4-grid h4[style],
+html.dark .activite-page .activite-n4-grid p[style],
+html.dark .activite-page .activite-n4-table td[style] {
+  color: #cbd5e1 !important;
+}
