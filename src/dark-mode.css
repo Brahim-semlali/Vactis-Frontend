@@ -1,0 +1,1149 @@
+/* ==========================================================================
+   THEME SOMBRE GLOBAL (DARK MODE) - VACTIS
+   Fichier unique et complet pour la gestion et l'amélioration du mode sombre.
+   Garantit un contraste parfait (WCAG AAA/AA) :
+   - Fin des textes de même couleur que l'arrière-plan
+   - Fin des fonds blancs/pastels éclatants
+   - Design moderne avec fonds sombres subtilement teintés et textes lumineux
+   - Prise en charge complète des pages d'authentification (Login & Register)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. VARIABLES & PALETTE SOMBRE
+   -------------------------------------------------------------------------- */
+html.dark,
+body.dark,
+:root[data-theme="dark"] {
+  --bg: #0b131f;
+  --bg-soft: #111d2d;
+  --card: #162436;
+  --card-hover: #1c2e44;
+  --card-border: #23374d;
+  --text: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --muted: #94a3b8;
+  --muted-soft: #64748b;
+
+  --primary: #14b8a6;
+  --primary-dark: #0d9488;
+  --primary-hover: #2dd4bf;
+  --primary-light: #164e4b;
+  --primary-soft: #133a37;
+
+  --sidebar-bg: #0d1722;
+  --sidebar-secondary: #14212e;
+  --sidebar-border: #243547;
+  --sidebar-text: #e2e8f0;
+  --sidebar-muted: #8fa0b2;
+  --sidebar-hover: #1a2b39;
+  --sidebar-active-bg: #133e3a;
+  --sidebar-active-text: #5eead4;
+  --sidebar-icon: #9aabba;
+
+  --shadow-base: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --shadow-soft: 0 8px 20px rgba(0, 0, 0, 0.3);
+
+  color-scheme: dark;
+}
+
+/* --------------------------------------------------------------------------
+   2. RACINE & BODY
+   -------------------------------------------------------------------------- */
+html.dark,
+html.dark body,
+html.dark #root {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+/* Scrollbar sombre élégante */
+html.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: #0d1722;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #25394e;
+  border-radius: 999px;
+  border: 2px solid #0d1722;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #334e6b;
+}
+
+/* Sélection de texte */
+html.dark ::selection {
+  background-color: #0d9488 !important;
+  color: #ffffff !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. TYPOGRAPHIE & LISIBILITÉ DU TEXTE
+   -------------------------------------------------------------------------- */
+/* Textes sombres Tailwind rehaussés en blanc/gris clair */
+html.dark .text-slate-950,
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+  color: var(--text) !important;
+}
+
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+/* Couleurs vives en mode clair rendues lumineuses et lisibles sur fond sombre */
+html.dark .text-sky-950 {
+  color: #f0f9ff !important;
+}
+html.dark .text-sky-900 {
+  color: #e0f2fe !important;
+}
+html.dark .text-sky-800 {
+  color: #bae6fd !important;
+}
+html.dark .text-sky-700 {
+  color: #7dd3fc !important;
+}
+html.dark .text-sky-600 {
+  color: #60a5fa !important;
+}
+
+html.dark .text-teal-950,
+html.dark .text-teal-900 {
+  color: #f0fdfa !important;
+}
+html.dark .text-teal-800,
+html.dark .text-teal-700,
+html.dark .text-teal-600 {
+  color: #5eead4 !important;
+}
+
+html.dark .text-indigo-900,
+html.dark .text-indigo-800 {
+  color: #c7d2fe !important;
+}
+html.dark .text-indigo-700 {
+  color: #a5b4fc !important;
+}
+html.dark .text-indigo-600 {
+  color: #818cf8 !important;
+}
+
+html.dark .text-emerald-900,
+html.dark .text-emerald-800,
+html.dark .text-emerald-700,
+html.dark .text-emerald-600 {
+  color: #6ee7b7 !important;
+}
+
+html.dark .text-amber-900,
+html.dark .text-amber-800,
+html.dark .text-amber-700,
+html.dark .text-amber-600 {
+  color: #fde047 !important;
+}
+
+html.dark .text-rose-950,
+html.dark .text-rose-900,
+html.dark .text-rose-800,
+html.dark .text-rose-700,
+html.dark .text-rose-600 {
+  color: #fca5b5 !important;
+}
+
+html.dark .text-red-900,
+html.dark .text-red-800,
+html.dark .text-red-700 {
+  color: #fca5a5 !important;
+}
+
+html.dark .text-blue-900,
+html.dark .text-blue-800,
+html.dark .text-blue-700 {
+  color: #93c5fd !important;
+}
+
+html.dark .text-purple-900,
+html.dark .text-purple-800,
+html.dark .text-purple-700 {
+  color: #d8b4fe !important;
+}
+
+/* Hover text */
+html.dark .hover\:text-sky-700:hover,
+html.dark .group:hover .group-hover\:text-sky-700 {
+  color: #38bdf8 !important;
+}
+
+/* Variantes explicites dark:text-* */
+html.dark .dark\:text-slate-50,
+html.dark .dark\:text-slate-100,
+html.dark .dark\:text-slate-200 {
+  color: var(--text) !important;
+}
+html.dark .dark\:text-slate-300,
+html.dark .dark\:text-slate-400 {
+  color: var(--muted) !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. SURFACES ET ARRIÈRE-PLANS PASTELS (CONVERSION EN FONDS SOMBRES TEINTÉS)
+   -------------------------------------------------------------------------- */
+/* Surfaces blanches ou neutres */
+html.dark .bg-white,
+html.dark .bg-surface {
+  background-color: var(--card) !important;
+}
+
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/40,
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/60,
+html.dark .bg-slate-50\/70,
+html.dark .bg-slate-50\/80,
+html.dark .bg-slate-50\/90 {
+  background-color: var(--bg-soft) !important;
+}
+
+html.dark .bg-slate-100,
+html.dark .bg-slate-100\/50,
+html.dark .bg-slate-100\/70,
+html.dark .bg-slate-100\/90 {
+  background-color: #192736 !important;
+}
+
+html.dark .bg-slate-200 {
+  background-color: #22354a !important;
+}
+
+/* FONDS TEINTÉS (ROSE, TEAL, ÉMERAUDE, AMBRE, BLEU, CIEL) :
+   Fonds sombres profonds pour assurer un contraste maximal avec l'écriture */
+html.dark .bg-rose-50,
+html.dark .bg-rose-100,
+html.dark .bg-rose-50\/60,
+html.dark .bg-rose-200 {
+  background-color: #38121a !important;
+}
+
+html.dark .bg-teal-50,
+html.dark .bg-teal-100,
+html.dark .bg-teal-50\/30,
+html.dark .bg-teal-50\/40,
+html.dark .bg-teal-50\/50,
+html.dark .bg-teal-50\/70,
+html.dark .bg-teal-50\/80 {
+  background-color: #0d2927 !important;
+}
+
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-100,
+html.dark .bg-emerald-50\/70 {
+  background-color: #0b291e !important;
+}
+
+html.dark .bg-sky-50,
+html.dark .bg-sky-100,
+html.dark .bg-sky-50\/30,
+html.dark .bg-sky-50\/50,
+html.dark .bg-sky-50\/60,
+html.dark .bg-sky-50\/70,
+html.dark .bg-sky-50\/90 {
+  background-color: #0d2438 !important;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-amber-100,
+html.dark .bg-amber-50\/40,
+html.dark .bg-amber-50\/80,
+html.dark .bg-amber-50\/90 {
+  background-color: #332107 !important;
+}
+
+html.dark .bg-blue-50,
+html.dark .bg-blue-100 {
+  background-color: #0f2038 !important;
+}
+
+html.dark .bg-red-50,
+html.dark .bg-red-100 {
+  background-color: #381014 !important;
+}
+
+html.dark .bg-indigo-50,
+html.dark .bg-indigo-100 {
+  background-color: #171836 !important;
+}
+
+html.dark .bg-purple-50,
+html.dark .bg-purple-100 {
+  background-color: #241133 !important;
+}
+
+/* BORDURES TEINTÉES HARMONIEUSES */
+html.dark .border-rose-100,
+html.dark .border-rose-200,
+html.dark .border-rose-200\/60 {
+  border-color: #6e2030 !important;
+}
+
+html.dark .border-teal-100,
+html.dark .border-teal-200,
+html.dark .border-teal-200\/60,
+html.dark .border-teal-200\/80 {
+  border-color: #18524b !important;
+}
+
+html.dark .border-emerald-100,
+html.dark .border-emerald-200,
+html.dark .border-emerald-200\/60 {
+  border-color: #165239 !important;
+}
+
+html.dark .border-sky-100,
+html.dark .border-sky-200,
+html.dark .border-sky-200\/60,
+html.dark .border-sky-200\/90 {
+  border-color: #1a476b !important;
+}
+
+html.dark .border-amber-100,
+html.dark .border-amber-200,
+html.dark .border-amber-200\/60,
+html.dark .border-amber-200\/90 {
+  border-color: #613e0c !important;
+}
+
+html.dark .border-blue-200 {
+  border-color: #1a3c69 !important;
+}
+
+html.dark .border-red-200 {
+  border-color: #6e1a22 !important;
+}
+
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-200\/60,
+html.dark .border-slate-200\/70,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/90,
+html.dark .border-slate-300,
+html.dark .border-border,
+html.dark .border-white\/80,
+html.dark .border-white\/15,
+html.dark .dark\:border-slate-800,
+html.dark .dark\:border-slate-700 {
+  border-color: #23374d !important;
+}
+
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #23374d !important;
+}
+
+/* Hover de surface */
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover,
+html.dark .hover\:bg-slate-200:hover {
+  background-color: #213347 !important;
+}
+
+html.dark .hover\:bg-sky-50:hover,
+html.dark .hover\:bg-sky-50\/30:hover,
+html.dark .hover\:bg-sky-50\/50:hover {
+  background-color: #182e42 !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. TABLES ET LIGNES DE DONNÉES (MÉDECINS & ACTIONS)
+   -------------------------------------------------------------------------- */
+/* Entêtes de tableau */
+html.dark table thead,
+html.dark table thead tr,
+html.dark thead.bg-slate-50\/80,
+html.dark tr.bg-slate-50\/90,
+html.dark .medecins-table th,
+html.dark .controle-table th {
+  background-color: #131e2d !important;
+  border-bottom: 1px solid #23374d !important;
+}
+
+html.dark table th,
+html.dark th,
+html.dark .medecins-table th,
+html.dark .controle-table th {
+  color: #94a3b8 !important;
+  font-weight: 700;
+  border-color: #23374d !important;
+  letter-spacing: 0.06em;
+}
+
+/* Cellules */
+html.dark table td,
+html.dark td,
+html.dark .medecins-table td,
+html.dark .controle-table td {
+  background-color: transparent;
+  border-color: #1e3044 !important;
+  color: #e2e8f0;
+}
+
+/* Survol de ligne */
+html.dark table tbody tr:hover,
+html.dark tr.hover\:bg-sky-50\/30:hover,
+html.dark .medecins-table-row:hover,
+html.dark .controle-table tbody tr:hover {
+  background-color: #172738 !important;
+}
+
+/* Ligne active / sélectionnée */
+html.dark tr.bg-sky-50\/90,
+html.dark tr.border-l-sky-500,
+html.dark tr[data-state="selected"],
+html.dark .medecins-table-row--active {
+  background-color: #153349 !important;
+  border-left-color: #38bdf8 !important;
+}
+
+/* Nom du médecin dans la ligne sélectionnée */
+html.dark tr.bg-sky-50\/90 .text-sky-950,
+html.dark tr.border-l-sky-500 .text-sky-950 {
+  color: #f0fdfa !important;
+  text-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+}
+
+/* Nom et sous-titres dans la table */
+html.dark table td .text-slate-900 {
+  color: #f8fafc !important;
+}
+html.dark table td .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+html.dark table td .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+/* Boutons dans la table */
+html.dark button.bg-sky-50 {
+  background-color: #1a384e !important;
+  color: #38bdf8 !important;
+  border: 1px solid #235478 !important;
+}
+
+html.dark button.bg-slate-100 {
+  background-color: #1e2f42 !important;
+  color: #cbd5e1 !important;
+}
+html.dark button.bg-slate-100:hover {
+  background-color: #1a384e !important;
+  color: #38bdf8 !important;
+  border-color: #235478 !important;
+}
+
+/* Bouton Réserver dans la table des actions */
+html.dark button.bg-teal-50 {
+  background-color: #103834 !important;
+  color: #5eead4 !important;
+  border: 1px solid #1a5c54 !important;
+}
+html.dark button.bg-teal-50:hover {
+  background-color: #164d47 !important;
+  color: #ffffff !important;
+  border-color: #2dd4bf !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. BADGES, PILULES ET STATUTS
+   -------------------------------------------------------------------------- */
+/* SEGMENT A */
+html.dark .badge--segment-a,
+html.dark .medecins-badge--segment-a {
+  background-color: #0b291e !important;
+  color: #6ee7b7 !important;
+  border: 1px solid #165239 !important;
+}
+
+/* SEGMENT B */
+html.dark .badge--segment-b,
+html.dark .medecins-badge--segment-b {
+  background-color: #0d2438 !important;
+  color: #7dd3fc !important;
+  border: 1px solid #1a476b !important;
+}
+
+/* SEGMENT C */
+html.dark .badge--segment-c,
+html.dark .medecins-badge--segment-c {
+  background-color: #332107 !important;
+  color: #fde047 !important;
+  border: 1px solid #613e0c !important;
+}
+
+/* SEGMENT D */
+html.dark .badge--segment-d,
+html.dark .medecins-badge--segment-d,
+html.dark .fiche-badge--segment-d {
+  background-color: #192736 !important;
+  color: #cbd5e1 !important;
+  border: 1px solid #273d52 !important;
+}
+
+/* STATUTS VACTIS */
+html.dark .badge--actif,
+html.dark .medecins-badge--actif {
+  background-color: #0b291e !important;
+  color: #6ee7b7 !important;
+  border: 1px solid #165239 !important;
+}
+
+html.dark .badge--progression,
+html.dark .medecins-badge--progression {
+  background-color: #0d2927 !important;
+  color: #5eead4 !important;
+  border: 1px solid #18524b !important;
+}
+
+html.dark .badge--surveillance,
+html.dark .medecins-badge--surveillance {
+  background-color: #332107 !important;
+  color: #fde047 !important;
+  border: 1px solid #613e0c !important;
+}
+
+html.dark .badge--onboarding,
+html.dark .medecins-badge--onboarding {
+  background-color: #0d2438 !important;
+  color: #7dd3fc !important;
+  border: 1px solid #1a476b !important;
+}
+
+html.dark .badge--silence,
+html.dark .medecins-badge--silence {
+  background-color: #38121a !important;
+  color: #fca5b5 !important;
+  border: 1px solid #6e2030 !important;
+}
+
+html.dark .badge--urgent {
+  background-color: #381014 !important;
+  color: #fca5a5 !important;
+  border: 1px solid #6e1a22 !important;
+}
+
+html.dark .badge--muted,
+html.dark .medecins-badge--muted {
+  background-color: #192736 !important;
+  color: #94a3b8 !important;
+  border: 1px solid #273d52 !important;
+}
+
+/* Pastilles Note terrain (4/5, 5/5, etc.) */
+html.dark span.bg-teal-50 {
+  background-color: #0d2927 !important;
+  color: #5eead4 !important;
+  border: 1px solid #18524b !important;
+}
+
+/* Pastilles Note Potentiel Médecin (☆ 5/5) */
+html.dark span.bg-amber-50 {
+  background-color: #332107 !important;
+  color: #fde047 !important;
+  border: 1px solid #613e0c !important;
+}
+
+/* Pastille Note non renseignée */
+html.dark span.bg-slate-100:has(.animate-pulse),
+html.dark span.bg-slate-100:has(.bg-amber-400) {
+  background-color: #192736 !important;
+  color: #cbd5e1 !important;
+  border: 1px solid #273d52 !important;
+}
+
+/* --------------------------------------------------------------------------
+   7. AUTHENTIFICATION (LOGIN & REGISTER) - CORRECTION CARTE BLANCHE
+   -------------------------------------------------------------------------- */
+html.dark .auth-page {
+  background-color: #061320 !important;
+}
+
+/* La carte formulaire d'authentification passe en mode sombre assorti au showcase */
+html.dark .auth-card {
+  background-color: #0b1726 !important;
+  border: 1px solid #1c3249 !important;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 4px 14px rgba(0, 198, 215, 0.08) !important;
+}
+
+html.dark .auth-header h1 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .auth-subtitle {
+  color: #94a3b8 !important;
+}
+
+html.dark .field-label {
+  color: #e2e8f0 !important;
+}
+
+/* Le conteneur du champ (field-control) */
+html.dark .field-control {
+  background-color: #102133 !important;
+  border: 1px solid #203850 !important;
+  box-shadow: none !important;
+}
+
+html.dark .field-control:focus-within {
+  background-color: #13273c !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.25) !important;
+}
+
+/* L'input réel à l'intérieur du conteneur ne doit pas avoir de fond parasite */
+html.dark .field-control input {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark .field-control input::placeholder {
+  color: #64748b !important;
+}
+
+html.dark .field-icon {
+  color: #94a3b8 !important;
+}
+
+html.dark .field-control:focus-within .field-icon {
+  color: var(--primary-hover) !important;
+}
+
+html.dark .field-toggle {
+  color: #94a3b8 !important;
+}
+html.dark .field-toggle:hover {
+  color: #f1f5f9 !important;
+}
+
+/* Option "Se souvenir de moi" et case à cocher */
+html.dark .remember-option {
+  color: #cbd5e1 !important;
+}
+
+html.dark .remember-option input[type="checkbox"] {
+  appearance: none !important;
+  background-color: #102133 !important;
+  border: 1px solid #233e59 !important;
+  border-radius: 0.3rem !important;
+  cursor: pointer !important;
+}
+
+html.dark .remember-option input[type="checkbox"]:checked {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+  box-shadow: inset 0 0 0 2px #0b1726 !important;
+}
+
+/* Lien Mot de passe oublié */
+html.dark .forgot-link {
+  color: #38bdf8 !important;
+}
+html.dark .forgot-link:hover:not(:disabled) {
+  color: #7dd3fc !important;
+}
+
+/* Footer d'authentification */
+html.dark .auth-footer,
+html.dark .auth-footer p {
+  color: #94a3b8 !important;
+}
+
+html.dark .auth-footer .link-btn {
+  color: #2dd4bf !important;
+}
+html.dark .auth-footer .link-btn:hover {
+  color: #5eead4 !important;
+}
+
+/* Alertes d'authentification */
+html.dark .alert-error {
+  background-color: #38121a !important;
+  border-color: #6e2030 !important;
+  color: #fca5b5 !important;
+}
+
+html.dark .alert-warning {
+  background-color: #332107 !important;
+  border-color: #613e0c !important;
+  color: #fde047 !important;
+}
+
+/* --------------------------------------------------------------------------
+   8. SECTION EXPLICATION DE CALCUL (« POURQUOI CES VALEURS ? »)
+   -------------------------------------------------------------------------- */
+/* Conteneur principal */
+html.dark .action-detail-explanation,
+html.dark .calculation-explanation {
+  background: #122132 !important;
+  border: 1px solid #233e54 !important;
+}
+
+/* Bouton accordéon racine (« Pourquoi ces valeurs ? ») */
+html.dark .action-detail-explanation button span.text-sky-950,
+html.dark .calculation-explanation button span.text-sky-950 {
+  color: #f0fdfa !important;
+  font-weight: 800 !important;
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+}
+
+html.dark .action-detail-explanation button span.text-sky-700,
+html.dark .calculation-explanation button span.text-sky-700 {
+  color: #38bdf8 !important;
+}
+
+/* Panneaux intérieurs (cartes de calcul) */
+html.dark .action-detail-value-panel,
+html.dark .calculation-explanation > div > div {
+  background: #172739 !important;
+  border: 1px solid #243c52 !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Boutons de bascule par bloc */
+html.dark .action-detail-value-panel button span,
+html.dark .calculation-explanation button span {
+  color: #94a3b8;
+}
+html.dark .action-detail-value-panel button:hover span,
+html.dark .calculation-explanation button:hover span {
+  color: #e2e8f0;
+}
+html.dark .action-detail-value-panel strong.text-slate-900,
+html.dark .calculation-explanation strong.text-slate-900 {
+  color: #f8fafc !important;
+}
+
+/* Cartes métriques individuelles */
+html.dark .action-metric,
+html.dark .calculation-explanation details.group {
+  background: #121e2c !important;
+  border: 1px solid #203347 !important;
+}
+
+html.dark .action-metric > div:first-child,
+html.dark .calculation-explanation details.group > summary {
+  background: #18283a !important;
+  color: #f1f5f9 !important;
+  border-bottom: 1px solid #203347 !important;
+}
+
+/* Contenu des détails et explications */
+html.dark .action-metric > div:last-child,
+html.dark .calculation-explanation details.group > div {
+  background: #121e2c !important;
+  color: #cbd5e1 !important;
+}
+
+/* Lignes de formule et paramètres */
+html.dark .action-metric p.text-sky-700,
+html.dark .calculation-explanation p.text-sky-700,
+html.dark .action-metric div.text-sky-700,
+html.dark .calculation-explanation div.text-sky-700 {
+  color: #7dd3fc !important;
+}
+
+html.dark .action-metric p.text-teal-800,
+html.dark .calculation-explanation p.text-teal-800,
+html.dark .action-metric div.text-teal-800,
+html.dark .calculation-explanation div.text-teal-800 {
+  color: #5eead4 !important;
+}
+
+html.dark .action-metric .text-indigo-700,
+html.dark .calculation-explanation .text-indigo-700 {
+  color: #a5b4fc !important;
+}
+
+html.dark .action-metric .text-slate-500,
+html.dark .calculation-explanation .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .action-metric strong,
+html.dark .calculation-explanation strong {
+  color: #f1f5f9;
+}
+
+/* Pastille Source */
+html.dark .action-metric span.bg-sky-50 {
+  background: #1a364c !important;
+  color: #7dd3fc !important;
+  border: 1px solid #254a69;
+}
+
+/* Blocs Contribution */
+html.dark .action-contribution--blue {
+  background: rgba(30, 58, 138, 0.45) !important;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  color: #93c5fd !important;
+}
+
+html.dark .action-contribution--violet {
+  background: rgba(88, 28, 135, 0.45) !important;
+  border: 1px solid rgba(147, 51, 234, 0.4) !important;
+  color: #c084fc !important;
+}
+
+html.dark .action-contribution--teal {
+  background: rgba(19, 78, 74, 0.45) !important;
+  border: 1px solid rgba(20, 184, 166, 0.4) !important;
+  color: #5eead4 !important;
+}
+
+/* Bloc Poids Économique (CA normalisé & Volume normalisé) */
+html.dark .economic-weight-breakdown > div {
+  background: #172a3b !important;
+  border: 1px solid #23445e !important;
+}
+
+html.dark .economic-weight-breakdown strong {
+  color: #5eead4 !important;
+}
+
+html.dark .economic-weight-breakdown span {
+  color: #f0fdfa !important;
+}
+
+html.dark .economic-weight-breakdown small {
+  color: #94a3b8 !important;
+}
+
+/* Donut & Score Segment */
+html.dark .action-score-donut > div {
+  background: #18283a !important;
+  color: #f8fafc !important;
+}
+
+html.dark .action-score-segment {
+  background: rgba(234, 88, 12, 0.22) !important;
+  color: #fb923c !important;
+  border: 1px solid rgba(234, 88, 12, 0.4) !important;
+}
+
+/* Icônes métriques d'explication */
+html.dark .explanation-metric-icon--blue {
+  color: #60a5fa !important;
+  background: rgba(37, 99, 235, 0.22) !important;
+}
+html.dark .explanation-metric-icon--violet {
+  color: #a78bfa !important;
+  background: rgba(124, 58, 237, 0.22) !important;
+}
+html.dark .explanation-metric-icon--teal {
+  color: #2dd4bf !important;
+  background: rgba(20, 184, 166, 0.22) !important;
+}
+html.dark .explanation-metric-icon--orange {
+  color: #fb923c !important;
+  background: rgba(234, 88, 12, 0.22) !important;
+}
+
+/* --------------------------------------------------------------------------
+   9. CARTES DÉTAIL & HERO (ESPACE MÉDECIN & ACTIONS)
+   -------------------------------------------------------------------------- */
+html.dark .action-detail-card {
+  background: var(--card) !important;
+  border-color: #23374d !important;
+}
+
+html.dark .action-detail-hero {
+  background: #182738 !important;
+  border-color: #253d54 !important;
+  color: var(--text) !important;
+}
+
+html.dark .action-detail-hero .bg-sky-50 {
+  background: #163248 !important;
+  border-color: #235173 !important;
+  color: #38bdf8 !important;
+}
+
+html.dark .action-detail-hero h2 {
+  color: #f8fafc !important;
+}
+
+html.dark .action-detail-hero p.text-sky-700 {
+  color: #38bdf8 !important;
+}
+
+/* Blocs d'informations générales et lieux */
+html.dark .action-detail-card .bg-slate-50 {
+  background: #142232 !important;
+  border-color: #22374d !important;
+}
+
+html.dark .action-detail-card .bg-white {
+  background: #18283a !important;
+  border-color: #253d54 !important;
+}
+
+/* Cartes alertes de silence & urgence */
+html.dark .action-detail-urgency {
+  background: rgba(159, 18, 57, 0.2) !important;
+  border-left: 3px solid #f43f5e !important;
+  border-color: rgba(244, 63, 94, 0.3) !important;
+}
+
+html.dark .action-detail-silence {
+  background: rgba(14, 116, 144, 0.2) !important;
+  border-left: 3px solid #38bdf8 !important;
+  border-color: rgba(56, 189, 248, 0.3) !important;
+}
+
+html.dark .action-detail-state {
+  background: rgba(5, 150, 105, 0.2) !important;
+  border-left: 3px solid #34d399 !important;
+  border-color: rgba(52, 211, 153, 0.3) !important;
+}
+
+html.dark .action-detail-recommendation {
+  border-left: 4px solid #818cf8 !important;
+  background: rgba(67, 56, 202, 0.18) !important;
+}
+
+/* --------------------------------------------------------------------------
+   10. FORMULAIRES GÉNÉRAUX, INPUTS ET MODALES
+   -------------------------------------------------------------------------- */
+/* Inputs généraux hors du conteneur d'authentification */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not(.field-control input),
+html.dark select,
+html.dark textarea,
+html.dark [role="combobox"] {
+  background-color: #132232 !important;
+  border-color: #273e54 !important;
+  color: #f1f5f9 !important;
+  color-scheme: dark;
+}
+
+html.dark input:focus:not(.field-control input),
+html.dark select:focus,
+html.dark textarea:focus,
+html.dark [role="combobox"]:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.3) !important;
+}
+
+/* Menus déroulants et selects Radix */
+html.dark [role="listbox"],
+html.dark [data-radix-popper-content-wrapper] > div {
+  background-color: #172738 !important;
+  border: 1px solid #29425a !important;
+  color: var(--text) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark [role="option"]:hover,
+html.dark [role="option"][data-highlighted] {
+  background-color: #21364c !important;
+  color: var(--primary-hover) !important;
+}
+
+/* Modales & Dialogues */
+html.dark [role="dialog"],
+html.dark .modal-card,
+html.dark .modal-content {
+  background-color: var(--card) !important;
+  border-color: #273e54 !important;
+  color: var(--text) !important;
+}
+
+/* --------------------------------------------------------------------------
+   11. SIDEBAR & NAVIGATION
+   -------------------------------------------------------------------------- */
+html.dark .sidebar {
+  background-color: var(--sidebar-bg) !important;
+  border-right-color: var(--sidebar-border) !important;
+}
+
+html.dark .sidebar-brand {
+  border-bottom-color: var(--sidebar-border) !important;
+}
+
+html.dark .sidebar-brand-name {
+  color: #f8fafc !important;
+}
+
+html.dark .sidebar-brand-subtitle {
+  color: var(--primary-hover) !important;
+}
+
+html.dark .sidebar-collapse-button {
+  color: var(--sidebar-muted) !important;
+}
+html.dark .sidebar-collapse-button:hover {
+  background-color: var(--sidebar-hover) !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark .menu-section-header {
+  color: var(--sidebar-text) !important;
+}
+html.dark .menu-section-header:hover {
+  background-color: var(--sidebar-hover) !important;
+}
+
+html.dark .menu-section-active {
+  background-color: var(--sidebar-active-bg) !important;
+  box-shadow: inset 3px 0 0 var(--primary) !important;
+  border-color: rgba(20, 184, 166, 0.2) !important;
+}
+
+html.dark .menu-subitem {
+  color: var(--sidebar-muted) !important;
+}
+html.dark .menu-subitem:hover {
+  background-color: var(--sidebar-hover) !important;
+  color: var(--sidebar-text) !important;
+}
+html.dark .menu-subitem-active {
+  background-color: var(--sidebar-active-bg) !important;
+  color: var(--sidebar-active-text) !important;
+  box-shadow: inset 3px 0 0 var(--primary) !important;
+}
+
+html.dark .sidebar-profile {
+  background: linear-gradient(180deg, #182635, #111d29) !important;
+  border-color: var(--sidebar-border) !important;
+  color: var(--text) !important;
+}
+html.dark .sidebar-profile:hover {
+  border-color: rgba(20, 184, 166, 0.4) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark .sidebar-profile-menu {
+  background-color: #162436 !important;
+  border-color: var(--sidebar-border) !important;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45) !important;
+}
+html.dark .sidebar-profile-menu button {
+  color: var(--text) !important;
+}
+html.dark .sidebar-profile-menu button:hover:not(:disabled) {
+  background-color: var(--sidebar-hover) !important;
+  color: var(--primary-hover) !important;
+}
+
+/* --------------------------------------------------------------------------
+   12. MODULE LECTURE D'ACTIVITÉ & GRAPHES RECHARTS
+   -------------------------------------------------------------------------- */
+html.dark .activite-info-banner {
+  background: linear-gradient(100deg, #102e32, #123b3b) !important;
+  border-color: #1f5b5b !important;
+}
+html.dark .activite-info-icon {
+  background: #164e4b !important;
+  color: #5eead4 !important;
+}
+
+html.dark .activite-section-nav,
+html.dark .activite-card-section,
+html.dark .activite-kpi-card,
+html.dark .activite-comp-card,
+html.dark .activite-statut-card,
+html.dark .activite-transition-item,
+html.dark .activite-flux-row,
+html.dark .activite-top-col,
+html.dark .activite-commercial-card,
+html.dark .activite-cr-card,
+html.dark .activite-table-container,
+html.dark .activite-n4-table-container {
+  background: var(--card) !important;
+  border-color: #23374d !important;
+}
+
+html.dark .activite-section-nav {
+  background: rgba(16, 25, 35, 0.95) !important;
+  backdrop-filter: blur(10px);
+}
+
+html.dark .activite-section-title,
+html.dark .activite-kpi-value,
+html.dark .activite-comp-card-value,
+html.dark .activite-statut-count,
+html.dark .activite-transition-value,
+html.dark .activite-top-col-title,
+html.dark .activite-top-nom,
+html.dark .activite-commercial-name,
+html.dark .activite-cr-value,
+html.dark .activite-clickable-card-value,
+html.dark .activite-n4-comm-name,
+html.dark .activite-n4-comm-total,
+html.dark .activite-n4-type-count,
+html.dark .activite-n4-evo-count,
+html.dark .activite-n4-comm-evo-title {
+  color: var(--text) !important;
+}
+
+html.dark .activite-info-text,
+html.dark .activite-section-subtitle,
+html.dark .activite-kpi-sub,
+html.dark .activite-comp-card-sub,
+html.dark .activite-chart-subtitle,
+html.dark .activite-modal-subtitle,
+html.dark .activite-modal-pag-info,
+html.dark .activite-modal-comment,
+html.dark .activite-clickable-card-sub {
+  color: var(--muted) !important;
+}
+
+html.dark .activite-clickable-card {
+  background: #18283a !important;
+  border-color: #273d54 !important;
+}
+html.dark .activite-clickable-card-title {
+  color: #f1f5f9 !important;
+}
+
+html.dark .activite-insight-card,
+html.dark .activite-insight-card--neutral,
+html.dark .activite-insight-card--info {
+  background: #18283a !important;
+  border-color: #273d54 !important;
+}
+html.dark .activite-insight-card h4 {
+  color: #5eead4 !important;
+}
+html.dark .activite-insight-card--info h4 {
+  color: #93c5fd !important;
+}
+html.dark .activite-insight-card p,
+html.dark .activite-insight-card p strong {
+  color: #cbd5e1 !important;
+}
+
+/* Tooltips Recharts en mode sombre */
+html.dark .recharts-default-tooltip {
+  background-color: #172738 !important;
+  border: 1px solid #273d54 !important;
+  color: #f1f5f9 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4) !important;
+}
+html.dark .recharts-tooltip-label {
+  color: #7dd3fc !important;
+  font-weight: 700;
+}
+html.dark .recharts-cartesian-grid line {
+  stroke: #1f3044 !important;
+}
+html.dark .recharts-cartesian-axis-tick text {
+  fill: #94a3b8 !important;
+}
