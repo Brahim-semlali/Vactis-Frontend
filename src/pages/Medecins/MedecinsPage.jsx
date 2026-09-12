@@ -1,6 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getMedecinByCode, getMedecins, patchNoteInput } from '../../api/medecins.js';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from 'recharts';
+import { getMedecinByCode, getMedecinEvolution, getMedecins, patchNoteInput } from '../../api/medecins.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 
@@ -32,16 +41,20 @@ const KPI_ITEMS = [
 ];
 
 const TABLE_COLUMNS = [
-  'Médecin',
-  'Lieu / organisme',
-  'Segment',
-  'Statut',
-  'Note potentielle',
-  'CA mobil.',
-  '',
+  { label: 'Médecin', key: null },
+  { label: 'Lieu / organisme', key: null },
+  { label: 'Segment', key: null },
+  { label: 'Statut', key: null },
+  { label: 'Note potentielle', key: null },
+  { label: 'Nbr cas', key: 'totalCas' },
+  { label: 'Score', key: 'scoreValeur' },
+  { label: 'CA mois actuel', key: 'caMois' },
+  { label: 'CA total', key: 'caTotal' },
+  { label: '', key: null },
 ];
 
 const RISQUE_OPTIONS = ['FAIBLE', 'MOYEN', 'ELEVE', 'URGENT'];
+const COMPARISON_COLORS = ['#0ea5e9', '#f59e0b', '#34d399', '#8b5cf6', '#ec4899'];
 
 function MedecinsIcon({ name, size = 18 }) {
   const props = {
@@ -185,6 +198,18 @@ function MedecinsIcon({ name, size = 18 }) {
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
         </svg>
       );
+    case 'chevron-down':
+      return (
+        <svg {...props}>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      );
+    case 'chevron-up':
+      return (
+        <svg {...props}>
+          <path d="m18 15-6-6-6 6" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -213,6 +238,14 @@ function formatPotentialSource(source) {
   if (source === 'NOTE_TERRAIN') return 'Note terrain';
   if (source === 'INPUT_PROFIL') return 'Input profil';
   return 'Valeur par défaut (3/5)';
+}
+
+function getSortableValue(medecin, key) {
+  if (key === 'totalCas') return Number(medecin.totalCas ?? medecin.nombreCas ?? 0) || 0;
+  if (key === 'scoreValeur') return Number(medecin.scoreValeur ?? 0) || 0;
+  if (key === 'caMois') return Number(medecin.caMois ?? 0) || 0;
+  if (key === 'caTotal') return Number(medecin.caTotal ?? medecin.caMois ?? 0) || 0;
+  return null;
 }
 
 function calculateFrequenceJours(segment) {
@@ -320,6 +353,145 @@ function KpiCardComponent({ label, icon, tone, value, active, onClick }) {
   );
 }
 
+function EvolutionChartCard({ data = [], loading = false }) {
+  const currentYear = String(new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedMetric, setSelectedMetric] = useState('ca');
+
+  const availableYears = Array.from(
+    new Set(
+      data.map((item) => String(item.month || '').slice(0, 4)).filter(Boolean),
+    ),
+  ).sort((a, b) => Number(a) - Number(b));
+
+  useEffect(() => {
+    if (!availableYears.length) return;
+
+    const normalizedYear = availableYears.includes(selectedYear)
+      ? selectedYear
+      : availableYears.includes(currentYear)
+        ? currentYear
+        : availableYears[availableYears.length - 1];
+
+    if (normalizedYear !== selectedYear) {
+      setSelectedYear(normalizedYear);
+    }
+  }, [availableYears, currentYear, selectedYear]);
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+        <div className="h-56 animate-pulse rounded-xl bg-slate-200/80" />
+      </div>
+    );
+  }
+
+  if (!data.length) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+        <p className="text-sm text-slate-500">Aucune donnée historique disponible pour ce médecin.</p>
+      </div>
+    );
+  }
+
+  const filteredData = data.filter((item) => String(item.month || '').startsWith(String(selectedYear)));
+
+  const metricLabel = selectedMetric === 'ca' ? 'CA' : 'Nombre de cas';
+  const lineColor = selectedMetric === 'ca' ? '#0ea5e9' : '#34d399';
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-2xs">
+      <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Évolution</p>
+          <h3 className="text-sm font-black text-slate-900">{metricLabel}</h3>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 shadow-2xs">
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-400">Année</span>
+            <select
+              value={selectedYear}
+              onChange={(event) => setSelectedYear(event.target.value)}
+              className="bg-transparent text-[11px] font-bold text-slate-700 focus:outline-none"
+            >
+              {availableYears.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </label>
+
+          <div className="flex items-center rounded-full border border-sky-200 bg-sky-50 p-0.5">
+            <button
+              type="button"
+              onClick={() => setSelectedMetric('ca')}
+              className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.1em] transition-all ${
+                selectedMetric === 'ca'
+                  ? 'bg-sky-600 text-white shadow-sm'
+                  : 'text-sky-700 hover:bg-white'
+              }`}
+            >
+              CA
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedMetric('cas')}
+              className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.1em] transition-all ${
+                selectedMetric === 'cas'
+                  ? 'bg-emerald-500 text-white shadow-sm'
+                  : 'text-emerald-700 hover:bg-white'
+              }`}
+            >
+              Cas
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="h-56 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={filteredData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
+            <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#475569' }} tickLine={false} axisLine={{ stroke: '#cbd5e1' }} />
+            <YAxis
+              tick={{ fontSize: 11, fill: '#475569' }}
+              tickLine={false}
+              axisLine={{ stroke: '#cbd5e1' }}
+              tickFormatter={(value) => {
+                if (selectedMetric === 'ca') return `${Math.round(value / 1000)}k`;
+                return String(value);
+              }}
+            />
+            <Tooltip
+              formatter={(value) => {
+                if (selectedMetric === 'ca') {
+                  return [`${Number(value).toLocaleString('fr-FR')} MAD`, 'CA'];
+                }
+                return [`${Number(value).toLocaleString('fr-FR')} cas`, 'Nombre de cas'];
+              }}
+              labelStyle={{ fontWeight: 700, color: '#0f172a' }}
+              contentStyle={{
+                borderRadius: 12,
+                border: '1px solid #bfdbfe',
+                boxShadow: '0 10px 25px rgba(15, 23, 42, 0.08)',
+              }}
+            />
+            <Line
+              type="monotone"
+              dataKey={selectedMetric}
+              name={metricLabel}
+              stroke={lineColor}
+              strokeWidth={3}
+              dot={{ r: 3, fill: lineColor, strokeWidth: 0 }}
+              activeDot={{ r: 5 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 export default function MedecinsPage() {
   const { token } = useAuth();
   const [filters, setFilters] = useState(FILTER_DEFAULTS);
@@ -328,6 +500,8 @@ export default function MedecinsPage() {
   // Selection & View Mode state: 'table' or 'detail'
   const [selectedMedecin, setSelectedMedecin] = useState(null);
   const [viewMode, setViewMode] = useState('table');
+  const [medecinEvolution, setMedecinEvolution] = useState([]);
+  const [loadingEvolution, setLoadingEvolution] = useState(false);
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
   const [openCalculationBlocks, setOpenCalculationBlocks] = useState({
     segment: true,
@@ -453,6 +627,40 @@ export default function MedecinsPage() {
     }
   }, [selectedMedecin?.id]);
 
+  useEffect(() => {
+    if (!selectedMedecin?.id || !token) {
+      setMedecinEvolution([]);
+      setLoadingEvolution(false);
+      return;
+    }
+
+    let isActive = true;
+
+    const loadEvolution = async () => {
+      setLoadingEvolution(true);
+      try {
+        const data = await getMedecinEvolution(token, selectedMedecin.id);
+        if (isActive) {
+          setMedecinEvolution(data ?? []);
+        }
+      } catch {
+        if (isActive) {
+          setMedecinEvolution([]);
+        }
+      } finally {
+        if (isActive) {
+          setLoadingEvolution(false);
+        }
+      }
+    };
+
+    loadEvolution();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedMedecin?.id, token]);
+
   const scrollToSelectedDoctorRow = useCallback((targetId, fallbackPos) => {
     const docId = targetId || lastSelectedDoctorIdRef.current;
     const pos = fallbackPos || lastScrollPosition.current;
@@ -553,6 +761,7 @@ export default function MedecinsPage() {
   const resetFilters = () => {
     setFilters(FILTER_DEFAULTS);
     setSelectedMedecin(null);
+    setComparisonIds([]);
     setViewMode('table');
   };
 
@@ -560,8 +769,197 @@ export default function MedecinsPage() {
   const kpis = pageData?.kpis ?? {};
   const meta = pageData?.meta ?? {};
   const filterOptions = pageData?.filters ?? {};
+  const [sortConfig, setSortConfig] = useState({ key: 'caMois', direction: 'desc' });
+  const [comparisonIds, setComparisonIds] = useState([]);
+  const [comparisonSearch, setComparisonSearch] = useState('');
+  const [isComparisonListOpen, setIsComparisonListOpen] = useState(false);
+  const [comparisonMetric, setComparisonMetric] = useState('ca');
+  const [comparisonYear, setComparisonYear] = useState(String(new Date().getFullYear()));
+  const [comparisonEvolutionMap, setComparisonEvolutionMap] = useState({});
+  const [comparisonEvolutionLoading, setComparisonEvolutionLoading] = useState(false);
 
   const countSansNote = kpis.sansNoteInput ?? (pageData?.items ? pageData.items.filter((m) => m.noteInput == null).length : 0);
+
+  const sortedMedecins = useMemo(() => {
+    const items = [...medecins];
+
+    items.sort((a, b) => {
+      const valueA = getSortableValue(a, sortConfig.key);
+      const valueB = getSortableValue(b, sortConfig.key);
+
+      if (valueA === valueB) {
+        return formatMedecinName(a).localeCompare(formatMedecinName(b), 'fr', { sensitivity: 'base' });
+      }
+
+      return sortConfig.direction === 'asc' ? valueA - valueB : valueB - valueA;
+    });
+
+    return items;
+  }, [medecins, sortConfig]);
+
+  const comparisonMedecins = useMemo(() => {
+    return sortedMedecins.filter((medecin) => comparisonIds.includes(medecin.id));
+  }, [comparisonIds, sortedMedecins]);
+
+  const filteredComparisonMedecins = useMemo(() => {
+    const query = comparisonSearch.trim().toLowerCase();
+
+    if (!query) {
+      return sortedMedecins;
+    }
+
+    return sortedMedecins.filter((medecin) => {
+      const text = `${formatMedecinName(medecin)} ${medecin.organisme ?? ''} ${medecin.specialite ?? ''}`.toLowerCase();
+      return text.includes(query);
+    });
+  }, [comparisonSearch, sortedMedecins]);
+
+  const comparisonChartDoctors = useMemo(
+    () => comparisonMedecins.slice(0, 4),
+    [comparisonMedecins],
+  );
+
+  useEffect(() => {
+    if (viewMode !== 'comparison' || !token || comparisonMedecins.length === 0) {
+      return;
+    }
+
+    const idsToLoad = comparisonMedecins
+      .map((medecin) => medecin.id)
+      .filter((id) => comparisonEvolutionMap[id] === undefined);
+
+    if (idsToLoad.length === 0) {
+      return;
+    }
+
+    let isActive = true;
+    setComparisonEvolutionLoading(true);
+
+    Promise.all(
+      idsToLoad.map(async (id) => {
+        const data = await getMedecinEvolution(token, id);
+        return { id, data: Array.isArray(data) ? data : [] };
+      }),
+    )
+      .then((results) => {
+        if (!isActive) return;
+
+        setComparisonEvolutionMap((current) => {
+          const next = { ...current };
+          results.forEach(({ id, data }) => {
+            next[id] = data;
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        // Ignore non-blocking comparison graph loading errors; the table remains available.
+      })
+      .finally(() => {
+        if (isActive) {
+          setComparisonEvolutionLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [comparisonMedecins, token, viewMode, comparisonEvolutionMap]);
+
+  const comparisonAvailableYears = useMemo(() => {
+    const years = new Set();
+
+    comparisonChartDoctors.forEach((medecin) => {
+      const evolution = comparisonEvolutionMap[medecin.id] ?? [];
+
+      evolution.forEach((item) => {
+        if (item?.month) {
+          years.add(String(item.month).slice(0, 4));
+        }
+      });
+    });
+
+    return Array.from(years).sort((a, b) => Number(b) - Number(a));
+  }, [comparisonChartDoctors, comparisonEvolutionMap]);
+
+  useEffect(() => {
+    if (!comparisonAvailableYears.length) {
+      return;
+    }
+
+    if (!comparisonAvailableYears.includes(comparisonYear)) {
+      setComparisonYear(comparisonAvailableYears[0]);
+    }
+  }, [comparisonAvailableYears, comparisonYear]);
+
+  const comparisonChartData = useMemo(() => {
+    if (comparisonChartDoctors.length === 0) {
+      return [];
+    }
+
+    const months = new Set();
+
+    comparisonChartDoctors.forEach((medecin) => {
+      const evolution = comparisonEvolutionMap[medecin.id] ?? [];
+
+      evolution.forEach((item) => {
+        if (String(item?.month ?? '').startsWith(String(comparisonYear))) {
+          months.add(String(item.month));
+        }
+      });
+    });
+
+    const orderedMonths = Array.from(months).sort();
+
+    return orderedMonths.map((month) => {
+      const row = { month, label: month };
+
+      comparisonChartDoctors.forEach((medecin) => {
+        const point = (comparisonEvolutionMap[medecin.id] ?? []).find((item) => item.month === month);
+        row[String(medecin.id)] = Number(point?.[comparisonMetric] ?? 0);
+      });
+
+      const labelPoint = comparisonChartDoctors
+        .map((medecin) => (comparisonEvolutionMap[medecin.id] ?? []).find((item) => item.month === month))
+        .find(Boolean);
+
+      if (labelPoint?.label) {
+        row.label = labelPoint.label;
+      }
+
+      return row;
+    });
+  }, [comparisonChartDoctors, comparisonEvolutionMap, comparisonMetric, comparisonYear]);
+
+  const toggleSort = (key) => {
+    setSortConfig((current) => (
+      current.key === key
+        ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+        : { key, direction: 'desc' }
+    ));
+  };
+
+  const toggleComparisonSelection = (id) => {
+    setComparisonIds((current) => (
+      current.includes(id)
+        ? current.filter((currentId) => currentId !== id)
+        : [...current, id]
+    ));
+  };
+
+  const selectAllComparison = () => {
+    setComparisonIds(medecins.map((medecin) => medecin.id));
+  };
+
+  const clearComparisonSelection = () => {
+    setComparisonIds([]);
+  };
+
+  const handleComparisonToggle = () => {
+    setComparisonIds([]);
+    setIsComparisonListOpen(false);
+    setViewMode('comparison');
+  };
 
   return (
     <div className="space-y-6">
@@ -592,17 +990,19 @@ export default function MedecinsPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 font-extrabold text-sm transition-all shadow-2xs hover:shadow-xs active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
-            onClick={loadMedecins}
-            disabled={loading}
-          >
-            <div className="p-1 bg-sky-200/80 rounded-lg text-sky-800">
-              <MedecinsIcon name="refresh" size={16} />
-            </div>
-            Rafraîchir
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 font-extrabold text-sm transition-all shadow-2xs hover:shadow-xs active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
+              onClick={loadMedecins}
+              disabled={loading}
+            >
+              <div className="p-1 bg-sky-200/80 rounded-lg text-sky-800">
+                <MedecinsIcon name="refresh" size={16} />
+              </div>
+              Rafraîchir
+            </button>
+          </div>
         </div>
       </Card>
 
@@ -612,7 +1012,7 @@ export default function MedecinsPage() {
           {/* Filters Section */}
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
             <Card className="p-5 bg-white border border-slate-200/90 rounded-2xl shadow-2xs space-y-4">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <div className="relative w-80 shrink-0">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                     <MedecinsIcon name="search" />
@@ -645,6 +1045,17 @@ export default function MedecinsPage() {
                       {countSansNote}
                     </span>
                   )}
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-sky-700 border border-sky-200/90 font-extrabold text-xs transition-all shadow-2xs hover:shadow-xs active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
+                  onClick={handleComparisonToggle}
+                  disabled={loading || medecins.length === 0}
+                >
+                  <div className="p-1 bg-sky-100 rounded-lg text-sky-700">
+                    <MedecinsIcon name="chart" size={15} />
+                  </div>
+                  Comparaison
                 </button>
               </div>
 
@@ -738,7 +1149,7 @@ export default function MedecinsPage() {
       )}
 
       {/* Main Container */}
-      {viewMode === 'table' ? (
+      {viewMode === 'table' && (
         /* VUE 1 : TABLE COMPLÈTE EN 100% */
         <div key="table-view">
           <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
@@ -752,11 +1163,30 @@ export default function MedecinsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-slate-50/80 cursor-default bg-slate-50/90">
-                  {TABLE_COLUMNS.map((column, idx) => (
-                    <TableHead key={idx} className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">
-                      {column}
-                    </TableHead>
-                  ))}
+                  {TABLE_COLUMNS.map((column, idx) => {
+                    if (!column.key) {
+                      return (
+                        <TableHead key={idx} className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">
+                          {column.label}
+                        </TableHead>
+                      );
+                    }
+
+                    return (
+                      <TableHead key={idx} className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">
+                        <button
+                          type="button"
+                          onClick={() => toggleSort(column.key)}
+                          className="inline-flex items-center gap-1.5 font-extrabold text-[11px] uppercase tracking-wider text-slate-500 transition-colors hover:text-slate-800"
+                        >
+                          <span>{column.label}</span>
+                          <span className="text-[10px] leading-none">
+                            {sortConfig.key === column.key ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
+                          </span>
+                        </button>
+                      </TableHead>
+                    );
+                  })}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -768,6 +1198,8 @@ export default function MedecinsPage() {
                       <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-20 rounded-lg" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-8 w-24 rounded-lg" /></TableCell>
                     </TableRow>
@@ -787,7 +1219,7 @@ export default function MedecinsPage() {
                 )}
 
                 {!loading &&
-                  medecins.map((medecin) => {
+                  sortedMedecins.map((medecin) => {
                     const isSelected = selectedMedecin?.id === medecin.id;
                     return (
                       <TableRow
@@ -826,19 +1258,28 @@ export default function MedecinsPage() {
                         </TableCell>
                         <TableCell>
                           {medecin.noteInput != null ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200/90 text-xs font-extrabold shadow-2xs">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200/90 dark:bg-[#382508] dark:text-[#fde047] dark:border-[#6e470d] text-xs font-extrabold shadow-2xs">
                               <MedecinsIcon name="star" size={12} />
                               <span>{medecin.noteInput} / 5</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 border border-slate-200/80 text-[11px] font-semibold">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 border border-slate-200/80 dark:bg-[#192736] dark:text-[#94a3b8] dark:border-[#273d52] text-[11px] font-semibold">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 animate-pulse" />
                               <span>Non renseignée</span>
                             </span>
                           )}
                         </TableCell>
+                        <TableCell className="font-bold text-slate-700">
+                          {medecin.totalCas ?? medecin.nombreCas ?? 0}
+                        </TableCell>
+                        <TableCell className="font-extrabold text-slate-900">
+                          {formatScore(medecin.scoreValeur)}
+                        </TableCell>
                         <TableCell className="font-extrabold text-slate-900">
                           {formatCaMois(medecin.caMois)}
+                        </TableCell>
+                        <TableCell className="font-extrabold text-sky-700">
+                          {formatCaMois(medecin.caTotal ?? medecin.caMois ?? 0)}
                         </TableCell>
                         <TableCell className="text-right">
                           <button
@@ -865,7 +1306,310 @@ export default function MedecinsPage() {
             </Table>
           </Card>
         </div>
-      ) : (
+      )}
+      {viewMode === 'comparison' && (
+        <div key="comparison-view" className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 p-2">
+            <button
+              type="button"
+              onClick={handleBackToTable}
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-white hover:bg-slate-50 text-rose-700 border border-slate-200/90 font-extrabold text-sm shadow-2xs hover:shadow-xs hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
+            >
+              <div className="p-1.5 bg-rose-50 text-rose-700 rounded-xl border border-rose-100">
+                <MedecinsIcon name="arrow-left" size={20} />
+              </div>
+              <span>← Retour à la table des médecins</span>
+            </button>
+
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse" />
+              <span className="text-xs font-extrabold uppercase tracking-widest text-slate-500">
+                COMPARAISON
+              </span>
+            </div>
+          </div>
+
+          <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-2xs p-5 space-y-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-sky-700">Comparaison rapide</p>
+                <h4 className="text-sm font-black text-slate-900">Sélectionnez les médecins à comparer</h4>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={selectAllComparison}
+                  className="rounded-xl border border-sky-200 bg-white px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-sky-700 transition-colors hover:bg-sky-100"
+                >
+                  Tous
+                </button>
+                <button
+                  type="button"
+                  onClick={clearComparisonSelection}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-600 transition-colors hover:bg-slate-100"
+                >
+                  Effacer
+                </button>
+              </div>
+            </div>
+
+            <div className="relative w-full max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <MedecinsIcon name="search" />
+              </div>
+              <input
+                type="search"
+                placeholder="Rechercher un médecin à comparer…"
+                value={comparisonSearch}
+                onChange={(event) => {
+                  setComparisonSearch(event.target.value);
+                  if (event.target.value.trim() && !isComparisonListOpen) {
+                    setIsComparisonListOpen(true);
+                  }
+                }}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all"
+                aria-label="Rechercher un médecin à comparer"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsComparisonListOpen((prev) => !prev)}
+                className="inline-flex items-center gap-2.5 px-4 py-2 rounded-xl border border-sky-200 bg-sky-50/80 hover:bg-sky-100 text-sky-800 text-xs font-bold transition-all shadow-2xs hover:shadow-xs group cursor-pointer"
+                title={isComparisonListOpen ? 'Masquer la liste des médecins' : 'Afficher tous les médecins'}
+                aria-expanded={isComparisonListOpen}
+              >
+                <span>{isComparisonListOpen ? 'Masquer la liste des médecins' : 'Afficher tous les médecins'}</span>
+                <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-sky-200/90 text-sky-900">
+                  {filteredComparisonMedecins.length}
+                </span>
+                <div
+                  className={`p-1 rounded-lg bg-sky-200/80 text-sky-800 group-hover:bg-sky-300 transition-transform duration-200 ${
+                    isComparisonListOpen ? 'rotate-180' : ''
+                  }`}
+                >
+                  <MedecinsIcon name="chevron-down" size={14} />
+                </div>
+              </button>
+
+              {comparisonIds.length > 0 && (
+                <span className="text-xs font-semibold text-slate-500">
+                  {comparisonIds.length} sélectionné{comparisonIds.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+
+            {isComparisonListOpen && (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 animate-in fade-in duration-200">
+                {filteredComparisonMedecins.length === 0 ? (
+                  <div className="col-span-full py-4 text-center text-xs text-slate-500">
+                    Aucun médecin trouvé pour « {comparisonSearch} »
+                  </div>
+                ) : (
+                  filteredComparisonMedecins.map((medecin) => {
+                    const checked = comparisonIds.includes(medecin.id);
+
+                    return (
+                      <label
+                        key={medecin.id}
+                        className={`flex cursor-pointer items-center gap-2 rounded-xl border p-2.5 transition-all ${
+                          checked ? 'border-sky-300 bg-white shadow-2xs' : 'border-slate-200 bg-white/60 hover:bg-slate-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleComparisonSelection(medecin.id)}
+                          className="h-4 w-4 accent-sky-600"
+                        />
+                        <div className="min-w-0">
+                          <span className="block truncate text-xs font-bold text-slate-900">{formatMedecinName(medecin)}</span>
+                          <span className="block truncate text-[10px] text-slate-500">{medecin.organisme ?? '—'}</span>
+                        </div>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </Card>
+
+          <Card className="bg-white border border-slate-200/90 rounded-2xl shadow-2xs overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-sky-700">Synthèse comparative</p>
+                <h3 className="font-bold text-slate-900 text-base">Médecins comparés ({comparisonMedecins.length})</h3>
+              </div>
+            </div>
+
+            {comparisonMedecins.length === 0 ? (
+              <div className="p-8 text-center text-slate-500">
+                <p className="text-sm font-semibold text-slate-700">Aucun médecin sélectionné</p>
+                <p className="text-xs mt-1">Cliquez sur les cases ci-dessus pour choisir les médecins à comparer, ou utilisez “Tous”.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="p-5 pb-0">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border-separate border-spacing-y-2 text-left">
+                      <thead>
+                        <tr className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-slate-500">
+                          <th className="px-2 py-2">Médecin</th>
+                          <th className="px-2 py-2">Segment</th>
+                          <th className="px-2 py-2">Statut</th>
+                          <th className="px-2 py-2">Nbr cas</th>
+                          <th className="px-2 py-2">Score</th>
+                          <th className="px-2 py-2">CA mois actuel</th>
+                          <th className="px-2 py-2">CA total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {comparisonMedecins.map((medecin) => (
+                          <tr key={medecin.id} className="rounded-xl bg-white shadow-2xs">
+                            <td className="rounded-l-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900">
+                              {formatMedecinName(medecin)}
+                            </td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                              {medecin.segment ? `SEGMENT ${medecin.segment}` : '—'}
+                            </td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                              {medecin.statut ? medecin.statut : formatEnumLabel(medecin.statutPilotage)}
+                            </td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                              {medecin.totalCas ?? medecin.nombreCas ?? 0}
+                            </td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">
+                              {formatScore(medecin.scoreValeur)}
+                            </td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm font-extrabold text-sky-700">
+                              {formatCaMois(medecin.caMois)}
+                            </td>
+                            <td className="rounded-r-xl border border-slate-200 px-3 py-2 text-sm font-extrabold text-sky-700">
+                              {formatCaMois(medecin.caTotal ?? medecin.caMois ?? 0)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 p-5 space-y-5">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <p className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-sky-700">Graphique</p>
+                      <h3 className="font-bold text-slate-900 text-base">Évolution de {comparisonMetric === 'ca' ? 'CA' : 'nombre de cas'}</h3>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {comparisonAvailableYears.length > 0 && (
+                        <label className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1.5 shadow-2xs">
+                          <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-400">Année</span>
+                          <select
+                            value={comparisonYear}
+                            onChange={(event) => setComparisonYear(event.target.value)}
+                            className="bg-transparent text-[11px] font-bold text-slate-700 focus:outline-none"
+                          >
+                            {comparisonAvailableYears.map((year) => (
+                              <option key={year} value={year}>{year}</option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+
+                      <div className="flex items-center rounded-full border border-sky-200 bg-sky-50 p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setComparisonMetric('ca')}
+                          className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.1em] transition-all ${
+                            comparisonMetric === 'ca'
+                              ? 'bg-sky-600 text-white shadow-sm'
+                              : 'text-sky-700 hover:bg-white'
+                          }`}
+                        >
+                          CA
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setComparisonMetric('cas')}
+                          className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.1em] transition-all ${
+                            comparisonMetric === 'cas'
+                              ? 'bg-emerald-500 text-white shadow-sm'
+                              : 'text-emerald-700 hover:bg-white'
+                          }`}
+                        >
+                          Cas
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {comparisonChartDoctors.length > 0 && (
+                    <div className="h-72 w-full rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={comparisonChartData} margin={{ top: 8, right: 24, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
+                          <XAxis
+                            dataKey="label"
+                            tick={{ fontSize: 11, fill: '#475569' }}
+                            tickLine={false}
+                            axisLine={{ stroke: '#cbd5e1' }}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 11, fill: '#475569' }}
+                            tickLine={false}
+                            axisLine={{ stroke: '#cbd5e1' }}
+                            tickFormatter={(value) => {
+                              if (comparisonMetric === 'ca') return `${Math.round(value / 1000)}k`;
+                              return String(value);
+                            }}
+                          />
+                          <Tooltip
+                            formatter={(value, name) => {
+                              const label = name || 'Médecin';
+                              if (comparisonMetric === 'ca') {
+                                return [`${Number(value).toLocaleString('fr-FR')} MAD`, label];
+                              }
+                              return [`${Number(value).toLocaleString('fr-FR')} cas`, label];
+                            }}
+                            labelStyle={{ fontWeight: 700, color: '#0f172a' }}
+                            contentStyle={{
+                              borderRadius: 12,
+                              border: '1px solid #bfdbfe',
+                              boxShadow: '0 10px 25px rgba(15, 23, 42, 0.08)',
+                            }}
+                          />
+                          {comparisonChartDoctors.map((medecin, index) => (
+                            <Line
+                              key={medecin.id}
+                              type="monotone"
+                              dataKey={String(medecin.id)}
+                              name={formatMedecinName(medecin)}
+                              stroke={COMPARISON_COLORS[index % COMPARISON_COLORS.length]}
+                              strokeWidth={3}
+                              dot={{ r: 3, fill: COMPARISON_COLORS[index % COMPARISON_COLORS.length], strokeWidth: 0 }}
+                              activeDot={{ r: 5 }}
+                            />
+                          ))}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+
+                  {comparisonMedecins.length > 4 && (
+                    <p className="text-[11px] font-medium text-slate-500">
+                      Le graphe affiche uniquement les 4 premiers médecins sélectionnés. Utilisez la recherche pour choisir ceux à comparer.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </Card>
+        </div>
+    )}
+      {viewMode !== 'table' && viewMode !== 'comparison' && (
         /* VUE 2 : ESPACE MÉDECIN DÉTAILLÉ EN 100% DE L'ESPACE DE LA TABLE */
         <div key="detail-view" className="space-y-6">
           {/* Header Bar avec grand bouton RETOUR BLANC PUR ET ROUGE */}
@@ -924,7 +1668,130 @@ export default function MedecinsPage() {
                 </div>
               </div>
 
-              <section className="action-detail-explanation calculation-explanation order-3 rounded-2xl border border-sky-100 bg-sky-50/60 p-5 space-y-4">
+              {/* Grid 2 Colonnes */}
+              <div className="order-2 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Colonne Gauche (5 cols) : Lieux & Infos Générales */}
+                <div className="lg:col-span-5 space-y-6">
+                  {/* Lieux & Organismes */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Lieux & organismes</h4>
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3.5">
+                      <span className="p-2 bg-white text-sky-700 rounded-xl shadow-2xs mt-0.5 border border-slate-200/60">
+                        <MedecinsIcon name="map-pin" size={18} />
+                      </span>
+                      <div>
+                        <span className="text-[11px] text-slate-400 block font-bold uppercase">Lieu principal</span>
+                        <span className="text-base font-bold text-slate-800">{selectedMedecin.organisme ?? '—'}</span>
+                        {selectedMedecin.ville && (
+                          <span className="text-xs text-slate-500 block pt-0.5">{selectedMedecin.ville}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Informations Générales */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Informations générales</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-[11px] text-slate-400 font-bold uppercase block">Code Médecin</span>
+                        <span className="text-base font-bold text-slate-800">{selectedMedecin.codeMedecin ?? '—'}</span>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-[11px] text-slate-400 font-bold uppercase block">CA mois actuel</span>
+                        <span className="text-base font-black text-sky-700">{formatCaMois(selectedMedecin.caMois)}</span>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-[11px] text-slate-400 font-bold uppercase block">CA total</span>
+                        <span className="text-base font-black text-sky-700">{formatCaMois(selectedMedecin.caTotal ?? selectedMedecin.caMois ?? 0)}</span>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-[11px] text-slate-400 font-bold uppercase block">Nbr cas ce mois</span>
+                        <span className="text-base font-bold text-slate-800">
+                          {medecinEvolution.length > 0
+                            ? Number(medecinEvolution[medecinEvolution.length - 1]?.cas ?? 0)
+                            : 0}
+                        </span>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-[11px] text-slate-400 font-bold uppercase block">Nbr cas total</span>
+                        <span className="text-base font-bold text-slate-800">{selectedMedecin.totalCas ?? selectedMedecin.nombreCas ?? 0}</span>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-[11px] text-slate-400 font-bold uppercase block">Risque / urgence</span>
+                        <span className="text-sm font-bold text-slate-800">{formatEnumLabel(selectedMedecin.risqueUrgence)}</span>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-[11px] text-slate-400 font-bold uppercase block">Commercial référent</span>
+                        <span className="text-sm font-bold text-slate-800">{selectedMedecin.commercialReferent ?? '—'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Colonne Droite (7 cols) : Potentiel Commercial */}
+                <div className="lg:col-span-7 space-y-6">
+                  {/* Potentiel commercial */}
+                  <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Potentiel commercial</h4>
+                      <span className="text-xs text-slate-500 font-semibold">
+                        Note actuelle : <strong className="text-slate-900">{selectedMedecin.noteInput != null ? `${selectedMedecin.noteInput} / 5` : 'Non renseignée'}</strong>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2" role="group" aria-label="Choisir une note de potentiel">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className={`flex-1 h-10 rounded-xl font-bold text-sm transition-all border ${
+                            noteInputDraft === n
+                              ? 'bg-sky-50 text-sky-700 border-sky-300 font-black shadow-2xs'
+                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                          onClick={() => setNoteInputDraft(n)}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className={`h-10 px-4 rounded-xl font-bold text-sm transition-all border ${
+                          noteInputDraft == null
+                            ? 'bg-slate-800 text-white border-slate-800'
+                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                        }`}
+                        onClick={() => setNoteInputDraft(null)}
+                        title="Effacer la note"
+                      >
+                        —
+                      </button>
+                    </div>
+
+                    {noteError && <p className="text-xs font-semibold text-rose-600">{noteError}</p>}
+                    {noteSaved && <p className="text-xs font-semibold text-emerald-600">Note enregistrée ✓</p>}
+
+                    <button
+                      type="button"
+                      className="w-full py-3.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 font-extrabold text-sm shadow-2xs hover:shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                      onClick={handleSaveNote}
+                      disabled={noteSaving}
+                    >
+                      {noteSaving ? 'Enregistrement…' : 'Enregistrer la note'}
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Graphique d'évolution */}
+              <div className="order-3">
+                <EvolutionChartCard data={medecinEvolution} loading={loadingEvolution} />
+              </div>
+
+              {/* Section d'explication "Pourquoi ces valeurs ?" */}
+              <section className="action-detail-explanation calculation-explanation order-4 rounded-2xl border border-sky-100 bg-sky-50/60 p-5 space-y-4">
                 <button
                   type="button"
                   className="flex w-full items-center justify-between text-left"
@@ -996,107 +1863,6 @@ export default function MedecinsPage() {
                   </div>
                 </div>}
               </section>
-
-              {/* Grid 2 Colonnes */}
-              <div className="order-2 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* Colonne Gauche (5 cols) : Lieux & Infos Générales */}
-                <div className="lg:col-span-5 space-y-6">
-                  {/* Lieux & Organismes */}
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Lieux & organismes</h4>
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3.5">
-                      <span className="p-2 bg-white text-sky-700 rounded-xl shadow-2xs mt-0.5 border border-slate-200/60">
-                        <MedecinsIcon name="map-pin" size={18} />
-                      </span>
-                      <div>
-                        <span className="text-[11px] text-slate-400 block font-bold uppercase">Lieu principal</span>
-                        <span className="text-base font-bold text-slate-800">{selectedMedecin.organisme ?? '—'}</span>
-                        {selectedMedecin.ville && (
-                          <span className="text-xs text-slate-500 block pt-0.5">{selectedMedecin.ville}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Informations Générales */}
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Informations générales</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                        <span className="text-[11px] text-slate-400 font-bold uppercase block">Code Médecin</span>
-                        <span className="text-base font-bold text-slate-800">{selectedMedecin.codeMedecin ?? '—'}</span>
-                      </div>
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                        <span className="text-[11px] text-slate-400 font-bold uppercase block">CA mobil.</span>
-                        <span className="text-base font-black text-sky-700">{formatCaMois(selectedMedecin.caMois)}</span>
-                      </div>
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                        <span className="text-[11px] text-slate-400 font-bold uppercase block">Risque / urgence</span>
-                        <span className="text-sm font-bold text-slate-800">{formatEnumLabel(selectedMedecin.risqueUrgence)}</span>
-                      </div>
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                        <span className="text-[11px] text-slate-400 font-bold uppercase block">Commercial référent</span>
-                        <span className="text-sm font-bold text-slate-800">{selectedMedecin.commercialReferent ?? '—'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Colonne Droite (7 cols) : Potentiel Commercial */}
-                <div className="lg:col-span-7 space-y-6">
-                  {/* Potentiel commercial */}
-                  <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                      <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">Potentiel commercial</h4>
-                      <span className="text-xs text-slate-500 font-semibold">
-                        Note actuelle : <strong className="text-slate-900">{selectedMedecin.noteInput != null ? `${selectedMedecin.noteInput} / 5` : 'Non renseignée'}</strong>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2" role="group" aria-label="Choisir une note de potentiel">
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <button
-                          key={n}
-                          type="button"
-                          className={`flex-1 h-10 rounded-xl font-bold text-sm transition-all border ${
-                            noteInputDraft === n
-                              ? 'bg-sky-50 text-sky-700 border-sky-300 font-black shadow-2xs'
-                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                          }`}
-                          onClick={() => setNoteInputDraft(n)}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        className={`h-10 px-4 rounded-xl font-bold text-sm transition-all border ${
-                          noteInputDraft == null
-                            ? 'bg-slate-800 text-white border-slate-800'
-                            : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
-                        }`}
-                        onClick={() => setNoteInputDraft(null)}
-                        title="Effacer la note"
-                      >
-                        —
-                      </button>
-                    </div>
-
-                    {noteError && <p className="text-xs font-semibold text-rose-600">{noteError}</p>}
-                    {noteSaved && <p className="text-xs font-semibold text-emerald-600">Note enregistrée ✓</p>}
-
-                    <button
-                      type="button"
-                      className="w-full py-3.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 font-extrabold text-sm shadow-2xs hover:shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-                      onClick={handleSaveNote}
-                      disabled={noteSaving}
-                    >
-                      {noteSaving ? 'Enregistrement…' : 'Enregistrer la note'}
-                    </button>
-                  </div>
-
-                </div>
-              </div>
             </Card>
           )}
         </div>

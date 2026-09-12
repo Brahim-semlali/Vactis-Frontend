@@ -43,7 +43,7 @@ export default function AppLayout({ children }) {
   ).toUpperCase();
 
   return (
-    <div className="app-shell min-h-screen bg-[#f0f2f5] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-row font-sans antialiased">
+    <div className="app-shell min-h-screen bg-[#f0f2f5] dark:bg-[var(--bg)] text-slate-900 dark:text-slate-100 flex flex-row font-sans antialiased">
       <Sidebar
         activeRoute={activeRoute}
         onNavigate={navigate}
@@ -53,8 +53,8 @@ export default function AppLayout({ children }) {
         onMobileClose={() => setMobileOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col min-w-0 bg-[#f0f2f5] dark:bg-slate-950">
-        <header className="h-16 px-4 sm:px-6 md:px-8 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-[0_1px_0_rgba(15,23,42,0.03)] shrink-0 transition-colors">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#f0f2f5] dark:bg-[var(--bg)]">
+        <header className="h-16 px-4 sm:px-6 md:px-8 bg-white dark:bg-[var(--card)] border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shadow-[0_1px_0_rgba(15,23,42,0.03)] shrink-0 transition-colors">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -128,7 +128,7 @@ export default function AppLayout({ children }) {
           </div>
         </header>
 
-        <main className="flex-1 p-6 md:p-8 w-full max-w-none bg-[#f0f2f5] dark:bg-slate-950 transition-colors">
+        <main className="flex-1 p-6 md:p-8 w-full max-w-none bg-[#f0f2f5] dark:bg-[var(--bg)] transition-colors">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeRoute}

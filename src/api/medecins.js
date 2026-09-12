@@ -73,6 +73,27 @@ export async function getMedecinById(token, id) {
   return response.json();
 }
 
+export async function getMedecinEvolution(token, medecinId) {
+  logger.info('Chargement évolution médecin', { medecinId });
+
+  const response = await fetch(`${API_BASE}/api/medecins/${medecinId}/evolution`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await parseError(response);
+    logger.warn('Échec chargement évolution médecin', {
+      status: error.status,
+      medecinId,
+    });
+    throw error;
+  }
+
+  return response.json();
+}
+
 export async function getMedecinByCode(token, code) {
   const normalizedCode = String(code ?? '').trim().toUpperCase();
   logger.info('Recherche médecin par code', { code: normalizedCode });

@@ -57,6 +57,7 @@ function normalizeUserForm(user) {
     phone: user?.phone ?? "",
     roleId: user?.roleId ?? "",
     enabled: user?.enabled ?? true,
+    avatar: user?.avatar ?? "",
   };
 }
 
@@ -77,6 +78,34 @@ function getUserStatus(user) {
   if (user?.status === "BLOQUE" || (user?.accountLocked && !user?.lockedAt)) return "BLOQUE";
   if (user?.status === "SUSPENDU" || user?.accountLocked) return "SUSPENDU";
   return user?.enabled === false ? "DESACTIVE" : "ACTIF";
+}
+
+function getUserDisplayName(user) {
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
+  return fullName || user?.username || "Utilisateur";
+}
+
+function getUserInitials(user) {
+  const parts = getUserDisplayName(user).split(/\s+/).filter(Boolean);
+  const initials = parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
+  return initials || (user?.username?.slice(0, 2).toUpperCase() || "U");
+}
+
+function getUserAvatarPalette(user) {
+  const palette = [
+    { bg: "linear-gradient(135deg, #14b8a6 0%, #0f766e 100%)", text: "#f0fdfa" },
+    { bg: "linear-gradient(135deg, #60a5fa 0%, #1d4ed8 100%)", text: "#eff6ff" },
+    { bg: "linear-gradient(135deg, #fbbf24 0%, #d97706 100%)", text: "#fff7ed" },
+    { bg: "linear-gradient(135deg, #f472b6 0%, #be185d 100%)", text: "#fdf2f8" },
+    { bg: "linear-gradient(135deg, #a78bfa 0%, #6d28d9 100%)", text: "#f5f3ff" },
+    { bg: "linear-gradient(135deg, #34d399 0%, #047857 100%)", text: "#ecfdf5" },
+  ];
+
+  const seed = (user?.username || getUserDisplayName(user) || "user")
+    .split("")
+    .reduce((sum, char) => sum + char.charCodeAt(0), 0);
+
+  return palette[seed % palette.length];
 }
 
 function dataList(value) {
@@ -455,8 +484,25 @@ function UserDrawer({ user, roles, menus, saving, formError, passwordPolicy, onC
   const { token } = useAuth();
   const [stateSaving, setStateSaving] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
+  const fileInputRef = useRef(null);
   const set = (key, value) =>
     setForm((current) => ({ ...current, [key]: value }));
+
+  const handleAvatarUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      set("avatar", reader.result || "");
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
+
+  const handleRemoveAvatar = () => {
+    set("avatar", "");
+  };
   const applyState = async (action, minutes) => {
     setStateSaving(true);
     if (action === "suspend") await suspendUser(token, user.id, minutes);
@@ -507,6 +553,43 @@ function UserDrawer({ user, roles, menus, saving, formError, passwordPolicy, onC
             onSave(form);
           }}
         >
+          <div className="sm:col-span-2 flex items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-gradient-to-br from-teal-500 to-emerald-700 text-lg font-black text-white shadow-sm">
+              {form.avatar ? (
+                <img src={form.avatar} alt="Avatar utilisateur" className="h-full w-full object-cover" />
+              ) : (
+                <span>{getUserInitials(form)}</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-bold text-slate-800">Photo utilisateur</span>
+              <div className="flex gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                  id="admin-user-avatar-upload"
+                />
+                <label
+                  htmlFor="admin-user-avatar-upload"
+                  className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-bold text-teal-700 hover:bg-teal-100"
+                >
+                  {form.avatar ? "Changer l’image" : "Ajouter une image"}
+                </label>
+                {form.avatar && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveAvatar}
+                    className="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100"
+                  >
+                    Retirer
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
           <Field label="Nom d’utilisateur" required>
             <Input
               required
@@ -814,6 +897,7 @@ export default function AdministrationPage({ mode = "roles" }) {
           email: form.email.trim(),
           phone: form.phone.trim(),
           enabled: form.enabled,
+          avatar: form.avatar ?? null,
         };
         if (form.password) body.password = form.password;
         const result = editing?.id
@@ -1004,8 +1088,27 @@ export default function AdministrationPage({ mode = "roles" }) {
                       </tr>
                     ) : (
                       <tr key={item.id} className="cursor-pointer hover:bg-teal-50/30" onClick={() => setEditing({ ...item, roleId: item.roles?.idRole ?? "" })}>
-                        <td className="px-5 py-4 font-bold text-slate-900">
-                          {item.username}
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            {item.avatar ? (
+                              <img
+                                src={item.avatar}
+                                alt={getUserDisplayName(item)}
+                                className="h-10 w-10 rounded-full border border-slate-200 object-cover"
+                              />
+                            ) : (
+                              <div
+                                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-sm font-black"
+                                style={{
+                                  background: getUserAvatarPalette(item).bg,
+                                  color: getUserAvatarPalette(item).text,
+                                }}
+                              >
+                                {getUserInitials(item)}
+                              </div>
+                            )}
+                            <span className="font-bold text-slate-900">{item.username}</span>
+                          </div>
                         </td>
                         <td className="px-5 py-4 text-slate-700">
                           {item.firstName} {item.lastName}

@@ -71,6 +71,43 @@ export function AuthProvider({ children }) {
     refreshProfile();
   }, [refreshProfile]);
 
+  useEffect(() => {
+    if (!token) return undefined;
+
+    const expiresAt = decodeTokenPayload(token)?.exp * 1000;
+    if (!expiresAt || expiresAt <= Date.now()) {
+      setToken(null);
+      setUserProfile(null);
+      localStorage.removeItem(TOKEN_KEY);
+      return undefined;
+    }
+
+    const expirationTimer = window.setTimeout(() => {
+      logger.info('Session expirée, déconnexion automatique');
+      localStorage.removeItem(TOKEN_KEY);
+      setToken(null);
+      setUserProfile(null);
+      window.history.replaceState({}, '', '/');
+    }, expiresAt - Date.now());
+
+    const logRemainingTokenTime = () => {
+      const remainingMs = Math.max(0, expiresAt - Date.now());
+      const remainingMinutes = Math.ceil(remainingMs / 60000);
+      logger.info('Temps restant avant expiration du token', {
+        remainingMinutes,
+        remainingSeconds: Math.ceil(remainingMs / 1000),
+      });
+    };
+
+    logRemainingTokenTime();
+    const remainingTimeLogger = window.setInterval(logRemainingTokenTime, 2 * 60 * 1000);
+
+    return () => {
+      window.clearTimeout(expirationTimer);
+      window.clearInterval(remainingTimeLogger);
+    };
+  }, [token]);
+
   const updateUserProfile = useCallback(async (data) => {
     if (!token) return null;
     const updated = await updateProfileApi(token, data);
@@ -96,9 +133,9 @@ export function AuthProvider({ children }) {
     return jwt;
   }, [persistToken]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(({ notifyBackend = true } = {}) => {
     logger.info('Déconnexion');
-    if (token) {
+    if (token && notifyBackend) {
       logoutApi(token).catch(() => logger.warn('Impossible de journaliser la déconnexion'));
     }
     localStorage.removeItem(TOKEN_KEY);
@@ -115,7 +152,7 @@ export function AuthProvider({ children }) {
       const headers = args[1]?.headers ?? (request instanceof Request ? request.headers : undefined);
       const hasBearer = headers && (typeof headers.get === 'function' ? headers.get('Authorization') : headers.Authorization);
       if (response.status === 401 && hasBearer) {
-        logout();
+        logout({ notifyBackend: false });
       }
       return response;
     };
