@@ -6,6 +6,7 @@ const DEFAULT_FORM = {
   dureeSessionMinutes: '', dureeInactiviteJours: '', mdpLongueurMinimale: '',
   mdpExigeMajuscule: false, mdpExigeChiffre: false, mdpExigeCaractereSpecial: false,
   maxTentativesConnexion: '', dureeBlocageMinutes: '15', journalConnexionActif: true,
+  bridgeGoalTarget: '5000000',
 };
 
 export default function SettingsPage() {
@@ -35,23 +36,24 @@ export default function SettingsPage() {
     event.preventDefault();
     setError(null);
     setMessage(null);
-    const integerFields = ['dureeSessionMinutes', 'dureeInactiviteJours', 'mdpLongueurMinimale', 'maxTentativesConnexion', 'dureeBlocageMinutes'];
+    const integerFields = ['dureeSessionMinutes', 'dureeInactiviteJours', 'mdpLongueurMinimale', 'maxTentativesConnexion', 'dureeBlocageMinutes', 'bridgeGoalTarget'];
     const values = Object.fromEntries(integerFields.map((key) => [key, Number(form[key])]));
     if (!Number.isInteger(values.dureeSessionMinutes) || values.dureeSessionMinutes <= 0
       || !Number.isInteger(values.dureeInactiviteJours) || values.dureeInactiviteJours <= 0
       || !Number.isInteger(values.mdpLongueurMinimale) || values.mdpLongueurMinimale <= 0
       || !Number.isInteger(values.maxTentativesConnexion) || values.maxTentativesConnexion <= 0
-      || !Number.isInteger(values.dureeBlocageMinutes) || values.dureeBlocageMinutes < 0) {
-      setError('Les valeurs doivent être des entiers positifs; la durée de blocage peut être à zéro.');
+      || !Number.isInteger(values.dureeBlocageMinutes) || values.dureeBlocageMinutes < 0
+      || !Number.isInteger(values.bridgeGoalTarget) || values.bridgeGoalTarget <= 0) {
+      setError('Les valeurs doivent être des entiers positifs; la durée de blocage peut être à zéro et l’objectif doit être strictement positif.');
       return;
     }
     if (!window.confirm('Ces réglages s’appliqueront à tous les utilisateurs. Confirmer la sauvegarde ?')) return;
 
     setSaving(true);
     try {
-      const settings = await updateSettings(token, { ...values, mdpExigeMajuscule: form.mdpExigeMajuscule, mdpExigeChiffre: form.mdpExigeChiffre, mdpExigeCaractereSpecial: form.mdpExigeCaractereSpecial, journalConnexionActif: form.journalConnexionActif });
+      const settings = await updateSettings(token, { ...values, mdpExigeMajuscule: form.mdpExigeMajuscule, mdpExigeChiffre: form.mdpExigeChiffre, mdpExigeCaractereSpecial: form.mdpExigeCaractereSpecial, journalConnexionActif: form.journalConnexionActif, bridgeGoalTarget: values.bridgeGoalTarget });
       setMetadata({ updatedAt: settings.updatedAt, updatedBy: settings.updatedBy });
-      setMessage('Paramètres enregistrés. Les prochains tokens utiliseront la nouvelle durée de session.');
+      setMessage('Paramètres enregistrés. Le nouvel objectif Bridge to Goal est maintenant actif.');
     } catch (err) {
       setError(err.message ?? 'Impossible d’enregistrer les paramètres');
     } finally {
@@ -108,6 +110,13 @@ export default function SettingsPage() {
               <legend className="px-1 text-base font-black text-slate-900">Tentatives de connexion</legend>
               <label className="grid gap-2 text-xs font-bold uppercase tracking-wide text-slate-500"><span>Nombre maximal de tentatives</span><input type="number" min="1" step="1" value={form.maxTentativesConnexion} required onChange={(e) => setForm({ ...form, maxTentativesConnexion: e.target.value })} className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" /></label>
               <label className="grid gap-2 text-xs font-bold uppercase tracking-wide text-slate-500"><span>Durée du blocage <em className="font-normal normal-case tracking-normal text-slate-400">0 = permanent</em></span><input type="number" min="0" step="1" value={form.dureeBlocageMinutes} onChange={(e) => setForm({ ...form, dureeBlocageMinutes: e.target.value })} className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" /></label>
+            </fieldset>
+            <fieldset className="grid gap-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:grid-cols-1 sm:p-5">
+              <legend className="px-1 text-base font-black text-slate-900">Bridge to Goal</legend>
+              <label className="grid gap-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                <span>Objectif global</span>
+                <input type="number" min="1" step="1000" value={form.bridgeGoalTarget} required onChange={(e) => setForm({ ...form, bridgeGoalTarget: e.target.value })} className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10" />
+              </label>
             </fieldset>
             <div className="flex flex-col gap-4 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
               {metadata.updatedAt ? <p className="text-xs text-slate-500">Dernière modification par <strong className="text-slate-700">{metadata.updatedBy ?? 'système'}</strong><br />{new Date(metadata.updatedAt).toLocaleString('fr-FR')}</p> : <span />}
