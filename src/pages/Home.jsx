@@ -11,6 +11,10 @@ import AdministrationPage from './Administration/AdministrationPage.jsx';
 import SettingsPage from './Administration/SettingsPage.jsx';
 import UserSettingsPage from './UserSettings/UserSettingsPage.jsx';
 import VactisWorkflow from '../components/VactisWorkflow.tsx';
+import AlertesPage from './Alertes/AlertesPage.jsx';
+import RecommandationsPage from './Recommandations/RecommandationsPage.jsx';
+import BridgeToGoalPage from './BridgeToGoal/BridgeToGoalPage.jsx';
+import RapportCommercialPage from './RapportCommercial/RapportCommercialPage.jsx';
 
 const workflowSteps = [
   ['Entrée DATA', 'Facturation, profils et retours terrain', 'Collecte des signaux disponibles pour chaque médecin.'],
@@ -92,6 +96,16 @@ function isRouteAllowed(route, allowedRoutes) {
     return true;
   }
 
+  if (
+    route === '/alertes' ||
+    route === '/alertes-hebdo' ||
+    route === '/recommandations' ||
+    route === '/bridge-to-goal' ||
+    route === '/rapport-commercial'
+  ) {
+    return true;
+  }
+
   return allowedRoutes.includes(route);
 }
 
@@ -132,6 +146,21 @@ function resolvePageContent(activeRoute, username, navigate) {
     return <SettingsPage />;
   }
 
+  if (activeRoute === '/alertes' || activeRoute === '/alertes-hebdo') {
+    return <AlertesPage />;
+  }
+
+  if (activeRoute === '/recommandations') {
+    return <RecommandationsPage />;
+  }
+
+  if (activeRoute === '/bridge-to-goal') {
+    return <BridgeToGoalPage />;
+  }
+
+  if (activeRoute === '/rapport-commercial') {
+    return <RapportCommercialPage />;
+  }
 
   if (isPublicRoute(activeRoute)) {
     return (
