@@ -38,6 +38,11 @@ export const updateSettings = (token, settings) => request('/api/admin/settings'
   body: JSON.stringify(settings),
 });
 
+export const getBridgeGoalTarget = (token) => request('/api/admin/settings/bridge-goal-target', token);
+export const updateBridgeGoalTarget = (token, target) => request(`/api/admin/settings/bridge-goal-target?target=${encodeURIComponent(target)}`, token, {
+  method: 'PUT',
+});
+
 export const getConnexionLogs = (token, filters = {}) => {
   const params = new URLSearchParams({ page: filters.page ?? 0, size: filters.size ?? 10 });
   if (filters.userId) params.set('userId', filters.userId);
