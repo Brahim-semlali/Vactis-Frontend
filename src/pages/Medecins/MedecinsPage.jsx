@@ -9,7 +9,7 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts';
-import { getMedecinByCode, getMedecinEvolution, getMedecins, patchNoteInput } from '../../api/medecins.js';
+import { getMedecinByCode, getMedecinById, getMedecinEvolution, getMedecins, patchNoteInput } from '../../api/medecins.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 
@@ -521,6 +521,21 @@ export default function MedecinsPage() {
       detail.open = true;
     });
   }, [isExplanationOpen, selectedMedecin]);
+
+  useEffect(() => {
+    const targetId = sessionStorage.getItem('vactis_selected_medecin_id');
+    if (targetId && token) {
+      sessionStorage.removeItem('vactis_selected_medecin_id');
+      getMedecinById(token, targetId)
+        .then((doc) => {
+          if (doc) {
+            setSelectedMedecin(doc);
+            setViewMode('detail');
+          }
+        })
+        .catch(() => {});
+    }
+  }, [token]);
 
   // Sauvegarde de la position exacte de scroll avant sélection
   const lastScrollPosition = useRef(0);
