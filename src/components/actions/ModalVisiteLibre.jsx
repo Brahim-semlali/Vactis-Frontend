@@ -16,6 +16,8 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
   const [actionRealisee, setActionRealisee] = useState(true);
   const [motifNonRealisation, setMotifNonRealisation] = useState('');
   const [qualification, setQualification] = useState('FAVORABLE');
+  const [dateDepart, setDateDepart] = useState('');
+  const [dateRetourPrevue, setDateRetourPrevue] = useState('');
   const [commentaire, setCommentaire] = useState('');
   const [noteTerrain, setNoteTerrain] = useState('');
   const [prochaineAction, setProchaineAction] = useState('');
@@ -48,6 +50,16 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
       return;
     }
 
+    if (actionRealisee && !qualification) {
+      setErrorMsg('La qualification est obligatoire après une action réalisée.');
+      return;
+    }
+
+    if (qualification === 'CONGE_ABSENCE' && (!dateDepart || (dateRetourPrevue && dateRetourPrevue < dateDepart))) {
+      setErrorMsg('La date de départ est obligatoire et la date de retour doit être postérieure.');
+      return;
+    }
+
     onSubmit({
       medecinId: useExisting ? parseInt(selectedMedecinId, 10) : null,
       nomMedecin: !useExisting ? nomMedecin : null,
@@ -58,6 +70,8 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
       actionRealisee,
       motifNonRealisation: actionRealisee ? null : motifNonRealisation,
       qualification,
+      dateDepart: qualification === 'CONGE_ABSENCE' ? dateDepart : null,
+      dateRetourPrevue: qualification === 'CONGE_ABSENCE' ? (dateRetourPrevue || null) : null,
       commentaire,
       noteTerrain: noteTerrain ? parseFloat(noteTerrain) : null,
       prochaineAction,
@@ -222,9 +236,23 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
                 <option value="NEUTRE">Neutre</option>
                 <option value="DEFAVORABLE">Défavorable</option>
                 <option value="RECLAMATION">Réclamation</option>
+                <option value="CONGE_ABSENCE">Congé / Absence temporaire</option>
               </select>
             </div>
           </div>
+
+          {qualification === 'CONGE_ABSENCE' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-2xl bg-sky-50 border border-sky-200">
+              <div>
+                <label className="block text-xs font-bold text-sky-900 uppercase mb-1">Date de départ *</label>
+                <input type="date" required value={dateDepart} onChange={(e) => setDateDepart(e.target.value)} className="w-full rounded-xl border border-sky-300 p-2.5 bg-white font-semibold" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-sky-900 uppercase mb-1">Date de retour prévue</label>
+                <input type="date" min={dateDepart || undefined} value={dateRetourPrevue} onChange={(e) => setDateRetourPrevue(e.target.value)} className="w-full rounded-xl border border-sky-300 p-2.5 bg-white font-semibold" />
+              </div>
+            </div>
+          )}
 
           {!actionRealisee && (
             <div>

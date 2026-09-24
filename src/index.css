@@ -7440,3 +7440,45 @@ html.dark .activite-page .activite-n4-table td[style] {
 
 
 /* Les styles complets du mode sombre sont désormais centralisés dans src/dark-mode.css */
+
+/* ── Zone Intelligence : Leaflet custom styling ── */
+.custom-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-div-icon.cursor-grab {
+  cursor: grab;
+}
+
+.custom-div-icon.cursor-grab:active {
+  cursor: grabbing;
+}
+
+.vactis-map-popup .leaflet-popup-content-wrapper {
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  padding: 0.25rem;
+}
+
+.vactis-map-popup .leaflet-popup-tip {
+  background: #ffffff;
+}
+
+.vactis-map-popup .leaflet-popup-content {
+  margin: 0.75rem;
+  line-height: 1.4;
+}
+
+html.dark .vactis-map-popup .leaflet-popup-content-wrapper {
+  background: #0f172a;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+html.dark .vactis-map-popup .leaflet-popup-tip {
+  background: #0f172a;
+}

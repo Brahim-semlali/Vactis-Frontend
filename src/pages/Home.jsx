@@ -15,6 +15,7 @@ import AlertesPage from './Alertes/AlertesPage.jsx';
 import RecommandationsPage from './Recommandations/RecommandationsPage.jsx';
 import BridgeToGoalPage from './BridgeToGoal/BridgeToGoalPage.jsx';
 import RapportCommercialPage from './RapportCommercial/RapportCommercialPage.jsx';
+import ZoneIntelligencePage from './ZoneIntelligence/ZoneIntelligencePage.jsx';
 
 const workflowSteps = [
   ['Entrée DATA', 'Facturation, profils et retours terrain', 'Collecte des signaux disponibles pour chaque médecin.'],
@@ -101,7 +102,8 @@ function isRouteAllowed(route, allowedRoutes) {
     route === '/alertes-hebdo' ||
     route === '/recommandations' ||
     route === '/bridge-to-goal' ||
-    route === '/rapport-commercial'
+    route === '/rapport-commercial' ||
+    route === '/zone-intelligence'
   ) {
     return true;
   }
@@ -160,6 +162,10 @@ function resolvePageContent(activeRoute, username, navigate) {
 
   if (activeRoute === '/rapport-commercial') {
     return <RapportCommercialPage />;
+  }
+
+  if (activeRoute === '/zone-intelligence') {
+    return <ZoneIntelligencePage navigate={navigate} />;
   }
 
   if (isPublicRoute(activeRoute)) {
