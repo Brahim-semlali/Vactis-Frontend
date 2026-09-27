@@ -4,6 +4,8 @@ import {
   getMedecinsSansLocalisation,
   updateMedecinLocalisation,
   getAgencesConcurrentes,
+  getLaboratoireLocation,
+  updateLaboratoireLocation,
   createAgenceConcurrente,
   updateAgenceConcurrente,
   deleteAgenceConcurrente,
@@ -53,6 +55,41 @@ describe('zoneIntelligence API', () => {
       expect.objectContaining({
         method: 'PATCH',
         body: JSON.stringify({ latitude: 31.63, longitude: -7.99 }),
+      })
+    );
+  });
+
+  it('fetches the laboratory location', async () => {
+    const location = { latitude: 31.63, longitude: -7.99 };
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: () => Promise.resolve(JSON.stringify(location)),
+    });
+
+    await expect(getLaboratoireLocation('dummy-token')).resolves.toEqual(location);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/zone-intelligence/laboratoire'),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer dummy-token' }),
+      })
+    );
+  });
+
+  it('saves the laboratory location via PUT', async () => {
+    const location = { latitude: 31.63, longitude: -7.99 };
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: () => Promise.resolve(JSON.stringify(location)),
+    });
+
+    await expect(updateLaboratoireLocation('admin-token', location)).resolves.toEqual(location);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/zone-intelligence/laboratoire'),
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify(location),
       })
     );
   });
