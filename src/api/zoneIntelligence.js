@@ -52,6 +52,15 @@ export const updateMedecinLocalisation = (token, medecinId, { latitude, longitud
 export const getAgencesConcurrentes = (token) =>
   request('/api/agences-concurrentes', token);
 
+export const getLaboratoireLocation = (token) =>
+  request('/api/zone-intelligence/laboratoire', token);
+
+export const updateLaboratoireLocation = (token, { latitude, longitude }) =>
+  request('/api/zone-intelligence/laboratoire', token, {
+    method: 'PUT',
+    body: JSON.stringify({ latitude, longitude }),
+  });
+
 export const createAgenceConcurrente = (token, data) =>
   request('/api/agences-concurrentes', token, {
     method: 'POST',
