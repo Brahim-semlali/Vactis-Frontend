@@ -19,6 +19,7 @@ import {
   Eye,
   EyeOff,
   Navigation,
+  Cross,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import {
@@ -26,6 +27,8 @@ import {
   getMedecinsSansLocalisation,
   updateMedecinLocalisation,
   getAgencesConcurrentes,
+  getLaboratoireLocation,
+  updateLaboratoireLocation,
   createAgenceConcurrente,
   updateAgenceConcurrente,
   deleteAgenceConcurrente,
@@ -132,6 +135,16 @@ function createCompetitorPinIcon() {
   });
 }
 
+function createLaboratoryPinIcon() {
+  return L.divIcon({
+    className: 'custom-div-icon laboratory-pin',
+    html: '<div style="width:38px;height:38px;border:3px solid white;border-radius:50% 50% 50% 0;background:#0f766e;transform:rotate(-45deg);box-shadow:0 2px 6px #0006;display:grid;place-items:center"><span style="color:white;font-size:21px;font-weight:900;transform:rotate(45deg)">+</span></div>',
+    iconSize: [38, 38],
+    iconAnchor: [19, 36],
+    popupAnchor: [0, -34],
+  });
+}
+
 // Création d'étiquette visuelle pour les quartiers de Marrakech
 function createQuartierLabelIcon(name) {
   return L.divIcon({
@@ -181,6 +194,7 @@ export default function ZoneIntelligencePage({ navigate }) {
   // Données
   const [medecins, setMedecins] = useState([]);
   const [agences, setAgences] = useState([]);
+  const [laboratoireLocation, setLaboratoireLocation] = useState(null);
   const [medecinsSansCoords, setMedecinsSansCoords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -202,6 +216,7 @@ export default function ZoneIntelligencePage({ navigate }) {
 
   // Mode ciblage positionnement médecin : { id, nom, prenom } | null
   const [positioningDoctor, setPositioningDoctor] = useState(null);
+  const [laboratoryPlacementActive, setLaboratoryPlacementActive] = useState(false);
 
   // Formulaire d'ajout / modification d'agence concurrente
   const [agencyModalOpen, setAgencyModalOpen] = useState(false);
@@ -235,15 +250,17 @@ export default function ZoneIntelligencePage({ navigate }) {
     setLoading(true);
     setError(null);
     try {
-      const [docsGeo, listAgences, docsSansLoc] = await Promise.all([
+      const [docsGeo, listAgences, docsSansLoc, labLocation] = await Promise.all([
         getMedecinsGeolocalises(token),
         getAgencesConcurrentes(token),
         isAdmin ? getMedecinsSansLocalisation(token) : Promise.resolve([]),
+        getLaboratoireLocation(token),
       ]);
 
       setMedecins(docsGeo || []);
       setAgences(listAgences || []);
       setMedecinsSansCoords(docsSansLoc || []);
+      setLaboratoireLocation(labLocation || null);
     } catch (err) {
       setError(err.message || 'Impossible de charger les données cartographiques');
     } finally {
@@ -288,6 +305,21 @@ export default function ZoneIntelligencePage({ navigate }) {
         return;
       }
 
+      if (laboratoryPlacementActive && isAdmin) {
+        try {
+          const location = await updateLaboratoireLocation(token, {
+            latitude: formattedLat,
+            longitude: formattedLng,
+          });
+          setLaboratoireLocation(location);
+          setLaboratoryPlacementActive(false);
+          showToast('Localisation du laboratoire enregistrée.');
+        } catch (err) {
+          showToast(`Erreur lors de l’enregistrement : ${err.message}`, 4000);
+        }
+        return;
+      }
+
       // Cas 2 : Mode placement direct par clic pour le formulaire d'agence
       if (agencyModalOpen && agencyClickPlacementActive) {
         setAgencyForm((prev) => ({
@@ -299,7 +331,7 @@ export default function ZoneIntelligencePage({ navigate }) {
         showToast('Coordonnées capturées depuis la carte.');
       }
     },
-    [positioningDoctor, agencyModalOpen, agencyClickPlacementActive, token, showToast]
+    [positioningDoctor, laboratoryPlacementActive, isAdmin, agencyModalOpen, agencyClickPlacementActive, token, showToast]
   );
 
   // Déplacement d'un marqueur médecin (dragend)
@@ -652,6 +684,17 @@ export default function ZoneIntelligencePage({ navigate }) {
                 <Plus className="w-3.5 h-3.5" />
                 <span>Ajouter agence</span>
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLaboratoryPlacementActive(true);
+                  showToast('Cliquez sur la carte pour placer le laboratoire.');
+                }}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <Cross className="w-3.5 h-3.5" />
+                <span>{laboratoireLocation ? 'Modifier labo' : 'Localiser le labo'}</span>
+              </button>
             </div>
           )}
         </div>
@@ -787,6 +830,17 @@ export default function ZoneIntelligencePage({ navigate }) {
               interactive={false}
             />
           ))}
+
+          {laboratoireLocation && (
+            <Marker
+              position={[laboratoireLocation.latitude, laboratoireLocation.longitude]}
+              icon={createLaboratoryPinIcon()}
+            >
+              <Popup className="vactis-map-popup">
+                <div className="p-2 font-bold text-teal-800">Laboratoire VACTIS</div>
+              </Popup>
+            </Marker>
+          )}
 
           {/* Marqueurs des Médecins */}
           {filteredMedecins.map((medecin) => {
