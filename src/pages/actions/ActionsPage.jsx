@@ -49,7 +49,8 @@ const TABLE_COLUMNS = [
   'Statut',
   'Segment',
   'Dernière note terrain',
-  'Action recommandée',
+  'Action proposée',
+  'Décision',
   'Urgence',
   'État',
   'Date visite',
@@ -572,6 +573,8 @@ export default function ActionsPage() {
   const [drawerMedecinId, setDrawerMedecinId] = useState(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [retourSuccessMessage, setRetourSuccessMessage] = useState('');
+  const [retourErrorMessage, setRetourErrorMessage] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -591,6 +594,7 @@ export default function ActionsPage() {
   // Open Saisie Retour modal
   const handleOpenSaisieRetour = (action, e) => {
     if (e) e.stopPropagation();
+    setRetourErrorMessage('');
     setActionToSubmit(action);
     setIsSaisieRetourOpen(true);
   };
@@ -599,13 +603,23 @@ export default function ActionsPage() {
   const handleSubmitRetour = async (payload) => {
     if (!token || !actionToSubmit) return;
     setIsSubmitting(true);
+    setRetourSuccessMessage('');
+    setRetourErrorMessage('');
     try {
-      await soumettreRetourTerrainApi(token, actionToSubmit.id, payload);
+      const savedAction = await soumettreRetourTerrainApi(token, actionToSubmit.id, payload);
+      if (payload.qualification === 'RECLAMATION') {
+        const claimId = savedAction?.reclamationId;
+        setRetourSuccessMessage(
+          claimId
+            ? `Réclamation #${claimId} créée. Elle est disponible dans l’interface Réclamations.`
+            : 'Réclamation créée. Elle est disponible dans l’interface Réclamations.'
+        );
+      }
       setIsSaisieRetourOpen(false);
       setActionToSubmit(null);
       loadActions();
     } catch (err) {
-      alert(err.message || 'Erreur lors de l\'enregistrement du retour terrain');
+      setRetourErrorMessage(err.message || 'Impossible d’enregistrer le retour terrain. Vérifiez les informations et réessayez.');
     } finally {
       setIsSubmitting(false);
     }
@@ -839,6 +853,15 @@ export default function ActionsPage() {
         </div>
       </div>
 
+      {retourSuccessMessage && (
+        <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          <span>{retourSuccessMessage}</span>
+          <button type="button" onClick={() => setRetourSuccessMessage('')} className="shrink-0 text-emerald-700 hover:text-emerald-900" aria-label="Fermer la confirmation">
+            <ActionsIcon name="x" size={15} />
+          </button>
+        </div>
+      )}
+
       {/* AFFICHAGE CONDITIONNEL : Masquer les filtres et les KPIs en mode 'detail' */}
       {viewMode === 'table' && (
         <>
@@ -1009,6 +1032,7 @@ export default function ActionsPage() {
                         <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-14 rounded-full" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-44" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-20" /></TableCell>
@@ -1058,7 +1082,12 @@ export default function ActionsPage() {
                                 >
                                   {formatMedecinName(action.medecin)} 🛈
                                 </div>
-                                <div className="text-xs text-slate-500 font-medium">{action.medecin?.specialite ?? '—'}</div>
+                                <div className="text-xs text-slate-500 font-medium">
+                                  {action.medecin?.specialite ?? '—'}
+                                  {(action.lieuOrganisme || action.medecin?.organisme) && (
+                                    <span className="text-slate-400"> · {action.lieuOrganisme || action.medecin?.organisme}</span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </TableCell>
@@ -1071,6 +1100,11 @@ export default function ActionsPage() {
                             <Badge variant={getBadgeVariant('segment', action.segment)}>
                               {action.segment ? `SEGMENT ${action.segment}` : '—'}
                             </Badge>
+                            {action.segment && (
+                              <div className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                {action.segment === 'A' ? 'VIP' : action.segment === 'B' ? 'Important' : action.segment === 'C' ? 'Standard' : 'Faible'}
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
                             {action.derniereNoteTerrain != null ? (
@@ -1082,13 +1116,32 @@ export default function ActionsPage() {
                             )}
                           </TableCell>
                           <TableCell className="font-semibold text-slate-800 dark:text-slate-100">
-                            {action.actionRecommandee ?? '—'}
+                            <div>{action.actionRecommandee ?? '—'}</div>
+                            {action.commentaireMoteurResume && (
+                              <div className="text-[11px] font-medium text-slate-500 mt-1 line-clamp-1" title={action.commentaireMoteurResume}>
+                                {action.commentaireMoteurResume}
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={getBadgeVariant('urgence', action.urgence)} className="gap-1">
-                              <ActionsIcon name="heartbeat" size={12} />
-                              {formatEnumLabel(action.urgence)}
-                            </Badge>
+                            {action.decisionRecommandation ? (
+                              <Badge variant="secondary">{formatEnumLabel(action.decisionRecommandation)}</Badge>
+                            ) : (
+                              <span className="text-xs font-semibold text-slate-400">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1 items-start">
+                              <Badge variant={getBadgeVariant('urgence', action.urgence)} className="gap-1">
+                                <ActionsIcon name="heartbeat" size={12} />
+                                {formatEnumLabel(action.urgence)}
+                              </Badge>
+                              {action.horizonJours != null && (
+                                <span className="inline-flex items-center text-[10px] font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-md" title={`Délai recommandé : ${action.horizonJours} jours`}>
+                                  Horizon {action.horizonJours} j
+                                </span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge variant={getBadgeVariant('etat', action.etatAction)}>
@@ -1349,15 +1402,37 @@ export default function ActionsPage() {
                 <div className="lg:col-span-6 space-y-6">
                   {/* Action Recommandée */}
                   <div className="p-6 rounded-2xl bg-sky-50/60 border border-sky-100 space-y-3">
-                    <span className="text-[11px] font-extrabold text-sky-800 uppercase tracking-wider block">
-                      Action recommandée
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-extrabold text-sky-800 uppercase tracking-wider block">
+                        Action proposée
+                      </span>
+                      {selectedAction.horizonJours != null && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-100 text-indigo-900 text-xs font-bold border border-indigo-200">
+                          ⏱️ Horizon : {selectedAction.horizonJours} jours
+                        </span>
+                      )}
+                    </div>
                     <h4 className="text-lg font-black text-sky-950">
                       {selectedAction.actionRecommandee ?? '—'}
                     </h4>
-                    <p className="text-xs text-sky-900 leading-relaxed">
-                      {selectedAction.commentaire || getActionDescription(selectedAction, selectedMedecin)}
-                    </p>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="font-extrabold uppercase tracking-wider text-slate-500">Décision</span>
+                      {selectedAction.decisionRecommandation ? (
+                        <Badge variant="secondary">{formatEnumLabel(selectedAction.decisionRecommandation)}</Badge>
+                      ) : (
+                        <span className="font-semibold text-slate-400">—</span>
+                      )}
+                    </div>
+                    {selectedAction.commentaireMoteurResume && (
+                      <div className="p-3 bg-white/90 rounded-xl border border-sky-200/70 text-xs font-bold text-sky-950">
+                        <span className="text-[10px] uppercase tracking-wider text-sky-600 block font-black mb-0.5">Résumé court</span>
+                        {selectedAction.commentaireMoteurResume}
+                      </div>
+                    )}
+                    <div className="text-xs text-sky-900 leading-relaxed space-y-1">
+                      <span className="text-[10px] uppercase tracking-wider text-slate-500 block font-black">Commentaire détaillé</span>
+                      <p>{selectedAction.commentaireMoteurDetail || selectedAction.commentaire || getActionDescription(selectedAction, selectedMedecin)}</p>
+                    </div>
                   </div>
 
                   {/* Métriques Grid */}
@@ -1592,6 +1667,8 @@ export default function ActionsPage() {
         onClose={() => setIsSaisieRetourOpen(false)}
         onSubmit={handleSubmitRetour}
         isSubmitting={isSubmitting}
+        errorMessage={retourErrorMessage}
+        onClearError={() => setRetourErrorMessage('')}
       />
 
       <ModalVisiteLibre
