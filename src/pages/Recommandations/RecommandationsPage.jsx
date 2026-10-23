@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import VactisPilotBanner from '../../components/VactisPilotBanner.jsx';
+import VactisPilotBanner from '../../components/VactisPilotBanner';
 import { getRecommandations, creerActionRecommandation } from '../../api/vactis.js';
 
 export default function RecommandationsPage() {
@@ -51,9 +51,9 @@ export default function RecommandationsPage() {
   // Current tab items
   const tabItems = useMemo(() => {
     if (!data) return [];
-    if (activeTab === 'DEVELOPPEMENT') return data.opportunitesDeveloppement ?? [];
-    if (activeTab === 'REACTIVATION') return data.medecinsAReactiver ?? [];
-    return data.profilsIrreguliersRentables ?? [];
+    if (activeTab === 'DEVELOPPEMENT') return data.developpement ?? [];
+    if (activeTab === 'REACTIVATION') return data.reactivation ?? [];
+    return data.irreguliersRentables ?? [];
   }, [data, activeTab]);
 
   // Reset selected ID when tab changes or if none selected
@@ -115,9 +115,9 @@ export default function RecommandationsPage() {
   // KPI Calculations across all recommendations
   const kpiStats = useMemo(() => {
     const all = [
-      ...(data?.opportunitesDeveloppement ?? []),
-      ...(data?.medecinsAReactiver ?? []),
-      ...(data?.profilsIrreguliersRentables ?? []),
+      ...(data?.developpement ?? []),
+      ...(data?.reactivation ?? []),
+      ...(data?.irreguliersRentables ?? []),
     ];
     const total = all.length;
     const prioriteForte = all.filter((it) => ['A'].includes((it.segment || '').toUpperCase())).length;
@@ -210,7 +210,7 @@ export default function RecommandationsPage() {
           </svg>
           <span>Développement</span>
           <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-white/20 dark:bg-slate-950/20">
-            {data?.opportunitesDeveloppement?.length ?? 0}
+            {data?.developpement?.length ?? 0}
           </span>
         </button>
 
@@ -228,7 +228,7 @@ export default function RecommandationsPage() {
           </svg>
           <span>Réactivation</span>
           <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-white/20 dark:bg-slate-950/20">
-            {data?.medecinsAReactiver?.length ?? 0}
+            {data?.reactivation?.length ?? 0}
           </span>
         </button>
 
@@ -246,7 +246,7 @@ export default function RecommandationsPage() {
           </svg>
           <span>Irréguliers</span>
           <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] bg-white/20 dark:bg-slate-950/20">
-            {data?.profilsIrreguliersRentables?.length ?? 0}
+            {data?.irreguliersRentables?.length ?? 0}
           </span>
         </button>
       </div>
@@ -439,8 +439,9 @@ export default function RecommandationsPage() {
                   filteredItems.map((item) => {
                     const isSelected = selectedItem?.medecinId === item.medecinId;
                     const segment = (item.segment || 'A').toUpperCase();
-                    const note = 5; // note potentielle qualifiée
-                    const realisationPct = Math.round(((item.caMoyenMensuel ?? 1500) / 10000) * 100);
+                    const note = item.noteTerrain ?? (item.potentielSur100 == null ? null : item.potentielSur100 / 20);
+                    const realisationPct = item.realisationObjectifPct;
+                    const sousExploitation = item.sousExploitation;
 
                     return (
                       <tr
@@ -476,23 +477,23 @@ export default function RecommandationsPage() {
 
                         <td className="py-3.5 px-4">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200/80">
-                            ACTIVITÉ À SURVEILLER
+                            {(item.statut || '—').replace(/_/g, ' ')}
                           </span>
                         </td>
 
                         <td className="py-3.5 px-3 text-center font-black text-slate-900 dark:text-white">
-                          {note}
+                          {note == null ? '—' : `${note}/5`}
                         </td>
 
                         <td className="py-3.5 px-3 text-center">
                           <span className="font-bold text-slate-700 dark:text-slate-300">
-                            {Math.min(realisationPct, 100)} %
+                            {realisationPct == null ? '—' : `${realisationPct} %`}
                           </span>
                         </td>
 
                         <td className="py-3.5 px-4">
                           <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                            Sous-exploitation forte — opportunité majeure
+                            {sousExploitation == null ? '—' : `Indice ${sousExploitation.toFixed(1)}×`}
                           </span>
                         </td>
                       </tr>
@@ -525,13 +526,15 @@ export default function RecommandationsPage() {
                     SEGMENT {selectedItem.segment || 'A'}
                   </span>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200">
-                    ACTIVITÉ À SURVEILLER
+                    {(selectedItem.statut || '—').replace(/_/g, ' ')}
                   </span>
                 </div>
 
                 <div className="mt-2.5">
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                    PAS DE SILENCE SIGNIFICATIF
+                    {selectedItem.joursSansActivite == null
+                      ? 'SILENCE NON RENSEIGNÉ'
+                      : `${selectedItem.joursSansActivite} JOURS SANS ACTIVITÉ`}
                   </span>
                 </div>
               </div>
@@ -552,7 +555,7 @@ export default function RecommandationsPage() {
                 </div>
 
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                  Forte opportunité, Segment {selectedItem.segment || 'A'} avec potentiel 5/5. Rythme actuel : 0.3x l'intervalle attendu. CA moyen observé par cas : 800 DH. Marge théorique détectée : entre 14 181 et 45 531 DH/mois. À qualifier terrain avant projection commerciale.
+                  {selectedItem.justification || 'Opportunité à qualifier à partir des données du portefeuille.'} {selectedItem.pitchCommercial || ''}
                 </p>
               </div>
 
@@ -563,7 +566,7 @@ export default function RecommandationsPage() {
                     Action proposée
                   </span>
                   <div className="font-black text-slate-850 dark:text-white text-xs">
-                    opportunité à qualifier
+                    {selectedItem.pitchCommercial || 'Opportunité à qualifier'}
                   </div>
                 </div>
 
@@ -572,7 +575,7 @@ export default function RecommandationsPage() {
                     Score valeur
                   </span>
                   <div className="text-lg font-black text-cyan-600 dark:text-cyan-400">
-                    81
+                    {selectedItem.scoreValeur == null ? '—' : selectedItem.scoreValeur}
                   </div>
                 </div>
 
@@ -581,7 +584,7 @@ export default function RecommandationsPage() {
                     Score risque
                   </span>
                   <div className="text-sm font-bold text-slate-500">
-                    —
+                    {selectedItem.scoreRisque == null ? '—' : selectedItem.scoreRisque}
                   </div>
                 </div>
 
@@ -590,7 +593,7 @@ export default function RecommandationsPage() {
                     Jours sans activité
                   </span>
                   <div className="text-sm font-black text-slate-800 dark:text-slate-200">
-                    0 j
+                    {selectedItem.joursSansActivite == null ? '—' : `${selectedItem.joursSansActivite} j`}
                   </div>
                 </div>
 
@@ -599,7 +602,7 @@ export default function RecommandationsPage() {
                     Fréquence détectée
                   </span>
                   <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    1 cas tous les 8,9 j
+                    {selectedItem.intervalleEffectif == null ? '—' : `1 cas tous les ${selectedItem.intervalleEffectif} j`}
                   </div>
                 </div>
 
@@ -608,7 +611,7 @@ export default function RecommandationsPage() {
                     Réalisation objectif
                   </span>
                   <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    15 %
+                    {selectedItem.realisationObjectifPct == null ? '—' : `${selectedItem.realisationObjectifPct} %`}
                   </div>
                 </div>
 
@@ -617,7 +620,7 @@ export default function RecommandationsPage() {
                     Potentiel théorique
                   </span>
                   <div className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                    14 181 MAD
+                    {selectedItem.scoreOpportunite == null ? '—' : selectedItem.scoreOpportunite.toLocaleString('fr-FR')}
                   </div>
                 </div>
 
@@ -626,7 +629,7 @@ export default function RecommandationsPage() {
                     CA / Cas
                   </span>
                   <div className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    {(selectedItem.caMoyenMensuel ?? 69100).toLocaleString('fr-FR')} MAD / {selectedItem.totalCasHistorique ?? 87} cas
+                    {(selectedItem.caMoyenMensuel ?? 0).toLocaleString('fr-FR')} MAD/mois / {selectedItem.totalCasHistorique ?? 0} cas
                   </div>
                 </div>
               </div>
