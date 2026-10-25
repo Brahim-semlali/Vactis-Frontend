@@ -1,9 +1,29 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import VactisPilotBanner from '../../components/VactisPilotBanner.jsx';
-import { getBridgeToGoal } from '../../api/vactis.js';
-import { getBridgeGoalTarget, updateBridgeGoalTarget } from '../../api/settings.js';
+import VactisPilotBanner from '../../components/VactisPilotBanner';
+import { getBridgeGoalMonthlyTarget, getBridgeToGoal, saveBridgeGoalMonthlyTarget } from '../../api/vactis.js';
 import { getMoisDisponibles } from '../../api/activite.js';
+import { getSettings, updateBridgeGoalTarget } from '../../api/settings.js';
+import { getLatestCompletedMonth } from '../../utils/reportingPeriod.js';
+
+const COVERAGE_DECISIONS = {
+  PORTEFEUILLE_SUFFISANT: {
+    title: 'Portefeuille suffisant',
+    description: 'Le potentiel interne identifié couvre le gap projeté. La prospection externe n’est pas prioritaire.',
+  },
+  PROSPECTION_CIBLEE: {
+    title: 'Prospection ciblée',
+    description: 'Le portefeuille couvre au moins la moitié du gap. Compléter par une prospection ciblée.',
+  },
+  PROSPECTION_INDISPENSABLE: {
+    title: 'Prospection indispensable',
+    description: 'Le portefeuille couvre une partie du gap, mais la prospection est nécessaire pour atteindre l’objectif.',
+  },
+  ACQUISITION_NECESSAIRE: {
+    title: 'Acquisition nécessaire',
+    description: 'La couverture interne reste inférieure à 25 %. L’acquisition de nouveaux médecins est nécessaire.',
+  },
+};
 
 export default function BridgeToGoalPage() {
   const { token, userProfile } = useAuth();
@@ -20,14 +40,18 @@ export default function BridgeToGoalPage() {
 
   // User Target input
   const [targetInput, setTargetInput] = useState('');
-  const targetInputRef = useRef('');
-  useEffect(() => {
-    targetInputRef.current = targetInput;
-  }, [targetInput]);
+  const [targetMethod, setTargetMethod] = useState('DIRECT');
   const [editingTarget, setEditingTarget] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
   const [goalMessage, setGoalMessage] = useState('');
   const [goalError, setGoalError] = useState('');
+  const [editingAnnualTarget, setEditingAnnualTarget] = useState(false);
+  const [annualTargetMethod, setAnnualTargetMethod] = useState('DIRECT');
+  const [annualTargetInput, setAnnualTargetInput] = useState('');
+  const [annualReferenceRevenue, setAnnualReferenceRevenue] = useState(0);
+  const [annualSaving, setAnnualSaving] = useState(false);
+  const [annualMessage, setAnnualMessage] = useState('');
+  const [annualError, setAnnualError] = useState('');
   const [moisInput, setMoisInput] = useState('');
   const [moisDisponibles, setMoisDisponibles] = useState([]);
 
@@ -38,17 +62,14 @@ export default function BridgeToGoalPage() {
     setLoading(true);
     setError(null);
     try {
-      const savedTarget = isAdmin ? await getBridgeGoalTarget(token) : null;
-      const currentTarget = savedTarget ?? targetInputRef.current;
-      const res = await getBridgeToGoal(token, {
-        target: currentTarget ? parseInt(currentTarget, 10) : undefined,
-        mois: moisInput || undefined,
-      });
+      const res = await getBridgeToGoal(token, { mois: moisInput || undefined });
       setData(res);
       if (isAdmin) {
-        const nextTarget = savedTarget ?? res?.targetBudget ?? currentTarget;
-        setTargetInput(String(nextTarget));
-        targetInputRef.current = String(nextTarget);
+        const monthlyTarget = moisInput ? await getBridgeGoalMonthlyTarget(token, moisInput) : null;
+        setTargetMethod(monthlyTarget?.method ?? 'DIRECT');
+        setTargetInput(monthlyTarget?.value != null
+          ? String(monthlyTarget.value)
+          : String(res?.monthlyTargetBudget ?? Math.round((res?.targetBudget ?? 0) / 12)));
       }
     } catch (e) {
       setError(e.message);
@@ -64,13 +85,29 @@ export default function BridgeToGoalPage() {
         if (!actif) return;
         const disponibles = Array.isArray(mois) ? mois : [];
         setMoisDisponibles(disponibles);
-        if (disponibles.length > 0) setMoisInput((current) => current || disponibles[0]);
+        if (disponibles.length > 0) setMoisInput((current) => current || getLatestCompletedMonth(disponibles));
       })
       .catch(() => {
         if (actif) setMoisDisponibles([]);
       });
     return () => { actif = false; };
   }, [token]);
+
+  useEffect(() => {
+    if (!isAdmin || !token) return undefined;
+    let actif = true;
+    getSettings(token)
+      .then((settings) => {
+        if (!actif) return;
+        setAnnualTargetMethod(settings.bridgeGoalMethod ?? 'DIRECT');
+        setAnnualTargetInput(String(settings.bridgeGoalInputValue ?? settings.bridgeGoalTarget ?? ''));
+        setAnnualReferenceRevenue(Number(settings.bridgeGoalReferenceRevenue ?? 0));
+      })
+      .catch((requestError) => {
+        if (actif) setAnnualError(requestError.message || 'Impossible de charger l’objectif annuel.');
+      });
+    return () => { actif = false; };
+  }, [isAdmin, token]);
 
   useEffect(() => {
     fetchData();
@@ -82,8 +119,10 @@ export default function BridgeToGoalPage() {
     }
 
     const parsed = Number(targetInput);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      setGoalError('L’objectif doit être un nombre strictement positif.');
+    if (!Number.isFinite(parsed) || (targetMethod === 'DIRECT' ? parsed <= 0 : parsed < 0)) {
+      setGoalError(targetMethod === 'DIRECT'
+        ? 'L’objectif doit être un nombre strictement positif.'
+        : 'Le pourcentage d’augmentation doit être positif ou nul.');
       return;
     }
 
@@ -92,9 +131,12 @@ export default function BridgeToGoalPage() {
     setGoalMessage('');
 
     try {
-      const saved = await updateBridgeGoalTarget(token, parsed);
-      setTargetInput(String(saved));
-      targetInputRef.current = String(saved);
+      const saved = await saveBridgeGoalMonthlyTarget(token, {
+        mois: moisInput,
+        method: targetMethod,
+        value: parsed,
+      });
+      setTargetInput(String(saved.value));
       setGoalMessage('Objectif Bridge to Goal enregistré.');
       setEditingTarget(false);
       await fetchData();
@@ -103,7 +145,38 @@ export default function BridgeToGoalPage() {
     } finally {
       setSavingGoal(false);
     }
-  }, [fetchData, isAdmin, targetInput, token]);
+  }, [fetchData, isAdmin, moisInput, targetInput, targetMethod, token]);
+
+  const annualInputNumber = Number(annualTargetInput);
+  const annualTargetPreview = annualTargetMethod === 'PERCENTAGE'
+    ? Math.round(annualReferenceRevenue * (1 + (annualInputNumber || 0) / 100))
+    : Math.round(annualInputNumber || 0);
+
+  const handleSaveAnnualTarget = useCallback(async () => {
+    if (!isAdmin) return;
+    if (!Number.isFinite(annualInputNumber)
+      || (annualTargetMethod === 'DIRECT' && annualInputNumber <= 0)
+      || (annualTargetMethod === 'PERCENTAGE' && (annualInputNumber < 0 || annualReferenceRevenue <= 0))
+      || annualTargetPreview <= 0) {
+      setAnnualError('Saisissez un objectif annuel valide. Le mode pourcentage nécessite un CA positif sur l’année précédente.');
+      return;
+    }
+
+    setAnnualSaving(true);
+    setAnnualError('');
+    setAnnualMessage('');
+    try {
+      const savedTarget = await updateBridgeGoalTarget(token, annualInputNumber, annualTargetMethod);
+      setAnnualTargetInput(annualTargetMethod === 'DIRECT' ? String(annualInputNumber) : String(annualInputNumber));
+      setAnnualMessage(`Objectif annuel enregistré : ${Number(savedTarget).toLocaleString('fr-FR')} MAD.`);
+      setEditingAnnualTarget(false);
+      await fetchData();
+    } catch (requestError) {
+      setAnnualError(requestError.message || 'Impossible d’enregistrer l’objectif annuel.');
+    } finally {
+      setAnnualSaving(false);
+    }
+  }, [annualInputNumber, annualReferenceRevenue, annualTargetMethod, annualTargetPreview, fetchData, isAdmin, token]);
 
   const caMoisTotalLabo = data?.caMoisTotal ?? 0;
   const casMoisTotalLabo = data?.casMoisTotal ?? 0;
@@ -115,7 +188,12 @@ export default function BridgeToGoalPage() {
   const caYtdReel = data?.caYtdReel ?? 0;
   const caNMoins1Comparable = data?.caNMoins1Comparable ?? 0;
   const caMoyenMensuel = data?.caMoyenMensuel ?? 0;
-  const targetAnnuel = data?.targetBudget ?? (Number(targetInput) || 0);
+  const targetAnnuel = data?.targetBudget ?? 0;
+  const objectifMoisActuel = data?.monthlyTargetBudget ?? Math.round(targetAnnuel / 12);
+  const caMoisPrecedent = data?.previousMonthRevenue ?? 0;
+  const objectifMensuelCalcule = targetMethod === 'PERCENTAGE'
+    ? Math.round(caMoisPrecedent * (1 + (Number(targetInput) || 0) / 100))
+    : (Number(targetInput) || 0);
   const objectifYtdProratise = data?.objectifYtdProratise ?? 0;
   const varianceYtd = data?.varianceYtd ?? 0;
   const varianceYtdPct = data?.varianceYtdPct ?? 0;
@@ -125,27 +203,23 @@ export default function BridgeToGoalPage() {
   const effortAdditionnelMensuel = data?.effortAdditionnelMensuel ?? 0;
 
   // Opportunités internes VACTIS dérivées des indicateurs calculés par le backend.
-  const opportunitesBlocs = [
-    {
-      titre: 'Rétention / baisse activité',
-      segment: 'RETENTION',
-      medecins: data?.nbMedecinsEnRetention ?? 0,
-      caReference: caPortefeuille,
-      potentielTheorique: data?.gainRetention ?? 0,
-      description: "Potentiel calculé à partir des médecins actuellement classés en rétention.",
-    },
-    {
-      titre: 'Sous-exploitation / développement',
-      segment: 'A/B',
-      medecins: data?.nbMedecinsDeveloppement ?? 0,
-      caReference: caPortefeuille,
-      potentielTheorique: data?.gainDeveloppement ?? 0,
-      description: 'Potentiel calculé à partir des médecins actifs des segments A et B.',
-    },
-  ];
+  const opportunitesBlocs = (data?.opportunites ?? []).map((item) => ({
+      titre: item.label,
+      segment: item.segment,
+      medecins: item.medecins,
+      caReference: item.caReference,
+      potentielTheorique: item.potentielTheorique,
+      description: item.description,
+    }));
 
   const totalPotentielDetecte = (data?.gainOnboarding ?? 0) + (data?.gainRetention ?? 0) + (data?.gainDeveloppement ?? 0);
   const couvertureGapPct = gapProjete > 0 ? Math.round((Math.min(totalPotentielDetecte, gapProjete) / gapProjete) * 1000) / 10 : 100;
+  const decisionCouverture = data?.decisionCouverture || (
+    couvertureGapPct >= 100 ? 'PORTEFEUILLE_SUFFISANT'
+      : couvertureGapPct >= 50 ? 'PROSPECTION_CIBLEE'
+        : couvertureGapPct >= 25 ? 'PROSPECTION_INDISPENSABLE' : 'ACQUISITION_NECESSAIRE'
+  );
+  const recommandationCouverture = COVERAGE_DECISIONS[decisionCouverture] || COVERAGE_DECISIONS.ACQUISITION_NECESSAIRE;
   const gapRestantApresActivation = Math.max(0, gapProjete - totalPotentielDetecte);
   const nombreBlocsOpportunites = opportunitesBlocs.length;
   const nombreMedecinsOpportunites = opportunitesBlocs.reduce((total, bloc) => total + bloc.medecins, 0);
@@ -158,18 +232,14 @@ export default function BridgeToGoalPage() {
     const couverture = gapProjete > 0 ? Math.round(Math.min(potentielActivable, gapProjete) / gapProjete * 1000) / 10 : 100;
     return { ...scenario, potentielActivable, couverture };
   });
-  const caParAction = data?.actionsRequises > 0 && gapProjete > 0
-    ? Math.round(gapProjete / data.actionsRequises)
-    : 0;
-
-  const selectedBlock = opportunitesBlocs[selectedBlockIndex] || opportunitesBlocs[0];
+  const selectedBlock = opportunitesBlocs[selectedBlockIndex] || opportunitesBlocs[0] || null;
 
   return (
     <div className="space-y-6 max-w-[1700px] mx-auto pb-16 font-sans antialiased text-slate-800 dark:text-slate-100">
       {/* 1. Header institutionnel Pilote VACTIS */}
       <VactisPilotBanner profil="Laboratoire d'anatomopathologie — CA et cas" />
 
-      {/* 2. En-tête de la page Rapport Commercial / Bridge to Goal */}
+      {/* 2. En-tête de la page Bridge to Goal */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-xs">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
@@ -181,14 +251,14 @@ export default function BridgeToGoalPage() {
               </svg>
             </span>
             <span className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-400">
-              Lecture Commerciale d'Époque
+              Simulation & Trajectoire Budgétaire
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight">
-            Rapport commercial
+            Bridge to Goal
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium max-w-3xl">
-            Bridge to Goal / Variance-to-Plan Analysis YTD + cumul de l'année en cours depuis le 1er janvier jusqu'au mois actif.
+            Prospective financière, analyse Run-Rate d'atterrissage et plan d'action pour combler l'écart vers l'objectif annuel.
           </p>
 
           <div className="flex flex-wrap items-center gap-2 pt-2 text-xs font-semibold">
@@ -204,38 +274,26 @@ export default function BridgeToGoalPage() {
                 ? <option value="">Aucun mois disponible</option>
                 : moisDisponibles.map((mois) => <option key={mois} value={mois}>{mois}</option>)}
             </select>
-            <span className="px-3 py-1 rounded-full bg-slate-50 dark:bg-slate-850 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 font-mono text-[10px]">
-              Workbook vactis_amana_marrakech_ca_septembre_2026
-            </span>
-            <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              Refresh récent
-            </span>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           {isAdmin && (
-            editingTarget ? (
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2">
-                <input
-                  type="number"
-                  min="1"
-                  value={targetInput}
-                  onChange={(event) => setTargetInput(event.target.value)}
-                  className="h-10 w-36 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-cyan-500"
-                />
-                <button type="button" onClick={handleSaveTarget} disabled={savingGoal} className="rounded-xl bg-cyan-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">
-                  {savingGoal ? '...' : 'Enregistrer'}
-                </button>
-                <button type="button" onClick={() => { setEditingTarget(false); setGoalError(''); setGoalMessage(''); }} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700">
-                  Annuler
-                </button>
-              </div>
+            editingAnnualTarget ? (
+              <button type="button" onClick={() => setEditingAnnualTarget(false)} className="inline-flex items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-xs font-bold text-sky-800 transition hover:bg-sky-100">
+                Fermer objectif annuel
+              </button>
             ) : (
-              <button type="button" onClick={() => setEditingTarget(true)} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer">
-                Modifier l’objectif
+              <button type="button" onClick={() => { setEditingTarget(false); setAnnualMessage(''); setAnnualError(''); setEditingAnnualTarget(true); }} className="inline-flex items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-xs font-bold text-sky-800 transition hover:bg-sky-100">
+                Objectif annuel
               </button>
             )
+          )}
+
+          {isAdmin && !editingTarget && !editingAnnualTarget && (
+            <button type="button" onClick={() => { setEditingAnnualTarget(false); setGoalError(''); setGoalMessage(''); setEditingTarget(true); }} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer">
+              Objectif du mois
+            </button>
           )}
 
           <button
@@ -252,12 +310,148 @@ export default function BridgeToGoalPage() {
         </div>
       </div>
 
+      {isAdmin && editingTarget && (
+        <section className="overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-sm dark:border-cyan-900 dark:bg-slate-900" aria-labelledby="monthly-goal-editor-title">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-cyan-100 bg-sky-50/70 px-4 py-2.5 dark:border-cyan-900/70 dark:bg-sky-950/30">
+            <div>
+              <h2 id="monthly-goal-editor-title" className="text-sm font-black text-slate-950 dark:text-white">Objectif mensuel · {moisInput || 'mois sélectionné'}</h2>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">Cible de la période, indépendante de l’objectif annuel.</p>
+            </div>
+            <span className="rounded-full border border-cyan-200 bg-white px-2.5 py-1 text-[10px] font-bold text-cyan-800 dark:border-cyan-800 dark:bg-slate-900 dark:text-cyan-200">Cible mensuelle</span>
+          </div>
+
+          <div className="grid items-end gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(230px,1.2fr)_auto]">
+            <label className="grid gap-1 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+              <span className="uppercase tracking-wide">Méthode</span>
+              <select
+                id="bridge-goal-method"
+                aria-label="Méthode de calcul mensuel"
+                value={targetMethod}
+                onChange={(event) => {
+                  setTargetMethod(event.target.value);
+                  setTargetInput('');
+                  setGoalError('');
+                }}
+                className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              >
+                <option value="DIRECT">Montant mensuel fixe</option>
+                <option value="PERCENTAGE">Pourcentage du CA précédent</option>
+              </select>
+            </label>
+            <label className="grid gap-1 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+              <span className="uppercase tracking-wide">{targetMethod === 'DIRECT' ? 'Objectif (MAD)' : 'Hausse (%)'}</span>
+              <input
+                type="number"
+                min={targetMethod === 'DIRECT' ? '0.01' : '0'}
+                step={targetMethod === 'DIRECT' ? '1' : '0.1'}
+                value={targetInput}
+                onChange={(event) => setTargetInput(event.target.value)}
+                aria-label={targetMethod === 'DIRECT' ? 'Objectif mensuel en MAD' : 'Pourcentage d’augmentation'}
+                placeholder={targetMethod === 'DIRECT' ? 'Ex. 100000' : 'Ex. 12'}
+                className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              />
+            </label>
+
+            <div className="min-h-14 rounded-lg border border-cyan-200 bg-cyan-50/70 px-3 py-2 dark:border-cyan-900 dark:bg-cyan-950/30">
+              <p className="text-[9px] font-black uppercase tracking-wide text-cyan-800 dark:text-cyan-300">Aperçu · {moisInput}</p>
+              <p className="text-base font-black text-cyan-950 dark:text-cyan-100">{objectifMensuelCalcule.toLocaleString('fr-FR')} MAD</p>
+              <p className="text-[10px] text-cyan-800/80 dark:text-cyan-200/80">
+                {targetMethod === 'PERCENTAGE'
+                  ? `CA précédent ${caMoisPrecedent.toLocaleString('fr-FR')} × (1 + ${Number(targetInput) || 0} %)`
+                  : 'Montant fixe saisi'}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 lg:flex-col lg:items-stretch">
+              <button type="button" onClick={() => { setEditingTarget(false); setGoalError(''); setGoalMessage(''); fetchData(); }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+                Annuler
+              </button>
+              <button type="button" onClick={handleSaveTarget} disabled={savingGoal} className="h-9 rounded-lg bg-cyan-700 px-3 text-xs font-bold text-white transition hover:bg-cyan-800 disabled:cursor-not-allowed disabled:opacity-50">
+                {savingGoal ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {isAdmin && editingAnnualTarget && (
+        <section className="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm dark:border-sky-900 dark:bg-slate-900" aria-labelledby="annual-goal-editor-title">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-sky-100 bg-sky-50/70 px-4 py-2.5 dark:border-sky-900/70 dark:bg-sky-950/30">
+            <div>
+              <h2 id="annual-goal-editor-title" className="text-sm font-black text-slate-950 dark:text-white">Objectif annuel de direction</h2>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400">Pilote le prorata YTD et les projections, indépendamment de la cible mensuelle.</p>
+            </div>
+            <span className="rounded-full border border-sky-200 bg-white px-2.5 py-1 text-[10px] font-bold text-sky-800 dark:border-sky-800 dark:bg-slate-900 dark:text-sky-200">Cible annuelle</span>
+          </div>
+
+          <div className="grid items-end gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(230px,1.2fr)_auto]">
+            <label className="grid gap-1 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+              <span className="uppercase tracking-wide">Méthode</span>
+              <select
+                id="bridge-annual-goal-method"
+                value={annualTargetMethod}
+                onChange={(event) => {
+                  setAnnualTargetMethod(event.target.value);
+                  setAnnualTargetInput('');
+                  setAnnualError('');
+                }}
+                className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              >
+                <option value="DIRECT">Montant annuel fixe</option>
+                <option value="PERCENTAGE">Hausse sur le CA de l’année précédente</option>
+              </select>
+            </label>
+            <label className="grid gap-1 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+              <span className="uppercase tracking-wide">{annualTargetMethod === 'DIRECT' ? 'Objectif annuel (MAD)' : 'Hausse (%)'}</span>
+              <input
+                type="number"
+                min={annualTargetMethod === 'DIRECT' ? '1' : '0'}
+                step={annualTargetMethod === 'DIRECT' ? '1' : '0.1'}
+                value={annualTargetInput}
+                onChange={(event) => setAnnualTargetInput(event.target.value)}
+                aria-label={annualTargetMethod === 'DIRECT' ? 'Objectif annuel en MAD' : 'Pourcentage annuel'}
+                placeholder={annualTargetMethod === 'DIRECT' ? 'Ex. 1200000' : 'Ex. 12'}
+                className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              />
+            </label>
+
+            <div className="min-h-14 rounded-lg border border-sky-200 bg-sky-50/70 px-3 py-2 dark:border-sky-900 dark:bg-sky-950/30">
+              <p className="text-[9px] font-black uppercase tracking-wide text-sky-800 dark:text-sky-300">Aperçu annuel</p>
+              <p className="text-base font-black text-sky-950 dark:text-sky-100">{annualTargetPreview.toLocaleString('fr-FR')} MAD</p>
+              <p className="text-[10px] text-sky-800/80 dark:text-sky-200/80">
+                {annualTargetMethod === 'PERCENTAGE'
+                  ? `CA N-1 ${annualReferenceRevenue.toLocaleString('fr-FR')} × (1 + ${annualInputNumber || 0} %)`
+                  : 'Montant annuel fixe'}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 lg:flex-col lg:items-stretch">
+              <button type="button" onClick={() => { setEditingAnnualTarget(false); setAnnualError(''); setAnnualMessage(''); }} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+                Annuler
+              </button>
+              <button type="button" onClick={handleSaveAnnualTarget} disabled={annualSaving} className="h-9 rounded-lg bg-sky-700 px-3 text-xs font-bold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:opacity-50">
+                {annualSaving ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {(annualMessage || annualError) && (
+        <div role={annualError ? 'alert' : 'status'} className={`rounded-2xl border px-4 py-3 text-sm ${annualError ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-sky-200 bg-sky-50 text-sky-800'}`}>
+          {annualError || annualMessage}
+        </div>
+      )}
+
       {(goalMessage || goalError) && (
         <div className={`rounded-2xl border px-4 py-3 text-sm ${goalError ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
           {goalError || goalMessage}
         </div>
       )}
 
+      {!data && <div role={error ? 'alert' : 'status'} className={`rounded-2xl border px-4 py-5 text-sm ${error ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-slate-200 bg-white text-slate-500 dark:border-slate-800 dark:bg-slate-900'}`}>{loading ? 'Chargement des données et de l’objectif enregistrés…' : error || 'Aucune donnée disponible.'}</div>}
+
+      {data && <>
       {/* 3. Encart VACTIS Méthode Bridge to Goal */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-cyan-950 text-white p-6 rounded-3xl shadow-sm border border-slate-800 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -281,7 +475,7 @@ export default function BridgeToGoalPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800">
           <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 block mb-1">
-            CA Mois Total Labo
+            CA Mois Total Data
           </span>
           <div className="text-2xl font-black text-slate-950 dark:text-white">
             {caMoisTotalLabo.toLocaleString('fr-FR')} MAD
@@ -291,7 +485,7 @@ export default function BridgeToGoalPage() {
 
         <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800">
           <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 block mb-1">
-            Cas Mois Total Labo
+            Cas Mois Total Data
           </span>
           <div className="text-2xl font-black text-cyan-600 dark:text-cyan-400">
             {casMoisTotalLabo}
@@ -301,22 +495,22 @@ export default function BridgeToGoalPage() {
 
         <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800">
           <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 block mb-1">
-            Médecins identifiés
+            CA Portefeuille
           </span>
           <div className="text-2xl font-black text-slate-950 dark:text-white">
-            {data?.medecinsIdentifies ?? 0}
+            {(data?.caPortefeuille ?? 0).toLocaleString('fr-FR')} MAD
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Médecins avec activité sur la période</p>
+            <p className="text-[10px] text-slate-400 mt-1">Activité facturée aux médecins identifiés</p>
         </div>
 
         <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800">
           <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 block mb-1">
-            Non affectés
+            Cas non affectés
           </span>
           <div className="text-2xl font-black text-slate-950 dark:text-white">
             {nonAffectesCount}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Dossiers sans médecin rattaché</p>
+          <p className="text-[10px] text-slate-400 mt-1">{(data?.caNonAffectes ?? 0).toLocaleString('fr-FR')} MAD sans médecin rattaché</p>
         </div>
       </div>
 
@@ -379,11 +573,27 @@ export default function BridgeToGoalPage() {
             </h3>
           </div>
           <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statutYtd === 'EN AVANCE' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : statutYtd === 'RETARD IMPORTANT' ? 'bg-rose-100 text-rose-800 border-rose-300' : 'bg-amber-100 text-amber-800 border-amber-300'}`}>
-            {statutYtd}
+              {statutYtd === 'RETARD MODERE' ? 'Retard modéré' : statutYtd}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="p-4 rounded-2xl bg-cyan-50/70 dark:bg-cyan-950/30 border border-cyan-200 dark:border-cyan-900/60">
+            <span className="text-[10px] font-black uppercase tracking-wider text-cyan-800 dark:text-cyan-300 block mb-1">
+              Objectif du mois sélectionné
+            </span>
+            <div className="text-xl font-black text-cyan-900 dark:text-cyan-100">
+              {objectifMoisActuel.toLocaleString('fr-FR')} MAD
+            </div>
+            <span className="text-[10px] text-cyan-700 dark:text-cyan-300">
+              {data?.monthlyTargetMethod
+                ? data.monthlyTargetMethod === 'PERCENTAGE'
+                  ? `${caMoisPrecedent.toLocaleString('fr-FR')} × (1 + ${(data.monthlyTargetInputValue ?? 0)} / 100) = ${objectifMoisActuel.toLocaleString('fr-FR')} MAD`
+                  : 'Montant mensuel direct enregistré'
+                : `${targetAnnuel.toLocaleString('fr-FR')} MAD ÷ 12 = ${objectifMoisActuel.toLocaleString('fr-FR')} MAD`}
+            </span>
+          </div>
+
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
               Objectif YTD Proratisé
@@ -427,47 +637,7 @@ export default function BridgeToGoalPage() {
               Run-rate — Où on va si rien ne change
             </h3>
           </div>
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={() => setEditingTarget((prev) => !prev)}
-              className="text-xs font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-              </svg>
-              <span>Modifier l'objectif</span>
-            </button>
-          )}
         </div>
-
-        {isAdmin && editingTarget && (
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center gap-3">
-            <label className="text-xs font-bold">Objectif Annuel Direction (MAD) :</label>
-            <input
-              type="number"
-              min="1"
-              value={targetInput}
-              onChange={(e) => setTargetInput(e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold w-44"
-            />
-            <button
-              type="button"
-              onClick={handleSaveTarget}
-              disabled={savingGoal}
-              className="px-4 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold disabled:opacity-50"
-            >
-              {savingGoal ? '...' : 'Appliquer'}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setEditingTarget(false); setGoalError(''); setGoalMessage(''); }}
-              className="px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700"
-            >
-              Annuler
-            </button>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
@@ -490,14 +660,14 @@ export default function BridgeToGoalPage() {
             <span className="text-[10px] text-rose-600">Montant net à combler</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
+          <div className="p-4 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
               Objectif Annuel Direction
             </span>
-            <div className="text-lg font-black text-slate-950 dark:text-white">
+            <div className="text-lg font-black text-sky-900 dark:text-sky-100">
               {targetAnnuel.toLocaleString('fr-FR')} MAD
             </div>
-            <span className="text-[10px] text-slate-400">Hypothèse : croissance +10%</span>
+            <span className="text-[10px] text-sky-700 dark:text-sky-300">Objectif annuel configuré par l’administration</span>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
@@ -638,12 +808,13 @@ export default function BridgeToGoalPage() {
                     </tr>
                   );
                 })}
+                {opportunitesBlocs.length === 0 && <tr><td colSpan="5" className="px-4 py-8 text-center text-slate-400">Aucune opportunité retournée par les données actuelles.</td></tr>}
               </tbody>
             </table>
           </div>
 
           {/* Fiche contextuelle bloc (col-span-4) */}
-          <div className="xl:col-span-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 space-y-4">
+          {selectedBlock ? <div className="xl:col-span-4 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 space-y-4">
             <span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 block">
               Fiche contextuelle
             </span>
@@ -678,7 +849,7 @@ export default function BridgeToGoalPage() {
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200/70 dark:border-slate-800">
               {selectedBlock.description}
             </p>
-          </div>
+          </div> : <div className="xl:col-span-4 rounded-2xl border border-dashed border-slate-200 p-5 text-sm text-slate-400">Aucune opportunité à détailler.</div>}
         </div>
       </div>
 
@@ -742,11 +913,11 @@ export default function BridgeToGoalPage() {
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
             <span className="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-200">
-              Recommandation Commerciale Prioritaire : Prospection indispensable
+              Recommandation Commerciale Prioritaire : {recommandationCouverture.title}
             </span>
           </div>
           <p className="text-xs text-amber-800 dark:text-amber-300 font-medium leading-relaxed">
-            Le portefeuille actuel ne couvre pas suffisamment le gap ({couvertureGapPct}% &lt; 50%). Les actions internes sont nécessaires, mais la prospection devient indispensable. Potentiel théorique à confirmer terrain, sous réserve d'exécution commerciale.
+            {recommandationCouverture.description} Couverture actuelle : {couvertureGapPct} %. Potentiel théorique à confirmer sur le terrain, sous réserve d'exécution commerciale.
           </p>
         </div>
 
@@ -786,7 +957,7 @@ export default function BridgeToGoalPage() {
               Besoin de prospection estimé
             </h4>
             <p className="text-[11px] text-slate-500">
-              Pour combler le gap restant de {gapRestantApresActivation.toLocaleString('fr-FR')} MAD, le système estime {data?.actionsRequises ?? 0} actions supplémentaires.
+              Pour combler le gap restant de {gapRestantApresActivation.toLocaleString('fr-FR')} MAD, voici le nombre estimé de nouveaux médecins par segment, avec une montée en charge de 50 %.
             </p>
           </div>
 
@@ -860,6 +1031,7 @@ export default function BridgeToGoalPage() {
           </div>
         </div>
       </div>
+      </>}
     </div>
   );
 }
