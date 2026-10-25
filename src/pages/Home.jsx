@@ -16,6 +16,8 @@ import RecommandationsPage from './Recommandations/RecommandationsPage.jsx';
 import BridgeToGoalPage from './BridgeToGoal/BridgeToGoalPage.jsx';
 import RapportCommercialPage from './RapportCommercial/RapportCommercialPage.jsx';
 import ZoneIntelligencePage from './ZoneIntelligence/ZoneIntelligencePage.jsx';
+import ReclamationsPage from './ReclamationsPage';
+
 
 const workflowSteps = [
   ['Entrée DATA', 'Facturation, profils et retours terrain', 'Collecte des signaux disponibles pour chaque médecin.'],
@@ -161,11 +163,15 @@ function resolvePageContent(activeRoute, username, navigate) {
   }
 
   if (activeRoute === '/rapport-commercial') {
-    return <RapportCommercialPage />;
+    return <RapportCommercialPage navigate={navigate} />;
   }
 
   if (activeRoute === '/zone-intelligence') {
     return <ZoneIntelligencePage navigate={navigate} />;
+  }
+
+  if (activeRoute === '/reclamations') {
+    return <ReclamationsPage />;
   }
 
   if (isPublicRoute(activeRoute)) {
@@ -245,7 +251,9 @@ export default function Home() {
   }, [token]);
 
   return (
-    <AppLayout>
+    <AppLayout
+      canAccessReclamations={menuLoaded && allowedRoutes.includes('/reclamations')}
+    >
       {({ activeRoute, navigate }) => (
         <HomeContent
           activeRoute={activeRoute}
