@@ -1441,7 +1441,7 @@ export default function ZoneIntelligencePage({ navigate }) {
 
                     {isAdmin && (
                       <p className="text-[10px] text-slate-400 italic mb-2.5">
-                        💡 Astuce : glissez ce repère pour ajuster sa position.
+                        Astuce : glissez ce repère pour ajuster sa position.
                       </p>
                     )}
 
@@ -1573,7 +1573,6 @@ export default function ZoneIntelligencePage({ navigate }) {
               <div className="text-center py-12 px-4 text-xs text-slate-400">
                 {medecinsSansCoords.length === 0 ? (
                   <div className="space-y-2">
-                    <span className="text-3xl">🎉</span>
                     <p className="font-bold text-slate-700 dark:text-slate-300">
                       Tous les médecins sont géolocalisés !
                     </p>
@@ -1605,7 +1604,7 @@ export default function ZoneIntelligencePage({ navigate }) {
                         <p className="text-[11px] text-slate-500 font-medium">{doc.specialite || 'Spécialité —'}</p>
                         {doc.organisme && (
                           <p className="text-[10px] text-teal-700 dark:text-teal-400 font-bold mt-1">
-                            📍 {doc.organisme} {doc.ville ? `(${doc.ville})` : ''}
+                            {doc.organisme} {doc.ville ? `(${doc.ville})` : ''}
                           </p>
                         )}
                       </div>
@@ -1734,8 +1733,8 @@ export default function ZoneIntelligencePage({ navigate }) {
               <div className="p-3.5 bg-purple-50 dark:bg-purple-950/30 rounded-2xl border border-purple-200/60 dark:border-purple-800/40 text-xs text-purple-900 dark:text-purple-300 flex items-center justify-between">
                 <span className="font-semibold text-[11px]">
                   {agencyForm.latitude && agencyForm.longitude
-                    ? `📍 Coordonnées définies (${agencyForm.latitude}, ${agencyForm.longitude})`
-                    : '💡 Cliquez sur la carte pour capturer les coordonnées'}
+                    ? `Coordonnées définies (${agencyForm.latitude}, ${agencyForm.longitude})`
+                    : 'Cliquez sur la carte pour capturer les coordonnées'}
                 </span>
                 <button
                   type="button"
