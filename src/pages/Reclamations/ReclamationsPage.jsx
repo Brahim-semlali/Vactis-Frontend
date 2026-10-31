@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { Building2, CalendarDays, ClipboardList, Clock3, FileText, History, Plus, Search, UserRound, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import {
   getReclamations,
@@ -44,6 +45,18 @@ function formatDoctorOption(medecin) {
   const identity = name ? `Dr ${name}` : medecin.codeMedecin || `Médecin #${medecin.id}`;
   const details = [medecin.specialite, medecin.organisme, medecin.ville].filter(Boolean).join(' · ');
   return details ? `${identity} — ${details}` : identity;
+}
+
+function formatDate(value, includeTime = false) {
+  if (!value) return '—';
+  const normalized = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? `${value}T00:00:00`
+    : value;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('fr-FR', includeTime
+    ? { dateStyle: 'medium', timeStyle: 'short' }
+    : { dateStyle: 'medium' }).format(date);
 }
 
 export default function ReclamationsPage() {
@@ -149,7 +162,7 @@ export default function ReclamationsPage() {
     setUpdateForm({
       statut: rec.statut || 'TRAITEE',
       solution: rec.solutionApportee || '',
-      responsable: rec.responsableAffecte || '',
+      responsable: rec.responsableTraitement || rec.responsableAffecte || '',
       prochaineInstruction: rec.prochaineInstruction || '',
       dateTraitement: rec.dateResolution || new Date().toISOString().split('T')[0],
     });
@@ -240,12 +253,14 @@ export default function ReclamationsPage() {
   };
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-5 p-4 sm:p-6 md:p-8">
       {/* En-tête */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
-        <div>
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300"><ClipboardList size={20} /></span>
+          <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <h1 className="text-xl font-black text-slate-950 dark:text-white sm:text-2xl">
               Gestion des Réclamations
             </h1>
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -257,34 +272,36 @@ export default function ReclamationsPage() {
             </span>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Ticketing réclamations prescripteurs, instructions direction et historique de résolution (Sections 5 et 7).
+            Suivi des demandes prescripteurs, décisions et historique de traitement.
           </p>
+          </div>
         </div>
 
         <button
           type="button"
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#009B83] hover:bg-[#00826e] text-white font-semibold text-sm shadow-sm transition-all active:scale-95 cursor-pointer"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-teal-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
+          <Plus size={16} />
           Déclarer une réclamation
         </button>
       </div>
 
       {/* Barre de filtres */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+      <div className="grid grid-cols-1 gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-2 xl:grid-cols-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-500 mb-1">Recherche</label>
+          <label className="mb-1 block text-xs font-bold text-slate-600 dark:text-slate-300">Recherche</label>
+          <div className="relative">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             placeholder="Médecin, motif..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && loadReclamations()}
-            className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#009B83]"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-xs text-slate-800 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-teal-950"
           />
+          </div>
         </div>
 
         <div>
@@ -292,7 +309,7 @@ export default function ReclamationsPage() {
           <select
             value={filterStatut}
             onChange={(e) => setFilterStatut(e.target.value)}
-            className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#009B83]"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-teal-950"
           >
             <option value="">Tous les statuts</option>
             {STATUTS_VACTIS.map((s) => (
@@ -308,7 +325,7 @@ export default function ReclamationsPage() {
           <select
             value={filterCategorie}
             onChange={(e) => setFilterCategorie(e.target.value)}
-            className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#009B83]"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-teal-950"
           >
             <option value="">Toutes les catégories</option>
             {CATEGORIES.map((c) => (
@@ -324,7 +341,7 @@ export default function ReclamationsPage() {
           <select
             value={filterPriorite}
             onChange={(e) => setFilterPriorite(e.target.value)}
-            className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#009B83]"
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-800 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-teal-950"
           >
             <option value="">Toutes les priorités</option>
             {PRIORITES.map((p) => (
@@ -337,31 +354,36 @@ export default function ReclamationsPage() {
       </div>
 
       {/* Tableau des réclamations */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          <div><h2 className="text-sm font-black text-slate-900 dark:text-white">Réclamations enregistrées</h2><p className="mt-0.5 text-xs text-slate-500">Ouvrez une fiche en cliquant sur le médecin ou sur Consulter.</p></div>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{reclamations.length} ticket{reclamations.length > 1 ? 's' : ''}</span>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-slate-800">
+          <table className="w-full min-w-[1120px] text-left text-xs">
+            <thead className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300">
               <tr>
-                <th className="px-4 py-3">Réf / Date</th>
-                <th className="px-4 py-3">Médecin & Organisme</th>
-                <th className="px-4 py-3">Commercial</th>
+                <th className="px-4 py-3">Ticket / dates</th>
+                <th className="px-4 py-3">Médecin / organisme</th>
+                <th className="px-4 py-3">Déclarant</th>
                 <th className="px-4 py-3">Catégorie</th>
+                <th className="px-4 py-3">Commentaire initial</th>
                 <th className="px-4 py-3">Priorité</th>
-                <th className="px-4 py-3">Statut</th>
-                <th className="px-4 py-3">Prochaine Instruction</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3">Statut / responsable</th>
+                <th className="px-4 py-3">Instruction</th>
+                <th className="px-4 py-3 text-right">Fiche</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan="9" className="px-4 py-8 text-center text-slate-400">
                     Chargement des réclamations...
                   </td>
                 </tr>
               ) : reclamations.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="px-4 py-12 text-center text-slate-400">
+                  <td colSpan="9" className="px-4 py-12 text-center text-slate-400">
                     Aucune réclamation trouvée pour ces critères.
                   </td>
                 </tr>
@@ -384,28 +406,24 @@ export default function ReclamationsPage() {
                   return (
                     <tr
                       key={rec.id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                      className="transition-colors hover:bg-teal-50/50 dark:hover:bg-teal-950/20"
                     >
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className="font-bold text-slate-900 dark:text-slate-100">
-                          #{rec.id}
-                        </span>
-                        <div className="text-[11px] text-slate-400">
-                          {rec.dateCreation
-                            ? new Date(rec.dateCreation).toLocaleDateString('fr-FR')
-                            : '—'}
-                        </div>
+                        <span className="font-black text-slate-900 dark:text-slate-100">#{rec.id}</span>
+                        <div className="mt-1 text-[10px] text-slate-500">Déclarée {formatDate(rec.dateDeclaration || rec.dateCreation || rec.createdAt)}</div>
+                        <div className="text-[10px] text-slate-400">Visite {formatDate(rec.dateVisite)}</div>
                       </td>
 
                       <td className="px-4 py-3">
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">
-                          Dr {rec.medecin ? `${rec.medecin.prenom || ''} ${rec.medecin.nom}`.trim() : 'Prescripteur inconnu'}
-                        </span>
+                        <button type="button" onClick={() => handleOpenDetail(rec)} aria-label={`Ouvrir la réclamation #${rec.id} de ${rec.medecin ? `${rec.medecin.prenom || ''} ${rec.medecin.nom || ''}`.trim() : 'ce prescripteur'}`} className="text-left font-bold text-teal-800 underline decoration-teal-200 underline-offset-2 hover:text-teal-950 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:text-teal-300 dark:decoration-teal-800 dark:hover:text-teal-100">
+                          Dr {rec.medecin ? `${rec.medecin.prenom || ''} ${rec.medecin.nom || ''}`.trim() : 'Prescripteur inconnu'}
+                        </button>
                         {rec.medecin?.organisme && (
-                          <div className="text-[11px] text-slate-400 truncate max-w-[160px]">
+                          <div className="mt-1 max-w-[180px] truncate text-[10px] text-slate-500 dark:text-slate-400">
                             {rec.medecin.organisme}
                           </div>
                         )}
+                        {rec.medecin?.specialite && <div className="mt-0.5 text-[10px] text-slate-400">{rec.medecin.specialite}</div>}
                       </td>
 
                       <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
@@ -414,6 +432,10 @@ export default function ReclamationsPage() {
 
                       <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
                         {categorieInfo.label}
+                      </td>
+
+                      <td className="max-w-[240px] px-4 py-3">
+                        <p className="line-clamp-2 text-[11px] leading-5 text-slate-600 dark:text-slate-300">{rec.description || 'Aucun commentaire'}</p>
                       </td>
 
                       <td className="px-4 py-3">
@@ -426,6 +448,7 @@ export default function ReclamationsPage() {
                         <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${statutInfo.color}`}>
                           {statutInfo.label}
                         </span>
+                        <div className="mt-1 text-[10px] text-slate-500">{rec.responsableTraitement || rec.responsableAffecte || 'Sans responsable'}</div>
                       </td>
 
                       <td className="px-4 py-3 max-w-[200px]">
@@ -442,7 +465,7 @@ export default function ReclamationsPage() {
                         <button
                           type="button"
                           onClick={() => handleOpenDetail(rec)}
-                          className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium transition-colors"
+                          className="rounded-lg bg-slate-100 px-3 py-1.5 font-bold text-slate-700 transition-colors hover:bg-teal-100 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-teal-950"
                         >
                           {isDirectionOrAdmin ? 'Traiter / Fiche' : 'Consulter'}
                         </button>
@@ -469,7 +492,7 @@ export default function ReclamationsPage() {
                 onClick={() => setShowCreateModal(false)}
                 className="text-slate-400 hover:text-slate-600 text-lg leading-none"
               >
-                ✕
+                <X size={16} aria-hidden="true" />
               </button>
             </div>
 
@@ -599,84 +622,74 @@ export default function ReclamationsPage() {
 
       {/* MODAL FICHE COMPLÈTE & TRAITEMENT (Points 1b et 1c) */}
       {selectedReclamation && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 my-8">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                  Fiche Réclamation #{selectedReclamation.id}
-                </h2>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-[2px] sm:p-6" onClick={() => setSelectedReclamation(null)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="reclamation-detail-title" className="my-auto flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-950/70 sm:px-7">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300"><FileText size={20} /></span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-teal-700 dark:text-teal-400">Dossier de réclamation · #{selectedReclamation.id}</p>
+                  <h2 id="reclamation-detail-title" className="mt-0.5 truncate text-lg font-black text-slate-950 dark:text-white sm:text-xl">
+                    {selectedReclamation.medecin ? `Dr ${[selectedReclamation.medecin.prenom, selectedReclamation.medecin.nom].filter(Boolean).join(' ')}` : 'Prescripteur'}
+                  </h2>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className={`hidden rounded-full border px-3 py-1 text-xs font-bold sm:inline-flex ${
                   (STATUTS_VACTIS.find((s) => s.value === selectedReclamation.statut) || STATUTS_LEGACY_MAP[selectedReclamation.statut])?.color || 'bg-slate-100 text-slate-800'
                 }`}>
                   {(STATUTS_VACTIS.find((s) => s.value === selectedReclamation.statut) || STATUTS_LEGACY_MAP[selectedReclamation.statut])?.label || selectedReclamation.statut}
                 </span>
-              </div>
               <button
                 type="button"
                 onClick={() => setSelectedReclamation(null)}
-                className="text-slate-400 hover:text-slate-600 text-lg leading-none"
+                aria-label="Fermer la fiche de réclamation"
+                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
               >
-                ✕
+                <X size={18} />
               </button>
+              </div>
             </div>
 
-            {/* Fiche synthétique */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-xs">
-              <div>
-                <span className="text-slate-400 block">Médecin :</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  Dr {selectedReclamation.medecin ? `${selectedReclamation.medecin.prenom || ''} ${selectedReclamation.medecin.nom}`.trim() : 'Prescripteur'}
-                </span>
+            <div className="space-y-6 overflow-y-auto bg-slate-50/60 p-4 sm:p-6 lg:p-7 dark:bg-slate-950/30">
+            <section aria-label="Informations de la réclamation" className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              <DetailField icon={CalendarDays} label="Date de déclaration" value={formatDate(selectedReclamation.dateDeclaration || selectedReclamation.dateCreation || selectedReclamation.createdAt, true)} />
+              <DetailField icon={CalendarDays} label="Date de visite" value={formatDate(selectedReclamation.dateVisite)} />
+              <DetailField icon={ClipboardList} label="Catégorie" value={CATEGORIES.find((c) => c.value === selectedReclamation.categorie)?.label || selectedReclamation.categorie} />
+              <DetailField icon={Clock3} label="Priorité" value={PRIORITES.find((p) => p.value === selectedReclamation.priorite)?.label || selectedReclamation.priorite} />
+              <DetailField icon={UserRound} label="Commercial déclarant" value={selectedReclamation.commercialDeclarant} />
+              <DetailField icon={UserRound} label="Responsable traitement" value={selectedReclamation.responsableTraitement || selectedReclamation.responsableAffecte} />
+              <DetailField icon={CalendarDays} label="Date de résolution" value={formatDate(selectedReclamation.dateResolution)} />
+              <DetailField icon={ClipboardList} label="Retour terrain lié" value={selectedReclamation.retourTerrainId ? `#${selectedReclamation.retourTerrainId}` : 'Aucun'} />
+            </section>
+
+            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900"><Building2 size={16} className="text-teal-700 dark:text-teal-400" /><h3 className="text-[11px] font-black uppercase tracking-wide text-slate-700 dark:text-slate-200">Informations du prescripteur</h3></div>
+              <div className="grid grid-cols-2 gap-2.5 p-3.5 text-xs sm:grid-cols-3 sm:p-4">
+                <DetailField label="Médecin" value={selectedReclamation.medecin ? `Dr ${[selectedReclamation.medecin.prenom, selectedReclamation.medecin.nom].filter(Boolean).join(' ')}` : 'Prescripteur'} />
+                <DetailField label="Spécialité" value={selectedReclamation.medecin?.specialite} />
+                <DetailField label="Organisme" value={selectedReclamation.medecin?.organisme} />
+                <DetailField label="Ville" value={selectedReclamation.medecin?.ville} />
+                <DetailField label="Téléphone" value={selectedReclamation.medecin?.telephone} />
+                <DetailField label="E-mail" value={selectedReclamation.medecin?.email} />
+                <DetailField label="Code médecin" value={selectedReclamation.medecin?.codeMedecin} />
               </div>
-              <div>
-                <span className="text-slate-400 block">Organisme :</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {selectedReclamation.medecin?.organisme || '—'}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 block">Commercial déclarant :</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {selectedReclamation.commercialDeclarant || '—'}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 block">Catégorie :</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {CATEGORIES.find((c) => c.value === selectedReclamation.categorie)?.label || selectedReclamation.categorie}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 block">Priorité :</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {selectedReclamation.priorite}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-400 block">Date création :</span>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  {selectedReclamation.dateCreation ? new Date(selectedReclamation.dateCreation).toLocaleDateString('fr-FR') : '—'}
-                </span>
-              </div>
-            </div>
+            </section>
 
             {/* Commentaire initial */}
-            <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
-              <span className="text-slate-400 block font-semibold mb-1">Commentaire initial du déclarant :</span>
-              <p className="text-slate-800 dark:text-slate-200 whitespace-pre-wrap">
-                {selectedReclamation.description || 'Aucun commentaire initial.'}
-              </p>
-            </div>
+            <section className="rounded-xl border border-teal-200 bg-teal-50/70 p-4 sm:p-5 dark:border-teal-900 dark:bg-teal-950/30">
+              <div className="mb-2.5 flex items-center gap-2"><FileText size={16} className="text-teal-700 dark:text-teal-400" /><h3 className="text-[11px] font-black uppercase tracking-wide text-teal-900 dark:text-teal-200">Commentaire initial / motif</h3></div>
+              <p className="whitespace-pre-wrap text-sm leading-6 text-slate-800 dark:text-slate-200">{selectedReclamation.description || 'Aucun commentaire initial.'}</p>
+            </section>
 
             {/* Zone de traitement : uniquement pour Direction/Admin */}
             {isDirectionOrAdmin ? (
-              <form onSubmit={handleUpdateStatutSubmit} className="p-4 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40 space-y-3 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-purple-900 dark:text-purple-300">
+              <form onSubmit={handleUpdateStatutSubmit} className="space-y-4 rounded-xl border border-sky-200 bg-white p-4 text-xs dark:border-sky-900 dark:bg-slate-900 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
+                  <span className="font-black text-slate-900 dark:text-white">
                     Mise à jour du statut & instructions de direction
                   </span>
-                  <span className="text-[10px] text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">
+                  <span className="rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-bold text-sky-800 dark:bg-sky-950 dark:text-sky-200">
                     Réservé Direction/Admin
                   </span>
                 </div>
@@ -695,7 +708,7 @@ export default function ReclamationsPage() {
                     <select
                       value={updateForm.statut}
                       onChange={(e) => setUpdateForm({ ...updateForm, statut: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 font-semibold text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                     >
                       {STATUTS_VACTIS.map((s) => (
                         <option key={s.value} value={s.value}>
@@ -715,7 +728,7 @@ export default function ReclamationsPage() {
                       placeholder="Ex: Directeur Médical, Responsable Labo"
                       value={updateForm.responsable}
                       onChange={(e) => setUpdateForm({ ...updateForm, responsable: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                     />
                   </div>
                 </div>
@@ -729,7 +742,7 @@ export default function ReclamationsPage() {
                     placeholder="Protocole validé, ajustement technique, geste commercial..."
                     value={updateForm.solution}
                     onChange={(e) => setUpdateForm({ ...updateForm, solution: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
                 </div>
 
@@ -742,7 +755,7 @@ export default function ReclamationsPage() {
                     placeholder="Ex: Prévoir visite de réassurance sous 48h..."
                     value={updateForm.prochaineInstruction}
                     onChange={(e) => setUpdateForm({ ...updateForm, prochaineInstruction: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
                 </div>
 
@@ -750,7 +763,7 @@ export default function ReclamationsPage() {
                   <button
                     type="submit"
                     disabled={updating}
-                    className="px-4 py-2 rounded-xl bg-purple-700 text-white font-semibold hover:bg-purple-800 disabled:opacity-50"
+                    className="rounded-lg bg-teal-700 px-4 py-2.5 font-bold text-white transition-colors hover:bg-teal-800 disabled:opacity-50"
                   >
                     {updating ? 'Mise à jour...' : 'Enregistrer la décision direction'}
                   </button>
@@ -778,8 +791,9 @@ export default function ReclamationsPage() {
             )}
 
             {/* Historique des modifications */}
-            <div className="space-y-2 text-xs border-t border-slate-100 dark:border-slate-800 pt-3">
-              <span className="font-bold text-slate-700 dark:text-slate-300 block">
+            <section className="space-y-2 border-t border-slate-100 pt-3 text-xs dark:border-slate-800">
+              <span className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-300">
+                <History size={15} />
                 Historique des statuts & modifications :
               </span>
               {loadingHistorique ? (
@@ -811,9 +825,9 @@ export default function ReclamationsPage() {
                   ))}
                 </div>
               )}
-            </div>
+            </section>
 
-            <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex justify-end border-t border-slate-100 pt-3 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => setSelectedReclamation(null)}
@@ -822,9 +836,19 @@ export default function ReclamationsPage() {
                 Fermer
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DetailField({ icon: Icon, label, value }) {
+  return (
+    <div className="min-w-0 rounded-lg bg-slate-50 px-3 py-2.5 dark:bg-slate-800/70">
+      <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{Icon && <Icon size={12} />}{label}</span>
+      <span className="mt-1 block break-words text-xs font-bold text-slate-900 dark:text-slate-100">{value || '—'}</span>
     </div>
   );
 }

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import ReclamationsPage from './ReclamationsPage.jsx';
 import { getMedecins } from '../../api/medecins.js';
-import { creerReclamation } from '../../api/vactis.js';
+import { creerReclamation, getReclamations } from '../../api/vactis.js';
 
 const VALID_CATEGORIES = [
   'DELAIS_RESULTATS',
@@ -58,6 +58,38 @@ describe('ReclamationsPage', () => {
     expect(screen.getByText('Gestion des Réclamations')).toBeTruthy();
     expect(screen.getByText('Déclarer une réclamation')).toBeTruthy();
     expect(screen.getByText('Vue Direction / Pilotage')).toBeTruthy();
+  });
+
+  it('opens the full complaint when clicking the doctor and displays its comment', async () => {
+    vi.mocked(getReclamations).mockResolvedValue([{
+      id: 91,
+      dateDeclaration: '2026-10-22',
+      dateVisite: '2026-10-21',
+      categorie: 'DELAIS_RESULTATS',
+      priorite: 'HAUTE',
+      statut: 'A_TRAITER',
+      commercialDeclarant: 'Nadia Amrani',
+      description: 'Le médecin signale un retard de résultat.',
+      retourTerrainId: 53,
+      medecin: {
+        prenom: 'Nadia',
+        nom: 'Amrani',
+        specialite: 'Anatomopathologie',
+        organisme: 'Clinique Atlas',
+        telephone: '0600000000',
+        email: 'nadia@example.test',
+      },
+    }]);
+    render(<ReclamationsPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Ouvrir la réclamation #91/ }));
+
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    const detail = within(screen.getByRole('dialog'));
+    expect(detail.getByText('Le médecin signale un retard de résultat.')).toBeTruthy();
+    expect(detail.getByText('Clinique Atlas')).toBeTruthy();
+    expect(detail.getByText('0600000000')).toBeTruthy();
+    expect(detail.getByText('#53')).toBeTruthy();
   });
 
   it('shows doctors returned in the API items array in the complaint selector', async () => {
