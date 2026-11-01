@@ -84,8 +84,8 @@ describe('ActionsPage exports', () => {
     screen.getByRole('button', { name: 'Exporter la table Actions en PDF' }).click();
 
     expect(printObjectRows).toHaveBeenCalledWith([
-      ['Médecin', 'Statut', 'Segment', 'Action proposée', 'Décision', 'Urgence', 'État', 'Date visite', 'Commercial'],
-      ['Mehdi Ait Taleb', 'SURVEILLANCE', 'C', 'visite diagnostic', '—', 'ELEVE', 'PLANIFIEE', '30/10/2026', '—'],
+      ['Médecin', 'Statut', 'Segment', 'Note', 'Action proposée', 'Décision', 'Variation CA', 'Variation cas', 'Silence', 'Urgence %', 'Intensité VACTIS', 'État', 'Date visite', 'Commercial'],
+      ['Mehdi Ait Taleb', 'SURVEILLANCE', 'C (Standard)', '—', 'visite diagnostic', '—', '—', '—', '—', '17,81 %', 'ELEVE · Horizon 15j', 'PLANIFIEE', '30/10/2026', '—'],
     ], 'Actions VACTIS');
   });
 
