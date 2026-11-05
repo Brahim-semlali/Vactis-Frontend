@@ -27,7 +27,7 @@ function PasswordRequirements({ password, policy }) {
                 : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
             }`}
           >
-            {valid ? '✓' : '•'}
+            
           </span>
           {label}
         </span>
@@ -932,7 +932,6 @@ export default function UserSettingsPage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600 text-xl font-bold">
-                    ☀️
                   </div>
                   <div>
                     <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
@@ -945,7 +944,6 @@ export default function UserSettingsPage() {
                 </div>
                 {theme === 'light' && (
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-white text-xs font-black shadow-xs">
-                    ✓
                   </span>
                 )}
               </div>
@@ -989,7 +987,6 @@ export default function UserSettingsPage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/20 text-indigo-400 text-xl font-bold">
-                    🌙
                   </div>
                   <div>
                     <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">
@@ -1002,7 +999,6 @@ export default function UserSettingsPage() {
                 </div>
                 {theme === 'dark' && (
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-white text-xs font-black shadow-xs">
-                    ✓
                   </span>
                 )}
               </div>
