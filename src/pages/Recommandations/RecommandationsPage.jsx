@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 import VactisPilotBanner from '../../components/VactisPilotBanner';
 import { getRecommandations, creerActionRecommandation } from '../../api/vactis.js';
@@ -190,7 +191,7 @@ export default function RecommandationsPage() {
       {successMsg && (
         <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-900 text-emerald-900 dark:text-emerald-200 text-xs font-semibold flex items-center justify-between">
           <span>{successMsg}</span>
-          <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-700 font-bold hover:underline">✕</button>
+          <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-700 font-bold hover:underline" aria-label="Fermer"><X size={14} aria-hidden="true" /></button>
         </div>
       )}
 
@@ -579,6 +580,17 @@ export default function RecommandationsPage() {
                   </div>
                 </div>
 
+                {activeTab === 'REACTIVATION' && (
+                  <div className="p-3 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
+                      Priorité réactivation
+                    </span>
+                    <div className="text-sm font-black text-cyan-700 dark:text-cyan-300">
+                      {{ HIGH: 'HAUTE', MEDIUM: 'MOYENNE', LOW: 'FAIBLE' }[selectedItem.prioriteReactivation] || '—'} · {selectedItem.scoreReactivation == null ? '—' : selectedItem.scoreReactivation}
+                    </div>
+                  </div>
+                )}
+
                 <div className="p-3 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200/80 dark:border-slate-800">
                   <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
                     Score risque
@@ -587,6 +599,17 @@ export default function RecommandationsPage() {
                     {selectedItem.scoreRisque == null ? '—' : selectedItem.scoreRisque}
                   </div>
                 </div>
+
+                {activeTab === 'IRREGULIERS' && (
+                  <div className="p-3 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
+                      Présence historique
+                    </span>
+                    <div className="text-sm font-black text-slate-800 dark:text-slate-200">
+                      {selectedItem.tauxPresencePct == null ? '—' : `${selectedItem.tauxPresencePct.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} %`}
+                    </div>
+                  </div>
+                )}
 
                 <div className="p-3 bg-slate-50 dark:bg-slate-850 rounded-2xl border border-slate-200/80 dark:border-slate-800">
                   <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
