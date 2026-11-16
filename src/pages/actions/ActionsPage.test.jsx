@@ -3,9 +3,10 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ActionsPage from './ActionsPage.jsx';
 
-const { authState, getActions, getVisitesLibresApi, printObjectRows } = vi.hoisted(() => ({
+const { authState, getActions, getMedecins, getVisitesLibresApi, printObjectRows } = vi.hoisted(() => ({
   authState: { userProfile: { role: 'USER' } },
   getActions: vi.fn(),
+  getMedecins: vi.fn(),
   getVisitesLibresApi: vi.fn(),
   printObjectRows: vi.fn(),
 }));
@@ -20,7 +21,7 @@ vi.mock('../../api/actions.js', () => ({
   soumettreRetourTerrainApi: vi.fn(),
   creerVisiteLibreApi: vi.fn(),
 }));
-vi.mock('../../api/medecins.js', () => ({ getMedecinEvolution: vi.fn(), getMedecins: vi.fn() }));
+vi.mock('../../api/medecins.js', () => ({ getMedecinEvolution: vi.fn(), getMedecins }));
 vi.mock('../../components/actions/ModalSaisieRetour.jsx', () => ({ default: () => null }));
 vi.mock('../../components/actions/ModalVisiteLibre.jsx', () => ({ default: () => null }));
 vi.mock('../../components/medecins/FicheContextuelleDrawer.jsx', () => ({ default: () => null }));
@@ -53,6 +54,7 @@ describe('ActionsPage exports', () => {
       meta: { affiches: 1, charges: 1 },
       filters: {},
     });
+    getMedecins.mockResolvedValue({ items: [] });
     getVisitesLibresApi.mockResolvedValue([]);
   });
 
@@ -62,6 +64,48 @@ describe('ActionsPage exports', () => {
 
     expect(screen.queryByRole('button', { name: 'Exporter la table Actions en PDF' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Télécharger les Actions en Excel' })).toBeNull();
+  });
+
+  it('filters onboarding doctors and toggles back to all actions', async () => {
+    render(<ActionsPage />);
+    await screen.findByText('visite diagnostic');
+
+    getActions.mockResolvedValue({ items: [], kpis: {}, meta: {}, filters: {} });
+    getMedecins.mockResolvedValue({
+      items: [{
+        id: 88,
+        nom: 'Onboarding',
+        prenom: 'Dina',
+        statut: 'ONBOARDING',
+        segment: 'B',
+        specialite: 'Cardiologie',
+      }],
+    });
+
+    const onboardingButton = screen.getByRole('button', { name: 'Médecins onboarding' });
+    onboardingButton.click();
+
+    await waitFor(() => expect(getActions).toHaveBeenLastCalledWith(
+      'test-token',
+      expect.objectContaining({ statut: 'ONBOARDING' }),
+    ));
+    expect(getMedecins).toHaveBeenLastCalledWith(
+      'test-token',
+      expect.objectContaining({ statut: 'ONBOARDING' }),
+    );
+    expect(await screen.findByText(/ONBOARDING DINA/)).toBeTruthy();
+    expect(screen.getByText('Visite onboarding à planifier')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Médecins onboarding (1)' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Réserver' })).toBeNull();
+    expect(onboardingButton.getAttribute('aria-pressed')).toBe('true');
+
+    onboardingButton.click();
+
+    await waitFor(() => expect(getActions).toHaveBeenLastCalledWith(
+      'test-token',
+      expect.objectContaining({ statut: '' }),
+    ));
+    expect(onboardingButton.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('shows exports for admins and offers them on the free-visits tab too', async () => {
