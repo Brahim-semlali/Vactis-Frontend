@@ -39,7 +39,7 @@ export const updateSettings = (token, settings) => request('/api/admin/settings'
 });
 
 export const getBridgeGoalTarget = (token) => request('/api/admin/settings/bridge-goal-target', token);
-export const updateBridgeGoalTarget = (token, target) => request(`/api/admin/settings/bridge-goal-target?target=${encodeURIComponent(target)}`, token, {
+export const updateBridgeGoalTarget = (token, target, method = 'DIRECT') => request(`/api/admin/settings/bridge-goal-target?target=${encodeURIComponent(target)}&method=${encodeURIComponent(method)}`, token, {
   method: 'PUT',
 });
 

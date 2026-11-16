@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { getFicheContextuelleApi } from '../../api/actions.js';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { formatMad, formatNumber, formatPercent, formatSignedPercent } from '../../utils/indicatorFormatting.js';
 
 export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onClose }) {
+  const { userProfile } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -29,6 +33,8 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
 
   const medecin = data?.medecin;
   const historique = data?.historiqueVisites ?? [];
+  const roleName = String(userProfile?.role ?? userProfile?.roles?.nameRole ?? userProfile?.roles?.[0]?.nameRole ?? '').toUpperCase();
+  const canViewDirection = roleName.includes('ADMIN');
 
   return createPortal(
     <div
@@ -53,7 +59,7 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
             type="button"
             className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white transition-all"
           >
-            ✕
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
@@ -67,7 +73,7 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
 
           {error && (
             <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl">
-              ⚠️ {error}
+              {error}
             </div>
           )}
 
@@ -89,15 +95,77 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
                 </div>
               </div>
 
+              <section className="rounded-2xl border border-sky-100 bg-white p-4 shadow-sm" aria-label="Indicateurs du mois">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">Indicateurs du mois</h3>
+                    <p className="mt-1 text-[11px] text-slate-500">Référence {medecin?.dateReferenceIndicateurs ? new Date(`${medecin.dateReferenceIndicateurs}T00:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : '—'}</p>
+                  </div>
+                  <span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">Rythme {medecin?.sourceRythme === 'RECENT' ? 'récent' : medecin?.sourceRythme === 'HISTORIQUE' ? 'historique' : '30 jours par défaut'}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <IndicatorMetric label="CA courant" value={formatMad(medecin?.caMoisAnalyse)} />
+                  <IndicatorMetric label="Cas courants" value={formatNumber(medecin?.casMoisAnalyse, 0)} />
+                  <IndicatorMetric label="Référence CA" value={formatMad(medecin?.referenceCa)} />
+                  <IndicatorMetric label="Référence cas" value={formatNumber(medecin?.referenceVolume)} />
+                  <IndicatorMetric label="Variation CA" value={formatSignedPercent(medecin?.variationCa)} />
+                  <IndicatorMetric label="Variation cas" value={formatSignedPercent(medecin?.variationVolume)} />
+                  <IndicatorMetric label="Variation mixte" value={formatSignedPercent(medecin?.variationMixteSur100)} />
+                  <IndicatorMetric label="Silence score" value={formatPercent(medecin?.scoreSilence)} />
+                  <IndicatorMetric label="Intervalle effectif" value={medecin?.intervalleEffectif == null ? '—' : `${formatNumber(medecin.intervalleEffectif)} jours`} />
+                  <IndicatorMetric label="Jours sans activité" value={medecin?.joursSansActivite == null ? '—' : `${medecin.joursSansActivite} jours`} />
+                  <IndicatorMetric label="Urgence / rang" value={Number(medecin?.scoreUrgence) > 0 ? `${formatPercent(medecin.scoreUrgence)} · rang ${medecin.rangUrgence ?? '—'}` : '—'} />
+                  <IndicatorMetric label="Classe silence" value={medecin?.classeSilence?.replaceAll('_', ' ') || '—'} />
+                  <IndicatorMetric label="Dernier envoi" value={medecin?.dateDerniereActiviteCalcul ? new Date(`${medecin.dateDerniereActiviteCalcul}T00:00:00`).toLocaleDateString('fr-FR') : '—'} />
+                </div>
+                {['INACTIF', 'EXCLU', 'ACTIVITE_IRREGULIERE', 'BLOQUE'].includes(String(medecin?.statut || '').toUpperCase()) && (
+                  <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800">Médecin sans action automatique : urgence 0.</p>
+                )}
+                {medecin?.referenceCa === 0 && medecin?.referenceVolume === 0 && (
+                  <p className="mt-2 text-[11px] text-slate-500">Référence nulle : les variations correspondantes sont fixées à 0 %.</p>
+                )}
+              </section>
+
+              <details className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/40">
+                <summary className="cursor-pointer text-xs font-extrabold text-slate-800 dark:text-slate-100">Pourquoi ces valeurs ?</summary>
+                <div className="mt-3 space-y-2 text-[11px] leading-relaxed text-slate-700 dark:text-slate-300">
+                  <p>Référence CA = moyenne des {medecin?.nombreMoisReference ?? 0} mois disponibles avant le mois analysé = <strong>{formatMad(medecin?.referenceCa)}</strong>.</p>
+                  <p>Référence cas = moyenne des {medecin?.nombreMoisReference ?? 0} mois disponibles avant le mois analysé = <strong>{formatNumber(medecin?.referenceCas ?? medecin?.referenceVolume)}</strong>.</p>
+                  <p>Variation CA = ({formatMad(medecin?.caMoisAnalyse)} − {formatMad(medecin?.referenceCa)}) / max({formatMad(medecin?.referenceCa)} ; 300) = <strong>{formatSignedPercent(medecin?.variationCa)}</strong>.</p>
+                  <p>Variation cas = ({formatNumber(medecin?.casMoisAnalyse)} − {formatNumber(medecin?.referenceCas ?? medecin?.referenceVolume)}) / max({formatNumber(medecin?.referenceCas ?? medecin?.referenceVolume)} ; 1) = <strong>{formatSignedPercent(medecin?.variationCas ?? medecin?.variationVolume)}</strong>.</p>
+                  <p>Variation mixte = 0,60 × {formatSignedPercent(medecin?.variationCa)} + 0,40 × {formatSignedPercent(medecin?.variationCas ?? medecin?.variationVolume)} = <strong>{formatSignedPercent(medecin?.variationMixteSur100)}</strong>.</p>
+                  <p>Silence = min(100 ; 20 × {medecin?.joursSansActivite ?? '—'} / {formatNumber(medecin?.intervalleEffectif)}) = <strong>{formatPercent(medecin?.scoreSilence)}</strong> ; source du rythme : {medecin?.sourceRythme === 'RECENT' ? 'fenêtre récente fiable' : medecin?.sourceRythme === 'HISTORIQUE' ? 'rythme historique' : 'repli 30 jours'}.</p>
+                  <p>Urgence finale = urgence brute {formatNumber(medecin?.urgenceBrute)} × facteur de matérialité {formatNumber(medecin?.facteurMaterialite)} = <strong>{Number(medecin?.scoreUrgence) > 0 ? formatPercent(medecin.scoreUrgence) : '—'}</strong>.</p>
+                  <p>Perte CA = {formatMad(medecin?.perteCa)} ; seuil d’impact = {formatMad(medecin?.seuilImpact)} ; baisse de référence = {formatNumber(medecin?.baisseReference)} % ; baisse courte = {formatNumber(medecin?.baisseCourte)} % ; risque = {formatNumber(medecin?.scoreRisque)} / 100.</p>
+                </div>
+              </details>
+
+              <div className="p-5 rounded-2xl bg-teal-50/70 border border-teal-100 space-y-2">
+                <h4 className="text-xs font-extrabold text-teal-900 uppercase tracking-wider">Résumé court</h4>
+                <p className="text-xs text-teal-950 font-medium leading-relaxed">
+                  {data.commentaireMoteurResume || data.commentaireMoteurTitre || 'Résumé non disponible.'}
+                </p>
+              </div>
+
               {/* Explication du Statut */}
               <div className="p-5 rounded-2xl bg-sky-50/70 border border-sky-100 space-y-2">
                 <h4 className="text-xs font-extrabold text-sky-900 uppercase tracking-wider">
-                  Explication du Statut Métier
+                  Commentaire détaillé
                 </h4>
+                {data.commentaireMoteurTitre && (
+                  <p className="text-xs font-extrabold text-sky-950">{data.commentaireMoteurTitre}</p>
+                )}
                 <p className="text-xs text-sky-950 font-medium leading-relaxed">
-                  {data.statutExplanation}
+                  {data.commentaireMoteurDetail || data.statutExplanation}
                 </p>
               </div>
+
+              {canViewDirection && data.commentaireMoteurDirection && (
+                <div className="p-5 rounded-2xl bg-slate-100 border border-slate-200 space-y-2">
+                  <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">Message direction</h4>
+                  <p className="text-xs text-slate-700 font-medium leading-relaxed">{data.commentaireMoteurDirection}</p>
+                </div>
+              )}
 
               {/* Silence Radio */}
               <div className="p-5 rounded-2xl bg-rose-50/60 border border-rose-100 space-y-2">
@@ -110,7 +178,7 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
                   </span>
                 </div>
                 <p className="text-sm font-extrabold text-rose-950">
-                  {data.joursSansActivite} jours sans activité détectée
+                  {data.joursSansActivite == null ? 'Données indisponibles' : `${data.joursSansActivite} jours sans activité détectée`}
                 </p>
                 <p className="text-xs text-rose-800">
                   Fréquence habituelle attendue : 1 visite tous les {data.frequenceJours} jours.
@@ -176,4 +244,11 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
     </div>,
     document.body
   );
+}
+
+function IndicatorMetric({ label, value }) {
+  return <div className="min-w-0 rounded-lg bg-slate-50 px-3 py-2.5">
+    <span className="block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500">{label}</span>
+    <span className="mt-1 block break-words text-xs font-extrabold text-slate-900">{value}</span>
+  </div>;
 }

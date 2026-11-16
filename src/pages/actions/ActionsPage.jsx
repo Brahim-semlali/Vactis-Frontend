@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   ResponsiveContainer,
@@ -12,10 +12,12 @@ import {
 import { getActions, reserverActionApi, soumettreRetourTerrainApi, creerVisiteLibreApi, getVisitesLibresApi } from '../../api/actions.js';
 import { getMedecinEvolution, getMedecins } from '../../api/medecins.js';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { buildObjectRows, downloadExcelXml, isAdminProfile, printObjectRows } from '../../utils/adminExports.js';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 import ModalSaisieRetour from '../../components/actions/ModalSaisieRetour.jsx';
 import ModalVisiteLibre from '../../components/actions/ModalVisiteLibre.jsx';
 import FicheContextuelleDrawer from '../../components/medecins/FicheContextuelleDrawer.jsx';
+import { formatMad, formatNumber, formatPercent, formatSignedPercent } from '../../utils/indicatorFormatting.js';
 
 // UI components shadcn/ui
 import { Card } from '../../components/ui/card.jsx';
@@ -51,13 +53,18 @@ const TABLE_COLUMNS = [
   'Dernière note terrain',
   'Action proposée',
   'Décision',
-  'Urgence',
+  'Variation CA',
+  'Variation cas',
+  'Silence',
+  'Urgence %',
+  'Intensité VACTIS',
   'État',
   'Date visite',
   '',
 ];
 
 const URGENCE_OPTIONS = ['SILENCE_CRITIQUE', 'FAIBLE', 'MOYEN', 'ELEVE', 'URGENT'];
+const INTENSITE_OPTIONS = ['CRITIQUE', 'ELEVEE', 'NORMALE'];
 const ETAT_OPTIONS = ['PLANIFIEE', 'REALISEE'];
 const BACKLOG_OPTIONS = [
   { value: 'true', label: 'Oui' },
@@ -106,6 +113,13 @@ function ActionsIcon({ name, size = 18 }) {
         <svg {...props}>
           <rect x="8" y="2" width="8" height="4" rx="1" />
           <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+        </svg>
+      );
+    case 'download':
+      return (
+        <svg {...props}>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <path d="m7 10 5 5 5-5M12 15V3" />
         </svg>
       );
     case 'calendar':
@@ -325,10 +339,16 @@ function getActionRule(statut) {
 
 function getActionUrgencyReason(action, medecin) {
   const statut = action.statut || medecin?.statut || 'Non renseigné';
-  if (action.urgence === 'ELEVE') return `Élevé — statut ${formatEnumLabel(statut)}, action prioritaire à traiter sous 7 jours.`;
-  if (action.urgence === 'SILENCE_CRITIQUE') return action.urgenceSilence
-    ? `Silence critique — ${action.joursSansActivite ?? '—'} jours depuis le dernier dossier laboratoire, au-delà de la fréquence attendue.`
-    : `Silence critique — statut ${formatEnumLabel(statut)}, baisse ou absence d'activité détectée.`;
+  const niveauIntensite = String(medecin?.niveauIntensite ?? '').toUpperCase();
+  const scoreUrgence = Number(medecin?.scoreUrgence ?? 0);
+  const mediane = Number(medecin?.mediane ?? 0);
+  const p80 = Number(medecin?.percentile80 ?? 0);
+  if (action.urgenceSilence) return `Silence critique — ${action.joursSansActivite ?? '—'} jours depuis le dernier dossier laboratoire, au-delà de la fréquence attendue.`;
+  if (niveauIntensite === 'CRITIQUE') return `Critique — indice d'intensité ${medecin?.intensiteRisque != null ? Math.round(medecin.intensiteRisque * 100) / 100 : '—'} ≥ 80e percentile du portefeuille. Horizon recommandé : 7 jours. Score urgence : ${scoreUrgence > 0 ? Math.round(scoreUrgence * 100) / 100 : '—'} %.`;
+  if (niveauIntensite === 'ELEVEE' || niveauIntensite === 'ÉLEVÉE') return `Élevée — indice d'intensité ${medecin?.intensiteRisque != null ? Math.round(medecin.intensiteRisque * 100) / 100 : '—'} entre la médiane et le 80e percentile. Horizon recommandé : 15 jours. Score urgence : ${scoreUrgence > 0 ? Math.round(scoreUrgence * 100) / 100 : '—'} %.`;
+  if (niveauIntensite === 'NORMALE') return `Normale — indice d'intensité ${medecin?.intensiteRisque != null ? Math.round(medecin.intensiteRisque * 100) / 100 : '—'} sous la médiane du portefeuille. Horizon recommandé : 30 jours. Score urgence : ${scoreUrgence > 0 ? Math.round(scoreUrgence * 100) / 100 : '—'} %.`;
+  // Fallback sur le champ action.urgence (statut)
+  if (action.urgence === 'ELEVE') return `Élevé — priorité de l'action liée au statut ${formatEnumLabel(statut)}.`;
   return `${formatEnumLabel(action.urgence)} — niveau déterminé par le statut ${formatEnumLabel(statut)}.`;
 }
 
@@ -338,7 +358,7 @@ function getActionStateReason(action) {
 }
 
 function formatAmount(val) {
-  if (val === null || val === undefined) return '0';
+  if (val === null || val === undefined) return '—';
   return Math.round(Number(val)).toLocaleString('fr-FR');
 }
 
@@ -363,6 +383,12 @@ function getBadgeVariant(type, value) {
     if (normalized === 'SILENCE_CRITIQUE' || normalized === 'URGENT') return 'silence';
     if (normalized === 'ELEVE') return 'surveillance';
     if (normalized === 'MOYEN') return 'segment-b';
+    return 'actif';
+  }
+
+  if (type === 'intensite') {
+    if (normalized === 'CRITIQUE') return 'silence';
+    if (normalized === 'ELEVEE' || normalized === 'ÉLEVÉE') return 'surveillance';
     return 'actif';
   }
 
@@ -400,6 +426,15 @@ function KpiCardComponent({ label, icon, tone, value }) {
         </div>
       </Card>
     </motion.div>
+  );
+}
+
+function ActionIndicator({ label, value }) {
+  return (
+    <div className="min-w-0 rounded-lg bg-slate-50 px-3 py-2.5">
+      <span className="block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500">{label}</span>
+      <span className="mt-1 block truncate text-xs font-extrabold text-slate-900">{value}</span>
+    </div>
   );
 }
 
@@ -543,9 +578,11 @@ function EvolutionChartCard({ data = [], loading = false }) {
 }
 
 export default function ActionsPage() {
-  const { token } = useAuth();
+  const { token, userProfile } = useAuth();
+  const isAdmin = isAdminProfile(userProfile);
   const [filters, setFilters] = useState(FILTER_DEFAULTS);
   const [pageData, setPageData] = useState(null);
+  const [onboardingMedecins, setOnboardingMedecins] = useState([]);
 
   // Selection & View Mode state: 'table' or 'detail'
   const [selectedAction, setSelectedAction] = useState(null);
@@ -555,6 +592,7 @@ export default function ActionsPage() {
   const [openActionBlocks, setOpenActionBlocks] = useState({ valeur: true, action: true, urgence: true, silence: true, etat: true });
   const toggleActionBlock = (block) => setOpenActionBlocks((current) => ({ ...current, [block]: !current[block] }));
   const [viewMode, setViewMode] = useState('table');
+  const [urgencySortDirection, setUrgencySortDirection] = useState('desc');
 
   // Sauvegarde de la position exacte de scroll avant sélection
   const lastScrollPosition = useRef(0);
@@ -690,8 +728,19 @@ export default function ActionsPage() {
     setError(null);
 
     try {
-      const data = await getActions(token, filters);
+      const [data, onboardingData] = await Promise.all([
+        getActions(token, filters),
+        filters.statut === 'ONBOARDING'
+          ? getMedecins(token, {
+              search: filters.search,
+              statut: 'ONBOARDING',
+              segment: filters.segment,
+              organisme: filters.lieuOrganisme,
+            })
+          : Promise.resolve(null),
+      ]);
       setPageData(data);
+      setOnboardingMedecins(onboardingData?.items ?? []);
 
       setSelectedAction((current) => {
         if (!current) return null;
@@ -700,6 +749,7 @@ export default function ActionsPage() {
     } catch (err) {
       setError(err.message ?? 'Erreur de chargement des actions');
       setPageData(null);
+      setOnboardingMedecins([]);
     } finally {
       setLoading(false);
     }
@@ -817,14 +867,124 @@ export default function ActionsPage() {
     setViewMode('table');
   };
 
+  const toggleOnboardingFilter = () => {
+    setFilters((current) => current.statut === 'ONBOARDING'
+      ? FILTER_DEFAULTS
+      : { ...FILTER_DEFAULTS, statut: 'ONBOARDING' });
+  };
+
   const actions = pageData?.items ?? [];
+  const sortedActions = useMemo(() => [...actions].sort((left, right) => {
+    const leftUrgency = Number(left.medecin?.scoreUrgence ?? 0);
+    const rightUrgency = Number(right.medecin?.scoreUrgence ?? 0);
+    const urgencyOrder = urgencySortDirection === 'desc' ? rightUrgency - leftUrgency : leftUrgency - rightUrgency;
+    return urgencyOrder
+      || Number(right.medecin?.scoreRisque ?? 0) - Number(left.medecin?.scoreRisque ?? 0)
+      || Number(right.medecin?.perteCa ?? 0) - Number(left.medecin?.perteCa ?? 0);
+  }), [actions, urgencySortDirection]);
+  const displayedActions = useMemo(() => {
+    if (filters.statut !== 'ONBOARDING') return sortedActions;
+
+    const actionDoctorIds = new Set(sortedActions.map((action) => action.medecin?.id));
+    const doctorsWithoutAction = onboardingMedecins
+      .filter((medecin) => !actionDoctorIds.has(medecin.id))
+      .map((medecin) => ({
+        id: `onboarding-medecin-${medecin.id}`,
+        medecin,
+        statut: medecin.statut || 'ONBOARDING',
+        segment: medecin.segment,
+        actionRecommandee: 'Visite onboarding à planifier',
+        isOnboardingWithoutAction: true,
+      }));
+
+    return [...sortedActions, ...doctorsWithoutAction];
+  }, [filters.statut, onboardingMedecins, sortedActions]);
   const kpis = pageData?.kpis ?? {};
   const meta = pageData?.meta ?? {};
   const filterOptions = pageData?.filters ?? {};
   const selectedMedecin = selectedAction?.medecin ?? null;
 
+  const exportCurrentTable = () => {
+    if (!isAdmin) return;
+    if (activeTab === 'VACTIS') {
+      const rows = buildObjectRows(displayedActions);
+      downloadExcelXml(rows, 'actions-vactis.xls', 'Actions VACTIS');
+      return;
+    }
+
+    downloadExcelXml(buildObjectRows(visitesLibresList), 'visites-commerciales-libres.xls', 'Visites libres');
+  };
+
+  const printCurrentTable = () => {
+    if (!isAdmin) return;
+    const rows = activeTab === 'VACTIS'
+      ? [
+          [
+            'Médecin',
+            'Statut',
+            'Segment',
+            'Note',
+            'Action proposée',
+            'Décision',
+            'Variation CA',
+            'Variation cas',
+            'Silence',
+            'Urgence %',
+            'Intensité VACTIS',
+            'État',
+            'Date visite',
+            'Commercial',
+          ],
+          ...displayedActions.map((action) => {
+            const medecinName = `${action.medecin?.nom ?? ''} ${action.medecin?.prenom ?? ''}`.trim() || '—';
+            const medecinDetail = [action.medecin?.specialite, action.lieuOrganisme || action.medecin?.organisme].filter(Boolean).join(' · ');
+            const medecinDisplay = medecinDetail ? `${medecinName} (${medecinDetail})` : medecinName;
+            const segmentDisplay = action.segment
+              ? `${action.segment}${action.segment === 'A' ? ' (VIP)' : action.segment === 'B' ? ' (Important)' : action.segment === 'C' ? ' (Standard)' : ' (Faible)'}`
+              : '—';
+            const noteDisplay = action.derniereNoteTerrain != null ? `${action.derniereNoteTerrain}/5` : '—';
+            const urgencePercent = Number(action.medecin?.scoreUrgence ?? 0) > 0 ? formatPercent(action.medecin.scoreUrgence) : '—';
+            const intensiteDisplay = action.urgenceSilence
+              ? 'Silence critique'
+              : [action.medecin?.niveauIntensite ? formatEnumLabel(action.medecin.niveauIntensite) : formatEnumLabel(action.urgence), action.horizonJours != null ? `Horizon ${action.horizonJours}j` : null].filter(Boolean).join(' · ') || '—';
+
+            return [
+              medecinDisplay,
+              formatEnumLabel(action.statut),
+              segmentDisplay,
+              noteDisplay,
+              action.actionRecommandee ?? '—',
+              action.decisionRecommandation ? formatEnumLabel(action.decisionRecommandation) : '—',
+              formatSignedPercent(action.medecin?.variationCa),
+              formatSignedPercent(action.medecin?.variationVolume ?? action.medecin?.variationCas),
+              formatPercent(action.medecin?.scoreSilence),
+              urgencePercent,
+              intensiteDisplay,
+              formatEnumLabel(action.etatAction),
+              action.dateVisite ? formatDate(action.dateVisite) : '—',
+              action.commercial ?? '—',
+            ];
+          }),
+        ]
+      : [
+          ['Date visite', 'Médecin', 'Spécialité', 'Organisme', 'Commercial', 'Qualification', 'Commentaire'],
+          ...visitesLibresList.map((visite) => [
+            visite.dateVisite ? formatDate(visite.dateVisite) : '—',
+            `${visite.medecinNom ?? ''} ${visite.medecinPrenom ?? ''}`.trim() || 'Médecin NC',
+            visite.medecinSpecialite ?? '—',
+            visite.medecinOrganisme ?? '—',
+            visite.visiteur ?? '—',
+            visite.qualification ?? '—',
+            visite.commentaire ?? '—',
+          ]),
+        ];
+    const title = activeTab === 'VACTIS' ? 'Actions VACTIS' : 'Visites commerciales libres';
+    printObjectRows(rows, title);
+  };
+
   return (
     <div className="space-y-6">
+      <style>{`@media print { body * { visibility: hidden !important; } .actions-export-print, .actions-export-print * { visibility: visible !important; } .actions-export-print { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; overflow: visible !important; box-shadow: none !important; } .actions-export-print button { display: none !important; } }`}</style>
       {/* Page Header — intégré dans le flux, sans Card ni bordure */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 px-1">
         <div className="flex items-center gap-3">
@@ -839,7 +999,7 @@ export default function ActionsPage() {
 
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-400 font-medium hidden md:block">
-            {meta.affiches ?? 0} affichées / {meta.charges ?? 0} chargées
+            {filters.statut === 'ONBOARDING' ? displayedActions.length : meta.affiches ?? 0} affichées / {filters.statut === 'ONBOARDING' ? displayedActions.length : meta.charges ?? 0} chargées
           </span>
           <button
             type="button"
@@ -905,7 +1065,7 @@ export default function ActionsPage() {
                   options={filterOptions.actions ?? []}
                 />
                 <CustomSelect
-                  label="Urgence"
+                  label="Intensité VACTIS"
                   value={filters.urgence}
                   onChange={updateFilter('urgence')}
                   placeholder="Toutes"
@@ -941,7 +1101,15 @@ export default function ActionsPage() {
                 />
               </div>
 
-              <div className="flex justify-end pt-1">
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filters.statut === 'ONBOARDING' ? 'bg-sky-100 text-sky-800' : 'text-sky-700 hover:bg-sky-50'}`}
+                  onClick={toggleOnboardingFilter}
+                  aria-pressed={filters.statut === 'ONBOARDING'}
+                >
+                  Médecins onboarding
+                </button>
                 <button
                   type="button"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
@@ -982,7 +1150,7 @@ export default function ActionsPage() {
         <div key="actions-table-view" className="space-y-4">
           {/* Onglets + Table / Carte dans un seul bloc */}
           {activeTab === 'VACTIS' ? (
-            <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
+            <Card className="actions-export-print bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
               {/* Tab Bar intégrée dans l'en-tête de la Card */}
               <div className="px-5 pt-4 pb-0 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-1">
@@ -995,7 +1163,7 @@ export default function ActionsPage() {
                         : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
-                    Actions VACTIS ({actions.length})
+                    {filters.statut === 'ONBOARDING' ? 'Médecins onboarding' : 'Actions VACTIS'} ({displayedActions.length})
                   </button>
                   <button
                     type="button"
@@ -1009,9 +1177,15 @@ export default function ActionsPage() {
                     Visites commerciales libres ({visitesLibresList.length})
                   </button>
                 </div>
-                <p className="text-xs text-slate-500 pb-3 hidden md:block">
-                  Réservez vos actions, saisissez vos retours ou cliquez sur un médecin pour sa fiche contextuelle.
-                </p>
+                <div className="flex items-center gap-3 pb-3">
+                  {isAdmin && <div className="flex items-center gap-2">
+                    <button type="button" onClick={printCurrentTable} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50" aria-label="Exporter la table Actions en PDF" title="Imprimer ou enregistrer la table en PDF"><ActionsIcon name="clipboard" size={14} /> PDF</button>
+                    <button type="button" onClick={exportCurrentTable} disabled={!displayedActions.length} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50" aria-label="Télécharger les Actions en Excel" title="Télécharger les lignes filtrées au format Excel"><ActionsIcon name="download" size={14} /> Excel</button>
+                  </div>}
+                  <p className="text-xs text-slate-500 hidden md:block">
+                    Réservez vos actions, saisissez vos retours ou cliquez sur un médecin pour sa fiche contextuelle.
+                  </p>
+                </div>
               </div>
 
               <Table>
@@ -1019,7 +1193,11 @@ export default function ActionsPage() {
                   <TableRow className="hover:bg-slate-50/80 cursor-default bg-slate-50/90">
                     {TABLE_COLUMNS.map((column, idx) => (
                       <TableHead key={idx} className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">
-                        {column}
+                        {column === 'Urgence %' ? (
+                          <button type="button" onClick={() => setUrgencySortDirection((current) => current === 'desc' ? 'asc' : 'desc')} className="inline-flex items-center gap-1 hover:text-sky-700" aria-label={`Trier par urgence ${urgencySortDirection === 'desc' ? 'croissante' : 'décroissante'}`}>
+                            {column}<span aria-hidden="true">{urgencySortDirection === 'desc' ? '↓' : '↑'}</span>
+                          </button>
+                        ) : column}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -1028,27 +1206,17 @@ export default function ActionsPage() {
                   {loading && (
                     Array.from({ length: 6 }).map((_, idx) => (
                       <TableRow key={idx} className="hover:bg-transparent">
-                        <TableCell><Skeleton className="h-4 w-36 mb-1.5" /><Skeleton className="h-3 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-14 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-44" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-24 rounded-lg" /></TableCell>
-                        <TableCell><Skeleton className="h-8 w-24 rounded-lg" /></TableCell>
-                        <TableCell><Skeleton className="h-8 w-8 rounded-lg ml-auto" /></TableCell>
+                        {TABLE_COLUMNS.map((_, cellIndex) => <TableCell key={cellIndex}><Skeleton className={`h-${cellIndex === 0 ? '4 w-36' : '6 w-20'} rounded-lg`} /></TableCell>)}
                       </TableRow>
                     ))
                   )}
 
-                  {!loading && actions.length === 0 && (
+                  {!loading && displayedActions.length === 0 && (
                     <TableRow className="hover:bg-transparent">
                       <TableCell colSpan={TABLE_COLUMNS.length} className="h-80 text-center">
                         <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
                           <MenuIcon name="actions" />
-                          <p className="font-semibold text-slate-700">Aucune action VACTIS trouvée</p>
+                          <p className="font-semibold text-slate-700">{filters.statut === 'ONBOARDING' ? 'Aucun médecin onboarding trouvé' : 'Aucune action VACTIS trouvée'}</p>
                           <p className="text-xs text-slate-500">Ajustez les filtres ou réinitialisez la recherche.</p>
                         </div>
                       </TableCell>
@@ -1056,14 +1224,14 @@ export default function ActionsPage() {
                   )}
 
                   {!loading &&
-                    actions.map((action) => {
+                    displayedActions.map((action) => {
                       const isSelected = selectedAction?.id === action.id;
                       return (
                         <TableRow
                           key={action.id}
                           id={`action-row-${action.id}`}
-                          onClick={() => handleSelectAction(action)}
-                          className={`transition-all group cursor-pointer ${
+                          onClick={action.isOnboardingWithoutAction ? undefined : () => handleSelectAction(action)}
+                          className={`transition-all group ${action.isOnboardingWithoutAction ? '' : 'cursor-pointer'} ${
                             isSelected
                               ? 'bg-sky-50/90 border-l-4 border-l-sky-500 shadow-2xs font-semibold'
                               : 'hover:bg-sky-50/30'
@@ -1130,12 +1298,28 @@ export default function ActionsPage() {
                               <span className="text-xs font-semibold text-slate-400">—</span>
                             )}
                           </TableCell>
+                          <TableCell className="whitespace-nowrap text-xs font-semibold text-slate-700">{formatSignedPercent(action.medecin?.variationCa)}</TableCell>
+                          <TableCell className="whitespace-nowrap text-xs font-semibold text-slate-700">{formatSignedPercent(action.medecin?.variationVolume)}</TableCell>
+                          <TableCell className="whitespace-nowrap text-xs font-semibold text-slate-700">{formatPercent(action.medecin?.scoreSilence)}</TableCell>
+                          <TableCell className="whitespace-nowrap text-xs font-black text-slate-900">{Number(action.medecin?.scoreUrgence ?? 0) > 0 ? formatPercent(action.medecin.scoreUrgence) : '—'}</TableCell>
                           <TableCell>
                             <div className="flex flex-col gap-1 items-start">
-                              <Badge variant={getBadgeVariant('urgence', action.urgence)} className="gap-1">
-                                <ActionsIcon name="heartbeat" size={12} />
-                                {formatEnumLabel(action.urgence)}
-                              </Badge>
+                              {action.urgenceSilence ? (
+                                <Badge variant="silence" className="gap-1">
+                                  <ActionsIcon name="alert" size={12} />
+                                  Silence critique
+                                </Badge>
+                              ) : action.medecin?.niveauIntensite ? (
+                                <Badge variant={getBadgeVariant('intensite', action.medecin.niveauIntensite)} className="gap-1" title={`Indice VACTIS : ${action.medecin.intensiteRisque ?? '—'} / 100`}>
+                                  <ActionsIcon name="heartbeat" size={12} />
+                                  {formatEnumLabel(action.medecin.niveauIntensite)}
+                                </Badge>
+                              ) : (
+                                <Badge variant={getBadgeVariant('urgence', action.urgence)} className="gap-1">
+                                  <ActionsIcon name="heartbeat" size={12} />
+                                  {formatEnumLabel(action.urgence)}
+                                </Badge>
+                              )}
                               {action.horizonJours != null && (
                                 <span className="inline-flex items-center text-[10px] font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-md" title={`Délai recommandé : ${action.horizonJours} jours`}>
                                   Horizon {action.horizonJours} j
@@ -1152,9 +1336,9 @@ export default function ActionsPage() {
                             {formatDate(action.dateVisite)}
                           </TableCell>
                           <TableCell>
-                            {action.isReserved || action.reservedBy ? (
+                            {action.isOnboardingWithoutAction ? null : action.isReserved || action.reservedBy ? (
                               <span className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-[#0f2e22] dark:text-[#6ee7b7] dark:border-[#195e42] inline-flex items-center gap-1">
-                                🔒 {action.reservedBy ?? action.commercial}
+                                {action.reservedBy ?? action.commercial}
                               </span>
                             ) : (
                               <button
@@ -1167,16 +1351,16 @@ export default function ActionsPage() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <button
+                            {!action.isOnboardingWithoutAction && <button
                               type="button"
                               onClick={(e) => handleOpenSaisieRetour(action, e)}
                               className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-sky-600 hover:bg-sky-700 text-white shadow-2xs transition-all"
                             >
                               Saisir retour
-                            </button>
+                            </button>}
                           </TableCell>
                           <TableCell className="text-right">
-                            <button
+                            {!action.isOnboardingWithoutAction && <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1191,7 +1375,7 @@ export default function ActionsPage() {
                             >
                               <span>{isSelected ? 'Sélectionnée' : 'Ouvrir'}</span>
                               <ActionsIcon name="arrow-right" size={16} />
-                            </button>
+                            </button>}
                           </TableCell>
                         </TableRow>
                       );
@@ -1201,7 +1385,7 @@ export default function ActionsPage() {
             </Card>
           ) : (
             /* Onglet 2 : Visites commerciales libres */
-            <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
+            <Card className="actions-export-print bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
               {/* Tab Bar intégrée dans l'en-tête de la Card */}
               <div className="px-5 pt-4 pb-0 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-1">
@@ -1214,7 +1398,7 @@ export default function ActionsPage() {
                         : 'border-transparent text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
-                    Actions VACTIS ({actions.length})
+                    {filters.statut === 'ONBOARDING' ? 'Médecins onboarding' : 'Actions VACTIS'} ({displayedActions.length})
                   </button>
                   <button
                     type="button"
@@ -1228,13 +1412,19 @@ export default function ActionsPage() {
                     Visites commerciales libres ({visitesLibresList.length})
                   </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsVisiteLibreOpen(true)}
-                  className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs transition-all shadow-xs mb-3"
-                >
-                  + Enregistrer une visite libre
-                </button>
+                <div className="flex items-center gap-2 pb-3">
+                  {isAdmin && <>
+                    <button type="button" onClick={printCurrentTable} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50" aria-label="Exporter les visites libres en PDF" title="Imprimer ou enregistrer la table en PDF"><ActionsIcon name="clipboard" size={14} /> PDF</button>
+                    <button type="button" onClick={exportCurrentTable} disabled={!visitesLibresList.length} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50" aria-label="Télécharger les visites libres en Excel" title="Télécharger les lignes affichées au format Excel"><ActionsIcon name="download" size={14} /> Excel</button>
+                  </>}
+                  <button
+                    type="button"
+                    onClick={() => setIsVisiteLibreOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-900 font-extrabold text-xs transition-all shadow-xs"
+                  >
+                    + Enregistrer une visite libre
+                  </button>
+                </div>
               </div>
 
               <Table>
@@ -1382,12 +1572,22 @@ export default function ActionsPage() {
                       {formatEnumLabel(selectedAction.statut)}
                     </Badge>
                   )}
-                  {selectedAction.urgence && (
+                  {selectedAction.urgenceSilence ? (
+                    <Badge variant="silence" className="gap-1 px-3.5 py-1.5 text-xs">
+                      <ActionsIcon name="alert" size={14} />
+                      Silence critique
+                    </Badge>
+                  ) : selectedMedecin?.niveauIntensite ? (
+                    <Badge variant={getBadgeVariant('intensite', selectedMedecin.niveauIntensite)} className="gap-1 px-3.5 py-1.5 text-xs" title={`Intensité VACTIS — indice ${selectedMedecin.intensiteRisque ?? '—'} / 100`}>
+                      <ActionsIcon name="heartbeat" size={14} />
+                      {formatEnumLabel(selectedMedecin.niveauIntensite)}
+                    </Badge>
+                  ) : selectedAction.urgence ? (
                     <Badge variant={getBadgeVariant('urgence', selectedAction.urgence)} className="gap-1 px-3.5 py-1.5 text-xs">
                       <ActionsIcon name="heartbeat" size={14} />
                       {formatEnumLabel(selectedAction.urgence)}
                     </Badge>
-                  )}
+                  ) : null}
                   {selectedAction.etatAction && (
                     <Badge variant={getBadgeVariant('etat', selectedAction.etatAction)} className="px-3.5 py-1.5 text-xs">
                       {formatEnumLabel(selectedAction.etatAction)}
@@ -1431,6 +1631,9 @@ export default function ActionsPage() {
                     )}
                     <div className="text-xs text-sky-900 leading-relaxed space-y-1">
                       <span className="text-[10px] uppercase tracking-wider text-slate-500 block font-black">Commentaire détaillé</span>
+                      {selectedAction.commentaireMoteurTitre && (
+                        <p className="font-extrabold text-sky-950">{selectedAction.commentaireMoteurTitre}</p>
+                      )}
                       <p>{selectedAction.commentaireMoteurDetail || selectedAction.commentaire || getActionDescription(selectedAction, selectedMedecin)}</p>
                     </div>
                   </div>
@@ -1465,7 +1668,7 @@ export default function ActionsPage() {
                         <div>
                           <span className="text-[10px] text-sky-800 font-extrabold block uppercase">CA Mois Actuel</span>
                           <span className="text-sm font-black text-sky-700">
-                            {formatAmount(selectedMedecin?.caMois ?? 0)} MAD
+                            {selectedMedecin?.caMois == null ? '—' : `${formatAmount(selectedMedecin.caMois)} MAD`}
                           </span>
                         </div>
                         <div className="p-2 bg-sky-100 text-sky-700 rounded-xl shrink-0">
@@ -1477,7 +1680,7 @@ export default function ActionsPage() {
                         <div>
                           <span className="text-[10px] text-emerald-800 font-extrabold block uppercase">CA mois précédent (M-1)</span>
                           <span className="text-sm font-black text-emerald-700">
-                            {formatAmount(selectedMedecin?.caBaseline ?? selectedMedecin?.caMois ?? 0)} MAD
+                            {selectedMedecin?.caBaseline == null ? '—' : `${formatAmount(selectedMedecin.caBaseline)} MAD`}
                           </span>
                         </div>
                         <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl shrink-0">
@@ -1489,7 +1692,7 @@ export default function ActionsPage() {
                         <div>
                           <span className="text-[10px] text-indigo-800 font-extrabold block uppercase">CA Total Historique</span>
                           <span className="text-sm font-black text-indigo-700">
-                            {formatAmount(selectedMedecin?.caTotal ?? selectedMedecin?.caMois ?? 0)} MAD
+                            {selectedMedecin?.caTotal == null ? '—' : `${formatAmount(selectedMedecin.caTotal)} MAD`}
                           </span>
                         </div>
                         <div className="p-2 bg-indigo-100 text-indigo-700 rounded-xl shrink-0">
@@ -1513,7 +1716,7 @@ export default function ActionsPage() {
                         <div>
                           <span className="text-[10px] text-teal-800 font-extrabold block uppercase">Dossiers labo (Cas)</span>
                           <span className="text-sm font-black text-teal-700">
-                            {selectedMedecin?.totalCas ? `${selectedMedecin.totalCas} cas` : '—'}
+                            {selectedMedecin?.totalCas == null ? '—' : `${selectedMedecin.totalCas} cas`}
                           </span>
                         </div>
                         <div className="p-2 bg-teal-100 text-teal-700 rounded-xl shrink-0">
@@ -1550,6 +1753,19 @@ export default function ActionsPage() {
 
                 {/* Colonne Droite (6 cols) : Silence Radio & Métriques avancées */}
                 <div className="lg:col-span-6 space-y-6">
+                  <div className="grid grid-cols-2 gap-2 rounded-2xl border border-sky-100 bg-white p-4 shadow-2xs sm:grid-cols-4">
+                    <ActionIndicator label="Référence CA" value={formatMad(selectedMedecin?.referenceCa)} />
+                    <ActionIndicator label="Référence cas" value={formatNumber(selectedMedecin?.referenceCas ?? selectedMedecin?.referenceVolume)} />
+                    <ActionIndicator label="Variation CA" value={formatSignedPercent(selectedMedecin?.variationCa)} />
+                    <ActionIndicator label="Variation cas" value={formatSignedPercent(selectedMedecin?.variationCas ?? selectedMedecin?.variationVolume)} />
+                    <ActionIndicator label="Silence score" value={formatPercent(selectedMedecin?.scoreSilence)} />
+                    <ActionIndicator label="Intervalle" value={selectedMedecin?.intervalleEffectif == null ? '—' : `${formatNumber(selectedMedecin.intervalleEffectif)} j`} />
+                    <ActionIndicator label="Intensité" value={selectedMedecin?.niveauIntensite ? formatEnumLabel(selectedMedecin.niveauIntensite) : '—'} />
+                    <ActionIndicator label="Score de risque" value={formatNumber(selectedMedecin?.scoreRisque, 4)} />
+                    <ActionIndicator label="Facteur économique" value={formatNumber(selectedMedecin?.facteurMaterialite, 5)} />
+                    <ActionIndicator label="Urgence calculée" value={Number(selectedMedecin?.scoreUrgence) > 0 ? formatPercent(selectedMedecin.scoreUrgence) : '—'} />
+                    <ActionIndicator label="Rythme" value={selectedMedecin?.sourceRythme === 'RECENT' ? 'Récent' : selectedMedecin?.sourceRythme === 'HISTORIQUE' ? 'Historique' : '30 j par défaut'} />
+                  </div>
                   {/* Silence Radio */}
                   <div className="p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
                     <div className="flex items-center justify-between">
@@ -1594,6 +1810,17 @@ export default function ActionsPage() {
                   <span className="text-lg font-bold text-sky-700" aria-hidden="true">{isExplanationOpen ? '−' : '+'}</span>
                 </button>
                 {isExplanationOpen && <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
+                  <details open className="rounded-xl border border-sky-100 bg-white p-4 shadow-2xs lg:col-span-2">
+                    <summary className="cursor-pointer text-xs font-extrabold uppercase tracking-wider text-sky-800">Indicateurs du mois et urgence</summary>
+                    <div className="mt-3 space-y-1 text-xs leading-relaxed">
+                      <CalculationLine label="Référence" muted>CA = moyenne des {selectedMedecin?.nombreMoisReference ?? '—'} mois disponibles ; cas calculés sur la même période.</CalculationLine>
+                      <CalculationLine label="Variation CA">({formatMad(selectedMedecin?.caMoisAnalyse)} − {formatMad(selectedMedecin?.referenceCa)}) / max({formatMad(selectedMedecin?.referenceCa)} ; 300) = <strong>{formatSignedPercent(selectedMedecin?.variationCa)}</strong></CalculationLine>
+                      <CalculationLine label="Variation cas">({formatNumber(selectedMedecin?.casMoisAnalyse)} − {formatNumber(selectedMedecin?.referenceCas ?? selectedMedecin?.referenceVolume)}) / max({formatNumber(selectedMedecin?.referenceCas ?? selectedMedecin?.referenceVolume)} ; 1) = <strong>{formatSignedPercent(selectedMedecin?.variationCas ?? selectedMedecin?.variationVolume)}</strong></CalculationLine>
+                      <CalculationLine label="Silence">min(100 ; 20 × {selectedMedecin?.joursSansActivite ?? '—'} / {formatNumber(selectedMedecin?.intervalleEffectif)}) = <strong>{formatPercent(selectedMedecin?.scoreSilence)}</strong> ({selectedMedecin?.sourceRythme || '—'})</CalculationLine>
+                      <CalculationLine label="Urgence">brute {formatNumber(selectedMedecin?.urgenceBrute)} × facteur {formatNumber(selectedMedecin?.facteurMaterialite)} = <strong>{Number(selectedMedecin?.scoreUrgence) > 0 ? formatPercent(selectedMedecin.scoreUrgence) : '—'}</strong></CalculationLine>
+                      <CalculationLine label="Impact">perte CA {formatMad(selectedMedecin?.perteCa)} ; seuil {formatMad(selectedMedecin?.seuilImpact)} ; risque {formatNumber(selectedMedecin?.scoreRisque)} / 100</CalculationLine>
+                    </div>
+                  </details>
                   <div className="action-detail-value-panel rounded-xl border border-sky-100 bg-white p-4 shadow-2xs">
                     <button type="button" onClick={() => toggleActionBlock('valeur')} className="flex w-full items-center justify-between text-left text-xs font-extrabold uppercase tracking-wider text-sky-800"><span>Valeur du médecin</span><span className="text-base text-sky-700">{openActionBlocks.valeur ? '⌃' : '⌄'}</span></button>
                     <div className={`${openActionBlocks.valeur ? '' : 'hidden'} mt-3 space-y-2 text-xs leading-relaxed`}>
@@ -1608,7 +1835,7 @@ export default function ActionsPage() {
                       </details>
                       <details open className="action-metric action-metric--economic group rounded-lg border border-sky-100 bg-sky-50/50">
                         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span className="flex items-center gap-2"><span className="explanation-metric-icon explanation-metric-icon--teal"><ActionsIcon name="pie" size={18} /></span><span>3. Poids économique</span></span><span className="text-base text-sky-700 transition-transform group-open:rotate-180" aria-hidden="true">⌄</span></summary>
-                        <div className="economic-weight-breakdown"><div><strong>CA normalisé</strong><span>{formatExplanationScore(selectedMedecin?.caNormaliseSur100)} / 100</span><small>CA médecin {formatAmount(selectedMedecin?.caMois ?? 0)} MAD / maximum portefeuille {formatAmount(selectedMedecin?.maxCaPortefeuille ?? 0)} MAD</small></div><div><strong>Volume normalisé</strong><span>{formatExplanationScore(selectedMedecin?.volumeNormaliseSur100)} / 100</span><small>{selectedMedecin?.totalCas ?? '—'} cas / maximum portefeuille {formatExplanationScore(selectedMedecin?.maxVolumePortefeuille)} cas</small></div></div>
+                        <div className="economic-weight-breakdown"><div><strong>CA normalisé</strong><span>{formatExplanationScore(selectedMedecin?.caNormaliseSur100)} / 100</span><small>CA médecin {formatAmount(selectedMedecin?.caMois)} MAD / maximum portefeuille {formatAmount(selectedMedecin?.maxCaPortefeuille)} MAD</small></div><div><strong>Volume normalisé</strong><span>{formatExplanationScore(selectedMedecin?.volumeNormaliseSur100)} / 100</span><small>{selectedMedecin?.totalCas ?? '—'} cas / maximum portefeuille {formatExplanationScore(selectedMedecin?.maxVolumePortefeuille)} cas</small></div></div>
                         <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><CalculationLine label="Relation" muted>poids économique = 50% CA normalisé + 50% volume normalisé ; contribution = poids × 0,20</CalculationLine><CalculationLine label="Valeur">poids économique = {formatExplanationScore(selectedMedecin?.poidsEcoSur100)} / 100</CalculationLine><CalculationLine label="Calcul">{formatExplanationScore(selectedMedecin?.poidsEcoSur100)} × 0,20 = {formatWeightedExplanation(selectedMedecin?.poidsEcoSur100, 0.2)}</CalculationLine><CalculationLine label="Résultat">contribution économique = {formatWeightedExplanation(selectedMedecin?.poidsEcoSur100, 0.2)}</CalculationLine><div className="action-contribution action-contribution--teal"><span>Contribution</span><strong>{formatWeightedExplanation(selectedMedecin?.poidsEcoSur100, 0.2)}</strong><small>20% du score final</small></div></div>
                       </details>
                       <details open className="action-metric action-metric--final group rounded-lg border border-sky-100 bg-sky-50/50">
@@ -1631,11 +1858,12 @@ export default function ActionsPage() {
                     <button type="button" onClick={() => toggleActionBlock('silence')} className="flex w-full items-center justify-between text-left text-xs font-extrabold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-2"><ActionsIcon name="heartbeat" size={18} />Silence radio</span><span className="text-base text-sky-700">{openActionBlocks.silence ? '⌃' : '⌄'}</span></button>
                     <div className={`${openActionBlocks.silence ? '' : 'hidden'} mt-3 space-y-1 text-xs leading-relaxed`}>
                       <CalculationLine label="Relation" muted>niveau = jours sans activité / fréquence attendue</CalculationLine>
-                      <CalculationLine label="Seuil" muted>ratio &gt; 1 : SILENCE CRITIQUE ; ratio &gt; 0,70 : ALERTE SILENCE ; sinon : SUIVI REGULIER</CalculationLine>
-                      <CalculationLine label="Valeur">jours sans activité = {selectedAction.joursSansActivite ?? '—'} ; fréquence = {calculateFrequenceJours(selectedMedecin?.segment) ?? '—'} jours ; segment = {selectedMedecin?.segment || selectedAction.segment || '—'}</CalculationLine>
-                      <CalculationLine label="Calcul">{selectedAction.joursSansActivite ?? '—'} / {calculateFrequenceJours(selectedMedecin?.segment) ?? '—'} = {selectedAction.joursSansActivite != null && calculateFrequenceJours(selectedMedecin?.segment) ? formatExplanationScore(selectedAction.joursSansActivite / calculateFrequenceJours(selectedMedecin?.segment)) : '—'} ; score = {formatExplanationScore(selectedMedecin?.scoreSilence)} / 100</CalculationLine>
-                      <CalculationLine label="Résultat">{selectedAction.joursSansActivite ?? '—'} jours {selectedAction.urgenceSilence ? 'dépassent le seuil : SILENCE CRITIQUE et visite prioritaire.' : 'déterminent le niveau de silence affiché.'}</CalculationLine>
+                      <CalculationLine label="Relation" muted>score silence = min(100 ; 20 × jours sans activité / intervalle effectif)</CalculationLine>
+                      <CalculationLine label="Valeur">jours = {selectedMedecin?.joursSansActivite ?? selectedAction.joursSansActivite ?? '—'} ; intervalle = {formatNumber(selectedMedecin?.intervalleEffectif)} jours ; rythme = {selectedMedecin?.sourceRythme || '—'}</CalculationLine>
+                      <CalculationLine label="Calcul">min(100 ; 20 × {selectedMedecin?.joursSansActivite ?? selectedAction.joursSansActivite ?? '—'} / {formatNumber(selectedMedecin?.intervalleEffectif)}) = <strong>{formatPercent(selectedMedecin?.scoreSilence)}</strong></CalculationLine>
+                      <CalculationLine label="Classe">ratio {formatNumber(selectedMedecin?.joursSansActivite != null && selectedMedecin?.intervalleEffectif ? selectedMedecin.joursSansActivite / selectedMedecin.intervalleEffectif : null)} ; {selectedMedecin?.classeSilence?.replaceAll('_', ' ') || '—'}</CalculationLine>
                     </div>
+
                   </div>
                   <div className="action-detail-state rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
                     <button type="button" onClick={() => toggleActionBlock('etat')} className="flex w-full items-center justify-between text-left text-xs font-extrabold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-2"><ActionsIcon name="check" size={18} />État</span><span className="text-base text-sky-700">{openActionBlocks.etat ? '⌃' : '⌄'}</span></button>

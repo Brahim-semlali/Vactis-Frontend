@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import Sidebar from './Sidebar.jsx';
+import NotificationDropdown from './NotificationDropdown.jsx';
 
-export default function AppLayout({ children }) {
+export default function AppLayout({ children, canAccessReclamations = false }) {
   const { username, userProfile, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
@@ -54,7 +55,7 @@ export default function AppLayout({ children }) {
       />
 
       <div className="flex-1 flex flex-col min-w-0 bg-[#f0f2f5] dark:bg-[var(--bg)]">
-        <header className="h-16 px-4 sm:px-6 md:px-8 bg-white dark:bg-[var(--card)] border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shadow-[0_1px_0_rgba(15,23,42,0.03)] shrink-0 transition-colors">
+        <header className="relative z-[60] h-16 px-4 sm:px-6 md:px-8 bg-white dark:bg-[var(--card)] border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shadow-[0_1px_0_rgba(15,23,42,0.03)] shrink-0 transition-colors">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -77,6 +78,12 @@ export default function AppLayout({ children }) {
           </div>
 
           <div className="flex items-center gap-2.5">
+            {/* Notifications in-app avec compteur */}
+            <NotificationDropdown
+              onNavigate={navigate}
+              canAccessReclamations={canAccessReclamations}
+            />
+
             {/* Dark / Light Theme Toggle Button */}
             <button
               type="button"

@@ -85,7 +85,7 @@ export default function BridgeToGoalPage() {
         if (!actif) return;
         const disponibles = Array.isArray(mois) ? mois : [];
         setMoisDisponibles(disponibles);
-        if (disponibles.length > 0) setMoisInput((current) => current || getLatestCompletedMonth(disponibles));
+        if (disponibles.length > 0) setMoisInput((current) => (current && disponibles.includes(current) ? current : getLatestCompletedMonth(disponibles)));
       })
       .catch(() => {
         if (actif) setMoisDisponibles([]);

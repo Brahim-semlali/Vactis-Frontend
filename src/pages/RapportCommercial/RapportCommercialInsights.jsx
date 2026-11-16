@@ -13,6 +13,7 @@ import {
 import { ArrowDownRight, ArrowUpRight, BriefcaseBusiness, Search, X } from 'lucide-react';
 import { getKpisMensuels, getTopMouvements } from '../../api/activite.js';
 import { getMedecins } from '../../api/medecins.js';
+import { getPeriodsThroughSelection } from '../../utils/reportingPeriod.js';
 
 const formatMad = (value) => `${Number(value ?? 0).toLocaleString('fr-FR')} MAD`;
 const formatNumber = (value) => Number(value ?? 0).toLocaleString('fr-FR');
@@ -29,7 +30,8 @@ export default function RapportCommercialInsights({ token, data, moisSelectionne
   const anneeSelectionnee = moisSelectionne?.slice(0, 4) || moisDisponibles[0]?.slice(0, 4) || '';
   const moisAnnee = useMemo(() => moisDisponibles
     .filter((periode) => String(periode).startsWith(`${anneeSelectionnee}-`))
-    .sort(), [anneeSelectionnee, moisDisponibles]);
+    .sort()
+    .filter((periode) => !moisSelectionne || periode <= moisSelectionne), [anneeSelectionnee, moisDisponibles, moisSelectionne]);
 
   useEffect(() => {
     let actif = true;
@@ -111,7 +113,7 @@ export default function RapportCommercialInsights({ token, data, moisSelectionne
           <div>
             <span className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-400">Tendance d’activité · {anneeSelectionnee}</span>
             <h2 className="text-lg font-black text-slate-950 dark:text-white">Évolution annuelle du chiffre d’affaires</h2>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">CA facturé et volume de cas par mois, selon les périodes disponibles.</p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">CA facturé et volume de cas jusqu’au mois sélectionné.</p>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:min-w-[300px]">
             <div className="rounded-xl bg-slate-950 px-3.5 py-2.5 text-white"><span className="block text-[9px] font-bold uppercase tracking-wide text-slate-300">CA de l’année affichée</span><strong className="mt-1 block text-base font-black">{formatMad(caAnnee)}</strong></div>

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { X } from 'lucide-react';
 import Portal from '../Portal.jsx';
 
-export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, isSubmitting }) {
+export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, isSubmitting, errorMessage = '', onClearError }) {
   const [actionRealisee, setActionRealisee] = useState(true);
   const [dateVisite, setDateVisite] = useState(
     new Date().toISOString().split('T')[0]
@@ -10,6 +11,7 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
   const [qualification, setQualification] = useState('FAVORABLE');
   const [dateDepart, setDateDepart] = useState('');
   const [dateRetourPrevue, setDateRetourPrevue] = useState('');
+  const [dateRevue, setDateRevue] = useState('');
   const [obstaclePrincipal, setObstaclePrincipal] = useState('PRIX_TARIF');
   const [commentaire, setCommentaire] = useState('');
   const [noteTerrain, setNoteTerrain] = useState('');
@@ -33,6 +35,11 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
       return;
     }
 
+    if (qualification === 'DEFAVORABLE' && !commentaire.trim()) {
+      setErrorMsg('Le commentaire est obligatoire pour une qualification défavorable.');
+      return;
+    }
+
     if (qualification === 'DEFAVORABLE' && !obstaclePrincipal) {
       setErrorMsg("L'obstacle principal est obligatoire en cas de qualification défavorable.");
       return;
@@ -43,8 +50,11 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
       return;
     }
 
-    if (qualification === 'CONGE_ABSENCE' && (!dateDepart || (dateRetourPrevue && dateRetourPrevue < dateDepart))) {
-      setErrorMsg('La date de départ est obligatoire et la date de retour doit être postérieure.');
+    if (qualification === 'CONGE_ABSENCE' && (!dateDepart
+      || (!dateRetourPrevue && !dateRevue)
+      || (dateRetourPrevue && dateRetourPrevue < dateDepart)
+      || (dateRevue && dateRevue < dateDepart))) {
+      setErrorMsg('Saisissez le départ et une date de retour prévue ou une date de revue postérieure.');
       return;
     }
 
@@ -55,6 +65,7 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
       qualification,
       dateDepart: qualification === 'CONGE_ABSENCE' ? dateDepart : null,
       dateRetourPrevue: qualification === 'CONGE_ABSENCE' ? (dateRetourPrevue || null) : null,
+      dateRevue: qualification === 'CONGE_ABSENCE' ? (dateRevue || null) : null,
       obstaclePrincipal: qualification === 'DEFAVORABLE' ? obstaclePrincipal : null,
       commentaire,
       noteTerrain: noteTerrain ? parseFloat(noteTerrain) : null,
@@ -87,15 +98,20 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
               type="button"
               className="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-all"
             >
-              ✕
+              <X size={18} aria-hidden="true" />
             </button>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-5 text-slate-800 text-sm">
-            {errorMsg && (
+          <form
+            onSubmit={handleSubmit}
+            onChange={() => { if (errorMessage) onClearError?.(); }}
+            className="p-6 space-y-5 text-slate-800 text-sm"
+          >
+            {(errorMsg || errorMessage) && (
               <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 font-semibold rounded-xl text-xs">
-                ⚠️ {errorMsg}
+                <span className="mr-1" aria-hidden="true">⚠</span>
+                <span role="alert">{errorMsg || errorMessage}</span>
               </div>
             )}
 
@@ -135,14 +151,15 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
                 <label className="block text-xs font-bold text-amber-900 uppercase">
                   Motif de non-réalisation <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: Médecin absent, urgence au bloc, rdv reporté..."
-                  value={motifNonRealisation}
-                  onChange={(e) => setMotifNonRealisation(e.target.value)}
-                  className="w-full rounded-xl border border-amber-300 p-2.5 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
+                <select required value={motifNonRealisation} onChange={(e) => setMotifNonRealisation(e.target.value)} className="w-full rounded-xl border border-amber-300 p-2.5 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-amber-500">
+                  <option value="">Choisir un motif</option>
+                  <option value="MEDECIN_ABSENT">Médecin absent</option>
+                  <option value="MANQUE_DE_TEMPS">Manque de temps</option>
+                  <option value="VISITE_REPORTEE">Visite reportée</option>
+                  <option value="PRIORITE_MODIFIEE">Priorité modifiée</option>
+                  <option value="ADRESSE_INCORRECTE_INDISPONIBLE">Adresse incorrecte / indisponible</option>
+                  <option value="AUTRE">Autre</option>
+                </select>
               </div>
             )}
 
@@ -157,12 +174,12 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
                   onChange={(e) => setQualification(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500"
                 >
-                  <option value="FAVORABLE">✅ Favorable</option>
-                  <option value="NEUTRE">⚪ Neutre</option>
-                  <option value="DEFAVORABLE">🔴 Défavorable</option>
-                  <option value="RECLAMATION">⚠️ Réclamation</option>
-                  <option value="CONGE_ABSENCE">🏖️ Congé / Absence</option>
-                  <option value="NON_RENSEIGNE">❓ Non renseigné</option>
+                  <option value="FAVORABLE">Favorable</option>
+                  <option value="NEUTRE">Neutre</option>
+                  <option value="DEFAVORABLE">Défavorable</option>
+                  <option value="RECLAMATION">Réclamation</option>
+                  <option value="CONGE_ABSENCE">Congé / Absence</option>
+                  <option value="NON_RENSEIGNE">Non renseigné</option>
                 </select>
               </div>
 
@@ -200,11 +217,14 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
                   onChange={(e) => setObstaclePrincipal(e.target.value)}
                   className="w-full rounded-xl border border-rose-300 p-2.5 bg-white font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500"
                 >
-                  <option value="PRIX_TARIF">💰 Prix / Tarification</option>
-                  <option value="QUALITE_DELAI">⏱️ Qualité / Délais de résultats</option>
-                  <option value="RELATIONNEL_ACCUEIL">🤝 Relationnel / Accueil</option>
-                  <option value="CONCURRENCE">⚡ Concurrence</option>
-                  <option value="AUTRE">📝 Autre</option>
+                  <option value="PRIX_TARIF">Prix / Tarification</option>
+                  <option value="QUALITE">Qualité</option>
+                  <option value="DELAI">Délai</option>
+                  <option value="RELATION">Relation</option>
+                  <option value="CONCURRENCE">Concurrence</option>
+                  <option value="ORGANISATION_LOGISTIQUE">Organisation / logistique</option>
+                  <option value="REFUS_EXPLICITE">Refus explicite</option>
+                  <option value="AUTRE">Autre</option>
                 </select>
               </div>
             )}
@@ -219,6 +239,8 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
                   <div>
                     <label className="block text-xs font-bold text-sky-900 uppercase mb-1">Date de retour prévue</label>
                     <input type="date" min={dateDepart || undefined} value={dateRetourPrevue} onChange={(e) => setDateRetourPrevue(e.target.value)} className="w-full rounded-xl border border-sky-300 p-2.5 bg-white font-semibold" />
+                    <label className="block text-xs font-bold text-sky-900 uppercase mb-1 mt-3">Date de revue si retour inconnu</label>
+                    <input type="date" min={dateDepart || undefined} value={dateRevue} onChange={(e) => setDateRevue(e.target.value)} className="w-full rounded-xl border border-sky-300 p-2.5 bg-white font-semibold" />
                   </div>
                 </div>
               </div>

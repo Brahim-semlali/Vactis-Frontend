@@ -14,7 +14,7 @@ function PasswordRequirements({ password, policy }) {
     <div className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg bg-slate-50 px-3 py-2 text-[11px] font-medium">
       {requirements.map(([label, valid]) => (
         <span key={label} className={valid ? 'text-emerald-700' : 'text-rose-600'}>
-          <span className="mr-1 font-bold">{valid ? '✓' : '!'}</span>{label}
+          {label}
         </span>
       ))}
     </div>

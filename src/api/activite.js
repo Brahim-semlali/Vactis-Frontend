@@ -42,6 +42,10 @@ export async function getMoisDisponibles(token) {
   return activiteRequest('/api/activite/mois-disponibles', token);
 }
 
+export async function getMoisTerrainDisponibles(token) {
+  return activiteRequest('/api/activite/terrain/mois-disponibles', token);
+}
+
 export async function getStatutsRepartition(token, mois) {
   const query = mois ? `?mois=${encodeURIComponent(mois)}` : '';
   return activiteRequest(`/api/activite/statuts${query}`, token);

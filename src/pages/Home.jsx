@@ -17,7 +17,8 @@ import BridgeToGoalPage from './BridgeToGoal/BridgeToGoalPage.jsx';
 import RapportCommercialPage from './RapportCommercial/RapportCommercialPage.jsx';
 import ZoneIntelligencePage from './ZoneIntelligence/ZoneIntelligencePage.jsx';
 import ReclamationsPage from './ReclamationsPage';
-
+import ImportExportExcelPage from './Administration/ImportExportExcelPage.jsx';
+import { IMPORTED_DATASET_CHANGED_EVENT } from '../lib/importRefresh.js';
 
 const workflowSteps = [
   ['Entrée DATA', 'Facturation, profils et retours terrain', 'Collecte des signaux disponibles pour chaque médecin.'],
@@ -150,6 +151,10 @@ function resolvePageContent(activeRoute, username, navigate) {
     return <SettingsPage />;
   }
 
+  if (activeRoute === '/import-export-excel') {
+    return <ImportExportExcelPage />;
+  }
+
   if (activeRoute === '/alertes' || activeRoute === '/alertes-hebdo') {
     return <AlertesPage />;
   }
@@ -218,6 +223,13 @@ export default function Home() {
   const { username, token } = useAuth();
   const [allowedRoutes, setAllowedRoutes] = useState([]);
   const [menuLoaded, setMenuLoaded] = useState(false);
+  const [datasetVersion, setDatasetVersion] = useState(0);
+
+  useEffect(() => {
+    const handleImportedDatasetChanged = () => setDatasetVersion((version) => version + 1);
+    window.addEventListener(IMPORTED_DATASET_CHANGED_EVENT, handleImportedDatasetChanged);
+    return () => window.removeEventListener(IMPORTED_DATASET_CHANGED_EVENT, handleImportedDatasetChanged);
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -256,6 +268,7 @@ export default function Home() {
     >
       {({ activeRoute, navigate }) => (
         <HomeContent
+          key={activeRoute === '/import-export-excel' ? 'import-export-excel' : datasetVersion}
           activeRoute={activeRoute}
           navigate={navigate}
           username={username}

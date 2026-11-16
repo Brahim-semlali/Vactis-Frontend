@@ -30,8 +30,8 @@ const VACTIS_STATUT_META = {
     tone: 'blue',
   },
   a_reactiver: {
-    label: 'À réactiver',
-    description: 'Médecin historiquement actif mais sans CA sur le mois courant.',
+    label: 'À réactiver (marquage manuel)',
+    description: 'Marquage manuel direction : prescripteur ciblé manuellement pour démarche de réactivation.',
     tone: 'amber',
   },
   exclu: {

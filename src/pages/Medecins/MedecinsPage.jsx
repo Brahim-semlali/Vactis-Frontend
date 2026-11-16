@@ -9,9 +9,10 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts';
-import { getMedecinByCode, getMedecinById, getMedecinEvolution, getMedecins, patchNoteInput } from '../../api/medecins.js';
+import { getMedecinByCode, getMedecinById, getMedecinEvolution, getMedecins, patchNoteInput, syncMedecinsFromDataFictif } from '../../api/medecins.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
+import { formatMad, formatPercent, formatSignedPercent } from '../../utils/indicatorFormatting.js';
 
 // UI components shadcn/ui
 import { Card } from '../../components/ui/card.jsx';
@@ -50,6 +51,9 @@ const TABLE_COLUMNS = [
   { label: 'Score', key: 'scoreValeur' },
   { label: 'CA mois actuel', key: 'caMois' },
   { label: 'CA total', key: 'caTotal' },
+  { label: 'Variation mixte', key: 'variationMixteSur100', optional: true },
+  { label: 'Référence CA', key: 'referenceCa', optional: true },
+  { label: 'Silence', key: 'scoreSilence', optional: true },
   { label: '', key: null },
 ];
 
@@ -234,6 +238,15 @@ function formatScore(value) {
   return value == null || Number.isNaN(Number(value)) ? '—' : Number(value).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
 }
 
+function DoctorIndicator({ label, value }) {
+  return (
+    <div className="min-w-0 rounded-lg bg-slate-50 px-3 py-2.5">
+      <span className="block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500">{label}</span>
+      <span className="mt-1 block break-words text-xs font-extrabold text-slate-900">{value || '—'}</span>
+    </div>
+  );
+}
+
 function formatPotentialSource(source) {
   if (source === 'NOTE_TERRAIN') return 'Note terrain';
   if (source === 'INPUT_PROFIL') return 'Input profil';
@@ -245,6 +258,9 @@ function getSortableValue(medecin, key) {
   if (key === 'scoreValeur') return Number(medecin.scoreValeur ?? 0) || 0;
   if (key === 'caMois') return Number(medecin.caMois ?? 0) || 0;
   if (key === 'caTotal') return Number(medecin.caTotal ?? medecin.caMois ?? 0) || 0;
+  if (key === 'variationMixteSur100') return Number(medecin.variationMixteSur100 ?? 0) || 0;
+  if (key === 'referenceCa') return Number(medecin.referenceCa ?? 0) || 0;
+  if (key === 'scoreSilence') return Number(medecin.scoreSilence ?? 0) || 0;
   return null;
 }
 
@@ -287,7 +303,7 @@ function statutTooltip(medecin) {
   const normalized = statut.toUpperCase();
   if (normalized === 'ONBOARDING') return `Onboarding — nouveau médecin, première collaboration en ${formatDateTooltip(medecin.datePremiereCollaboration)}.`;
   if (normalized === 'EXCLU') return `Exclu — aucune activité depuis 6 mois (dernière activité : ${formatDateTooltip(medecin.dateDerniereActivite)}).`;
-  if (normalized === 'A REACTIVER' || normalized === 'A_REACTIVER') return `À réactiver — aucune activité ce mois, dernière activité en ${formatDateTooltip(medecin.dateDerniereActivite)}.`;
+  if (normalized === 'A REACTIVER' || normalized === 'A_REACTIVER') return `À réactiver (marquage manuel) — prescripteur ciblé manuellement par la direction pour réactivation.`;
   const variation = medecin.variationMixteSur100 ?? variationPct(medecin);
   if (variation == null) return `${statut} — premier mois d'activité, pas de comparaison possible.`;
   const threshold = normalized === 'SURVEILLANCE' ? 'entre -10% et -40%' : normalized === 'RETENTION' ? 'entre -40% et -70%' : normalized === 'SILENCE CRITIQUE' ? 'inférieure à -70%' : normalized === 'PROGRESSION' ? 'supérieure à +20%' : 'entre -10% et +20%';
@@ -493,9 +509,13 @@ function EvolutionChartCard({ data = [], loading = false }) {
 }
 
 export default function MedecinsPage() {
-  const { token } = useAuth();
+  const { token, userProfile } = useAuth();
+  const roleName = String(userProfile?.role ?? userProfile?.roles?.nameRole ?? userProfile?.roles?.[0]?.nameRole ?? '').toUpperCase();
+  const canSyncFictifData = roleName.includes('ADMIN');
   const [filters, setFilters] = useState(FILTER_DEFAULTS);
   const [pageData, setPageData] = useState(null);
+  const [syncingFictifData, setSyncingFictifData] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState(false);
 
   // Selection & View Mode state: 'table' or 'detail'
   const [selectedMedecin, setSelectedMedecin] = useState(null);
@@ -628,6 +648,26 @@ export default function MedecinsPage() {
       setLoading(false);
     }
   }, [token, filters]);
+
+  const handleSyncFictifData = async () => {
+    const confirmed = window.confirm(
+      'Cette opération remplace complètement le jeu fictif. Elle supprime les anciens médecins, dossiers, actions, alertes, réclamations et historiques de visites, puis importe le classeur actuel. Continuer ?'
+    );
+    if (!confirmed) return;
+
+    setSyncingFictifData(true);
+    setSyncSuccess(false);
+    setError(null);
+    try {
+      await syncMedecinsFromDataFictif(token);
+      await loadMedecins();
+      setSyncSuccess(true);
+    } catch (err) {
+      setError(err.message ?? 'Erreur lors de la synchronisation des données fictives.');
+    } finally {
+      setSyncingFictifData(false);
+    }
+  };
 
   useEffect(() => {
     loadMedecins();
@@ -785,6 +825,8 @@ export default function MedecinsPage() {
   const meta = pageData?.meta ?? {};
   const filterOptions = pageData?.filters ?? {};
   const [sortConfig, setSortConfig] = useState({ key: 'caMois', direction: 'desc' });
+  const [visibleOptionalColumns, setVisibleOptionalColumns] = useState([]);
+  const visibleColumnCount = TABLE_COLUMNS.length - TABLE_COLUMNS.filter((column) => column.optional && !visibleOptionalColumns.includes(column.key)).length;
   const [comparisonIds, setComparisonIds] = useState([]);
   const [comparisonSearch, setComparisonSearch] = useState('');
   const [isComparisonListOpen, setIsComparisonListOpen] = useState(false);
@@ -1006,6 +1048,17 @@ export default function MedecinsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {canSyncFictifData && (
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-extrabold text-sm transition-all shadow-2xs hover:shadow-xs active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
+                onClick={handleSyncFictifData}
+                disabled={syncingFictifData || loading}
+              >
+                <MedecinsIcon name="refresh" size={16} />
+                {syncingFictifData ? 'Synchronisation…' : 'Synchroniser le jeu fictif'}
+              </button>
+            )}
             <button
               type="button"
               className="inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 font-extrabold text-sm transition-all shadow-2xs hover:shadow-xs active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
@@ -1020,6 +1073,12 @@ export default function MedecinsPage() {
           </div>
         </div>
       </Card>
+
+      {syncSuccess && (
+        <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          Synchronisation terminée. Les médecins, dossiers et actions affichés proviennent du classeur actuel.
+        </div>
+      )}
 
       {/* AFFICHAGE CONDITIONNEL : Masquer les filtres et les KPIs en mode 'detail' */}
       {viewMode === 'table' && (
@@ -1168,17 +1227,34 @@ export default function MedecinsPage() {
         /* VUE 1 : TABLE COMPLÈTE EN 100% */
         <div key="table-view">
           <Card className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden min-h-[480px]">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex flex-col gap-3 border-b border-slate-100 p-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h3 className="font-bold text-slate-900 text-base">Table médecins</h3>
                 <p className="text-xs text-slate-500">Cliquez sur une ligne ou sur la flèche <span className="font-bold text-sky-700">→</span> pour ouvrir son espace complet.</p>
               </div>
+              <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-slate-600">
+                <legend className="mb-1 font-bold text-slate-500">Colonnes indicateurs</legend>
+                {TABLE_COLUMNS.filter((column) => column.optional).map((column) => (
+                  <label key={column.key} className="inline-flex items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={visibleOptionalColumns.includes(column.key)}
+                      onChange={(event) => setVisibleOptionalColumns((current) => event.target.checked
+                        ? [...current, column.key]
+                        : current.filter((key) => key !== column.key))}
+                      className="accent-teal-700"
+                    />
+                    {column.label}
+                  </label>
+                ))}
+              </fieldset>
             </div>
 
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-slate-50/80 cursor-default bg-slate-50/90">
                   {TABLE_COLUMNS.map((column, idx) => {
+                    if (column.optional && !visibleOptionalColumns.includes(column.key)) return null;
                     if (!column.key) {
                       return (
                         <TableHead key={idx} className="font-extrabold text-[11px] uppercase tracking-wider text-slate-500 py-3.5">
@@ -1208,22 +1284,14 @@ export default function MedecinsPage() {
                 {loading && (
                   Array.from({ length: 6 }).map((_, idx) => (
                     <TableRow key={idx} className="hover:bg-transparent">
-                      <TableCell><Skeleton className="h-4 w-36 mb-1.5" /><Skeleton className="h-3 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-20 rounded-lg" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-8 w-24 rounded-lg" /></TableCell>
+                      {TABLE_COLUMNS.filter((column) => !column.optional || visibleOptionalColumns.includes(column.key)).map((_, cellIndex) => <TableCell key={cellIndex}><Skeleton className={`h-${cellIndex === 0 ? '4 w-36' : '6 w-20'} rounded-lg`} /></TableCell>)}
                     </TableRow>
                   ))
                 )}
 
                 {!loading && medecins.length === 0 && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={TABLE_COLUMNS.length} className="h-80 text-center">
+                    <TableCell colSpan={visibleColumnCount} className="h-80 text-center">
                       <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
                         <MenuIcon name="medecins" />
                         <p className="font-semibold text-slate-700">Aucun médecin trouvé</p>
@@ -1296,6 +1364,9 @@ export default function MedecinsPage() {
                         <TableCell className="font-extrabold text-sky-700">
                           {formatCaMois(medecin.caTotal ?? medecin.caMois ?? 0)}
                         </TableCell>
+                        {visibleOptionalColumns.includes('variationMixteSur100') && <TableCell className="font-bold text-slate-700">{formatSignedPercent(medecin.variationMixteSur100)}</TableCell>}
+                        {visibleOptionalColumns.includes('referenceCa') && <TableCell className="font-bold text-slate-700">{formatMad(medecin.referenceCa)}</TableCell>}
+                        {visibleOptionalColumns.includes('scoreSilence') && <TableCell className="font-bold text-slate-700">{formatPercent(medecin.scoreSilence)}</TableCell>}
                         <TableCell className="text-right">
                           <button
                             type="button"
@@ -1468,16 +1539,26 @@ export default function MedecinsPage() {
               <div className="space-y-6">
                 <div className="p-5 pb-0">
                   <div className="overflow-x-auto">
-                    <table className="min-w-full border-separate border-spacing-y-2 text-left">
+                    <table className="min-w-[1580px] border-separate border-spacing-y-2 text-left">
                       <thead>
                         <tr className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-slate-500">
                           <th className="px-2 py-2">Médecin</th>
+                          <th className="px-2 py-2">Organisme</th>
                           <th className="px-2 py-2">Segment</th>
                           <th className="px-2 py-2">Statut</th>
-                          <th className="px-2 py-2">Nbr cas</th>
-                          <th className="px-2 py-2">Score</th>
-                          <th className="px-2 py-2">CA mois actuel</th>
-                          <th className="px-2 py-2">CA total</th>
+                          <th className="px-2 py-2">CA actuel</th>
+                          <th className="px-2 py-2">Cas actuels</th>
+                          <th className="px-2 py-2">Réf. CA</th>
+                          <th className="px-2 py-2">Réf. cas</th>
+                          <th className="px-2 py-2">Var. CA</th>
+                          <th className="px-2 py-2">Var. cas</th>
+                          <th className="px-2 py-2">Var. mixte</th>
+                          <th className="px-2 py-2">Silence</th>
+                          <th className="px-2 py-2">Jours sans activité</th>
+                          <th className="px-2 py-2">Risque</th>
+                          <th className="px-2 py-2">Urgence / rang</th>
+                          <th className="px-2 py-2">Score valeur</th>
+                          <th className="px-2 py-2">CA total historique</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1486,21 +1567,27 @@ export default function MedecinsPage() {
                             <td className="rounded-l-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900">
                               {formatMedecinName(medecin)}
                             </td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">{medecin.organisme || '—'}</td>
                             <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">
                               {medecin.segment ? `SEGMENT ${medecin.segment}` : '—'}
                             </td>
                             <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">
                               {medecin.statut ? medecin.statut : formatEnumLabel(medecin.statutPilotage)}
                             </td>
-                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">
-                              {medecin.totalCas ?? medecin.nombreCas ?? 0}
-                            </td>
-                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">
-                              {formatScore(medecin.scoreValeur)}
-                            </td>
                             <td className="border border-slate-200 px-3 py-2 text-sm font-extrabold text-sky-700">
                               {formatCaMois(medecin.caMois)}
                             </td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">{formatScore(medecin.casMoisAnalyse ?? medecin.totalCas ?? medecin.nombreCas)}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">{formatMad(medecin.referenceCa)}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">{formatScore(medecin.referenceCas ?? medecin.referenceVolume)}</td>
+                            <td className={`border border-slate-200 px-3 py-2 text-sm font-bold ${Number(medecin.variationCa) < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>{formatSignedPercent(medecin.variationCa)}</td>
+                            <td className={`border border-slate-200 px-3 py-2 text-sm font-bold ${Number(medecin.variationCas ?? medecin.variationVolume) < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>{formatSignedPercent(medecin.variationCas ?? medecin.variationVolume)}</td>
+                            <td className={`border border-slate-200 px-3 py-2 text-sm font-bold ${Number(medecin.variationMixteSur100) < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>{formatSignedPercent(medecin.variationMixteSur100)}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm font-bold text-rose-700">{formatPercent(medecin.scoreSilence)}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">{medecin.joursSansActivite == null ? '—' : `${medecin.joursSansActivite} j`}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">{formatScore(medecin.scoreRisque)}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm font-extrabold text-amber-700">{Number(medecin.scoreUrgence) > 0 ? `${formatPercent(medecin.scoreUrgence)} · #${medecin.rangUrgence ?? '—'}` : '—'}</td>
+                            <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">{formatScore(medecin.scoreValeur)}</td>
                             <td className="rounded-r-xl border border-slate-200 px-3 py-2 text-sm font-extrabold text-sky-700">
                               {formatCaMois(medecin.caTotal ?? medecin.caMois ?? 0)}
                             </td>
@@ -1785,7 +1872,7 @@ export default function MedecinsPage() {
                     </div>
 
                     {noteError && <p className="text-xs font-semibold text-rose-600">{noteError}</p>}
-                    {noteSaved && <p className="text-xs font-semibold text-emerald-600">Note enregistrée ✓</p>}
+                    {noteSaved && <p className="text-xs font-semibold text-emerald-600">Note enregistrée</p>}
 
                     <button
                       type="button"
@@ -1799,6 +1886,47 @@ export default function MedecinsPage() {
 
                 </div>
               </div>
+
+              <section className="order-2 rounded-2xl border border-sky-100 bg-white p-5 shadow-2xs" aria-label="Indicateurs du mois du médecin">
+                <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900">Indicateurs du mois</h3>
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      {selectedMedecin.dateReferenceIndicateurs
+                        ? `Période de référence : ${new Date(`${selectedMedecin.dateReferenceIndicateurs}T00:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`
+                        : 'Valeurs calculées par le moteur VACTIS'}
+                    </p>
+                  </div>
+                  <Badge variant="secondary">
+                    Rythme {selectedMedecin.sourceRythme === 'RECENT' ? 'récent' : selectedMedecin.sourceRythme === 'HISTORIQUE' ? 'historique' : '30 jours par défaut'}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                  <DoctorIndicator label="Référence CA" value={formatMad(selectedMedecin.referenceCa)} />
+                  <DoctorIndicator label="Référence cas" value={formatScore(selectedMedecin.referenceCas ?? selectedMedecin.referenceVolume)} />
+                  <DoctorIndicator label="Variation CA" value={formatSignedPercent(selectedMedecin.variationCa)} />
+                  <DoctorIndicator label="Variation cas" value={formatSignedPercent(selectedMedecin.variationCas ?? selectedMedecin.variationVolume)} />
+                  <DoctorIndicator label="Variation mixte" value={formatSignedPercent(selectedMedecin.variationMixteSur100)} />
+                  <DoctorIndicator label="Silence score" value={formatPercent(selectedMedecin.scoreSilence)} />
+                  <DoctorIndicator label="Jours sans activité" value={selectedMedecin.joursSansActivite == null ? '—' : `${selectedMedecin.joursSansActivite} jours`} />
+                  <DoctorIndicator label="Dernier envoi" value={selectedMedecin.dateDerniereActiviteCalcul ? new Date(`${selectedMedecin.dateDerniereActiviteCalcul}T00:00:00`).toLocaleDateString('fr-FR') : '—'} />
+                  <DoctorIndicator label="Intervalle effectif" value={selectedMedecin.intervalleEffectif == null ? '—' : `${formatScore(selectedMedecin.intervalleEffectif)} jours`} />
+                  <DoctorIndicator label="Urgence / rang" value={Number(selectedMedecin.scoreUrgence) > 0 ? `${formatPercent(selectedMedecin.scoreUrgence)} · rang ${selectedMedecin.rangUrgence ?? '—'}` : '—'} />
+                  <DoctorIndicator label="Classe silence" value={formatEnumLabel(selectedMedecin.classeSilence)} />
+                  <DoctorIndicator label="Risque calculé" value={selectedMedecin.scoreRisque == null ? '—' : `${formatScore(selectedMedecin.scoreRisque)} / 100`} />
+                </div>
+                {selectedMedecin.nombreMoisReference != null && selectedMedecin.nombreMoisReference < 3 && (
+                  <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800">
+                    Référence calculée sur {selectedMedecin.nombreMoisReference} mois disponibles.
+                  </p>
+                )}
+                {selectedMedecin.referenceCa === 0 && selectedMedecin.referenceVolume === 0 && (
+                  <p className="mt-2 text-[11px] text-slate-500">Référence nulle : les variations correspondantes sont fixées à 0 %.</p>
+                )}
+                {['INACTIF', 'EXCLU', 'ACTIVITE_IRREGULIERE', 'BLOQUE'].includes(String(selectedMedecin.statut || '').toUpperCase()) && (
+                  <p className="mt-2 text-[11px] font-semibold text-slate-500">Aucune action automatique pour ce statut; urgence affichée « — ».</p>
+                )}
+              </section>
 
               {/* Graphique d'évolution */}
               <div className="order-3">

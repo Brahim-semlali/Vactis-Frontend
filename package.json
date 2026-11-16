@@ -3,8 +3,8 @@
   "private": true,
   "version": "0.0.1",
   "scripts": {
-    "start": "parcel index.html --port 5173",
-    "dev": "parcel index.html --port 5173",
+    "start": "parcel --no-cache index.html --port 5173",
+    "dev": "parcel --no-cache index.html --port 5173",
     "test": "vitest run",
     "build": "parcel build index.html --dist-dir dist",
     "preview": "npm run build && serve dist -l 4173"

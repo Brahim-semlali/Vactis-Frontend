@@ -16,7 +16,7 @@ function PasswordRequirements({ password, policy }) {
       {requirements.map(([label, valid]) => (
         <span key={label} className={`flex items-center gap-1.5 ${valid ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-slate-400 dark:text-slate-500'}`}>
           <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] ${valid ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}>
-            {valid ? '✓' : '•'}
+            
           </span>
           {label}
         </span>
@@ -418,7 +418,7 @@ export default function UserSettingsModal({ onClose, initialTab = 'profile' }) {
                       value={username || ''}
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800/40 px-3.5 py-2.5 text-sm text-slate-500 dark:text-slate-400 cursor-not-allowed"
                     />
-                    <span className="absolute right-3 top-2.5 text-slate-400 text-xs font-bold">🔒 Fixe</span>
+                    <span className="absolute right-3 top-2.5 text-slate-400 text-xs font-bold">Fixe</span>
                   </div>
                 </div>
 
@@ -650,7 +650,6 @@ export default function UserSettingsModal({ onClose, initialTab = 'profile' }) {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 font-bold">
-                        ☀️
                       </div>
                       <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
                         Mode Clair
@@ -658,7 +657,6 @@ export default function UserSettingsModal({ onClose, initialTab = 'profile' }) {
                     </div>
                     {theme === 'light' && (
                       <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-white text-xs font-black">
-                        ✓
                       </span>
                     )}
                   </div>
@@ -702,7 +700,6 @@ export default function UserSettingsModal({ onClose, initialTab = 'profile' }) {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-400 font-bold">
-                        🌙
                       </div>
                       <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
                         Mode Sombre
@@ -710,7 +707,6 @@ export default function UserSettingsModal({ onClose, initialTab = 'profile' }) {
                     </div>
                     {theme === 'dark' && (
                       <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-white text-xs font-black">
-                        ✓
                       </span>
                     )}
                   </div>

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import VactisPilotBanner from '../../components/VactisPilotBanner.jsx';
+import VactisPilotBanner from '../../components/VactisPilotBanner';
+import FicheContextuelleDrawer from '../../components/medecins/FicheContextuelleDrawer.jsx';
 import {
   getAlertesActives,
   getToutesAlertes,
@@ -20,6 +22,7 @@ export default function AlertesPage() {
 
   // Selected item for the right context panel (Master-Detail)
   const [selectedId, setSelectedId] = useState(null);
+  const [isDetailedAnalysisOpen, setIsDetailedAnalysisOpen] = useState(false);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -62,10 +65,10 @@ export default function AlertesPage() {
     setBatchMsg(null);
     try {
       const res = await runBatchAlertes(token);
-      setBatchMsg(`✅ Surveillance hebdomadaire exécutée : ${res.nbAlertesCreees} alerte(s) générée(s).`);
+      setBatchMsg(`Surveillance hebdomadaire exécutée : ${res.nbAlertesCreees} alerte(s) générée(s).`);
       await fetchAlertes();
     } catch (e) {
-      setBatchMsg(`❌ Erreur batch : ${e.message}`);
+      setBatchMsg(`Erreur batch : ${e.message}`);
     } finally {
       setActionLoading(false);
     }
@@ -234,7 +237,7 @@ export default function AlertesPage() {
         <div className="p-4 rounded-2xl bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200 dark:border-cyan-900 text-cyan-900 dark:text-cyan-200 text-xs font-semibold flex items-center justify-between">
           <span>{batchMsg}</span>
           <button type="button" onClick={() => setBatchMsg(null)} className="text-cyan-700 font-bold hover:underline">
-            ✕
+            <X size={14} aria-hidden="true" />
           </button>
         </div>
       )}
@@ -655,7 +658,7 @@ export default function AlertesPage() {
                     disabled={actionLoading}
                     className="flex-1 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-xs hover:bg-emerald-100 transition-all cursor-pointer"
                   >
-                    ✓ Marquer traitée
+                    Marquer traitée
                   </button>
                   <button
                     type="button"
@@ -667,13 +670,18 @@ export default function AlertesPage() {
                   </button>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-slate-950 text-white flex items-center justify-center gap-2 text-xs font-bold shadow-xs cursor-pointer hover:bg-slate-900 transition-all">
+                <button
+                  type="button"
+                  onClick={() => setIsDetailedAnalysisOpen(true)}
+                  disabled={!selectedAlerte.medecin?.id}
+                  className="w-full p-3 rounded-2xl bg-slate-950 text-white flex items-center justify-center gap-2 text-xs font-bold shadow-xs hover:bg-slate-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
                     <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
                   </svg>
                   <span>Analyse VACTIS détaillée</span>
-                </div>
+                </button>
               </div>
             </div>
           ) : (
@@ -683,6 +691,12 @@ export default function AlertesPage() {
           )}
         </div>
       </div>
+      <FicheContextuelleDrawer
+        medecinId={selectedAlerte?.medecin?.id}
+        token={token}
+        isOpen={isDetailedAnalysisOpen}
+        onClose={() => setIsDetailedAnalysisOpen(false)}
+      />
     </div>
   );
 }

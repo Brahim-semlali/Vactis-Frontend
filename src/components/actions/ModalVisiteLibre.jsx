@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, onSubmit, isSubmitting }) {
@@ -18,6 +19,8 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
   const [qualification, setQualification] = useState('FAVORABLE');
   const [dateDepart, setDateDepart] = useState('');
   const [dateRetourPrevue, setDateRetourPrevue] = useState('');
+  const [dateRevue, setDateRevue] = useState('');
+  const [obstaclePrincipal, setObstaclePrincipal] = useState('PRIX_TARIF');
   const [commentaire, setCommentaire] = useState('');
   const [noteTerrain, setNoteTerrain] = useState('');
   const [prochaineAction, setProchaineAction] = useState('');
@@ -50,13 +53,21 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
       return;
     }
 
+    if (qualification === 'DEFAVORABLE' && (!commentaire.trim() || !obstaclePrincipal)) {
+      setErrorMsg('Le commentaire et l’obstacle principal sont obligatoires pour une qualification défavorable.');
+      return;
+    }
+
     if (actionRealisee && !qualification) {
       setErrorMsg('La qualification est obligatoire après une action réalisée.');
       return;
     }
 
-    if (qualification === 'CONGE_ABSENCE' && (!dateDepart || (dateRetourPrevue && dateRetourPrevue < dateDepart))) {
-      setErrorMsg('La date de départ est obligatoire et la date de retour doit être postérieure.');
+    if (qualification === 'CONGE_ABSENCE' && (!dateDepart
+      || (!dateRetourPrevue && !dateRevue)
+      || (dateRetourPrevue && dateRetourPrevue < dateDepart)
+      || (dateRevue && dateRevue < dateDepart))) {
+      setErrorMsg('Saisissez le départ et une date de retour prévue ou une date de revue postérieure.');
       return;
     }
 
@@ -72,6 +83,8 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
       qualification,
       dateDepart: qualification === 'CONGE_ABSENCE' ? dateDepart : null,
       dateRetourPrevue: qualification === 'CONGE_ABSENCE' ? (dateRetourPrevue || null) : null,
+      dateRevue: qualification === 'CONGE_ABSENCE' ? (dateRevue || null) : null,
+      obstaclePrincipal: qualification === 'DEFAVORABLE' ? obstaclePrincipal : null,
       commentaire,
       noteTerrain: noteTerrain ? parseFloat(noteTerrain) : null,
       prochaineAction,
@@ -99,7 +112,7 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
             type="button"
             className="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-white transition-all"
           >
-            ✕
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
@@ -107,7 +120,7 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
         <form onSubmit={handleSubmit} className="p-6 space-y-5 text-slate-800 text-sm">
           {errorMsg && (
             <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 font-semibold rounded-xl text-xs">
-              ⚠️ {errorMsg}
+              {errorMsg}
             </div>
           )}
 
@@ -250,6 +263,8 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
               <div>
                 <label className="block text-xs font-bold text-sky-900 uppercase mb-1">Date de retour prévue</label>
                 <input type="date" min={dateDepart || undefined} value={dateRetourPrevue} onChange={(e) => setDateRetourPrevue(e.target.value)} className="w-full rounded-xl border border-sky-300 p-2.5 bg-white font-semibold" />
+                <label className="block text-xs font-bold text-sky-900 uppercase mb-1 mt-3">Date de revue si retour inconnu</label>
+                <input type="date" min={dateDepart || undefined} value={dateRevue} onChange={(e) => setDateRevue(e.target.value)} className="w-full rounded-xl border border-sky-300 p-2.5 bg-white font-semibold" />
               </div>
             </div>
           )}
@@ -257,13 +272,31 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
           {!actionRealisee && (
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Motif de non-réalisation <span className="text-rose-500">*</span></label>
-              <input
-                type="text"
-                required
-                value={motifNonRealisation}
-                onChange={(e) => setMotifNonRealisation(e.target.value)}
-                className="w-full rounded-xl border border-amber-300 p-2.5 bg-amber-50 font-medium"
-              />
+              <select required value={motifNonRealisation} onChange={(e) => setMotifNonRealisation(e.target.value)} className="w-full rounded-xl border border-amber-300 p-2.5 bg-amber-50 font-medium">
+                <option value="">Choisir un motif</option>
+                <option value="MEDECIN_ABSENT">Médecin absent</option>
+                <option value="MANQUE_DE_TEMPS">Manque de temps</option>
+                <option value="VISITE_REPORTEE">Visite reportée</option>
+                <option value="PRIORITE_MODIFIEE">Priorité modifiée</option>
+                <option value="ADRESSE_INCORRECTE_INDISPONIBLE">Adresse incorrecte / indisponible</option>
+                <option value="AUTRE">Autre</option>
+              </select>
+            </div>
+          )}
+
+          {qualification === 'DEFAVORABLE' && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Obstacle principal *</label>
+              <select required value={obstaclePrincipal} onChange={(e) => setObstaclePrincipal(e.target.value)} className="w-full rounded-xl border border-rose-300 p-2.5 bg-rose-50 font-medium">
+                <option value="PRIX_TARIF">Prix / tarif</option>
+                <option value="QUALITE">Qualité</option>
+                <option value="DELAI">Délai</option>
+                <option value="RELATION">Relation</option>
+                <option value="CONCURRENCE">Concurrence</option>
+                <option value="ORGANISATION_LOGISTIQUE">Organisation / logistique</option>
+                <option value="REFUS_EXPLICITE">Refus explicite</option>
+                <option value="AUTRE">Autre</option>
+              </select>
             </div>
           )}
 
@@ -285,7 +318,7 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Commentaire {qualification === 'RECLAMATION' && <span className="text-rose-500">* (Obligatoire)</span>}</label>
+            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Commentaire {(qualification === 'RECLAMATION' || qualification === 'DEFAVORABLE') && <span className="text-rose-500">* (Obligatoire)</span>}</label>
             <textarea
               rows={3}
               placeholder="Remarques et détails de la visite commerciale libre..."

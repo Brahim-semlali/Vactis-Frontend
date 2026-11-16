@@ -85,14 +85,31 @@ export async function creerActionRecommandation(token, medecinId, type) {
 
 // ─── Bridge to Goal ─────────────────────────────────────────────────────────
 
-export async function getBridgeToGoal(token, { target, mois } = {}) {
+export async function getBridgeToGoal(token, { mois } = {}) {
   logger.info('Chargement simulation Bridge to Goal');
   const params = new URLSearchParams();
-  if (target) params.set('target', target);
   if (mois) params.set('mois', mois);
   const qs = params.toString() ? `?${params.toString()}` : '';
   const response = await fetch(`${API_BASE}/api/bridge-to-goal${qs}`, {
     headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw await parseError(response);
+  return response.json();
+}
+
+export async function getBridgeGoalMonthlyTarget(token, mois) {
+  const response = await fetch(`${API_BASE}/api/bridge-to-goal/target?mois=${encodeURIComponent(mois)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw await parseError(response);
+  return response.json();
+}
+
+export async function saveBridgeGoalMonthlyTarget(token, target) {
+  const response = await fetch(`${API_BASE}/api/bridge-to-goal/target`, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(target),
   });
   if (!response.ok) throw await parseError(response);
   return response.json();
@@ -115,15 +132,69 @@ export async function getReclamations(token, { search, statut, categorie, priori
   return response.json();
 }
 
-export async function mettreAJourStatutReclamation(token, id, { statut, solution, responsable }) {
-  const params = new URLSearchParams();
-  params.set('statut', statut);
-  if (solution) params.set('solution', solution);
-  if (responsable) params.set('responsable', responsable);
-  const response = await fetch(`${API_BASE}/api/reclamations/${id}/statut?${params.toString()}`, {
+export async function mettreAJourStatutReclamation(token, id, { statut, solution, responsable, prochaineInstruction, dateTraitement }) {
+  const body = { statut };
+  if (solution) body.solution = solution;
+  if (responsable) body.responsable = responsable;
+  if (prochaineInstruction) body.prochaineInstruction = prochaineInstruction;
+  if (dateTraitement) body.dateTraitement = dateTraitement;
+  const response = await fetch(`${API_BASE}/api/reclamations/${id}/statut`, {
     method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw await parseError(response);
+  return response.json();
+}
+
+export async function creerReclamation(token, body) {
+  const response = await fetch(`${API_BASE}/api/reclamations`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw await parseError(response);
+  return response.json();
+}
+
+export async function getReclamationById(token, id) {
+  const response = await fetch(`${API_BASE}/api/reclamations/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) throw await parseError(response);
   return response.json();
+}
+
+export async function getReclamationHistorique(token, id) {
+  const response = await fetch(`${API_BASE}/api/reclamations/${id}/historique`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw await parseError(response);
+  return response.json();
+}
+
+// ─── Notifications ───────────────────────────────────────────────────────────────
+
+export async function getNotifications(token) {
+  const response = await fetch(`${API_BASE}/api/notifications`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw await parseError(response);
+  return response.json();
+}
+
+export async function getNotificationsCount(token) {
+  const response = await fetch(`${API_BASE}/api/notifications/count`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw await parseError(response);
+  return response.json();
+}
+
+export async function marquerNotificationLue(token, id) {
+  const response = await fetch(`${API_BASE}/api/notifications/${id}/lire`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw await parseError(response);
 }

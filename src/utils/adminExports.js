@@ -53,22 +53,30 @@ export function buildPrintableHtml(rows, title = 'Export') {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
   const [headers = [], ...dataRows] = rows ?? [];
-  const headerHtml = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('');
-  const bodyHtml = dataRows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
+  const isRightAligned = (header) => {
+    const label = String(header).toLowerCase();
+    return label.includes('variation') || label.includes('silence') || label.includes('urgence %') || label.includes('note');
+  };
+  const headerHtml = headers.map((header) => `<th style="${isRightAligned(header) ? 'text-align:right;' : ''}">${escapeHtml(header)}</th>`).join('');
+  const bodyHtml = dataRows.map((row) => `<tr>${row.map((cell, idx) => `<td style="${isRightAligned(headers[idx]) ? 'text-align:right;' : ''}">${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
 
   const columnWidths = headers.map((header) => {
     const label = String(header).toLowerCase();
-    if (label.includes('action proposée') || label.includes('commentaire')) return 22;
-    if (label.includes('médecin')) return 16;
-    if (label.includes('organisme') || label.includes('spécialité')) return 13;
-    if (label.includes('commercial')) return 11;
-    if (label.includes('qualification') || label.includes('urgence') || label.includes('décision')) return 9;
-    return 8;
+    if (label.includes('action proposée') || label.includes('commentaire')) return 16;
+    if (label.includes('médecin')) return 15;
+    if (label.includes('organisme') || label.includes('spécialité')) return 12;
+    if (label.includes('intensité')) return 11;
+    if (label.includes('commercial')) return 9;
+    if (label.includes('qualification') || label.includes('décision')) return 8;
+    if (label.includes('urgence')) return 7;
+    if (label.includes('variation') || label.includes('silence')) return 7;
+    if (label.includes('note') || label.includes('segment') || label.includes('statut') || label.includes('état') || label.includes('date')) return 6;
+    return 7;
   });
   const totalWidth = columnWidths.reduce((sum, width) => sum + width, 0) || 1;
   const colgroup = columnWidths.map((width) => `<col style="width:${(width / totalWidth) * 100}%">`).join('');
 
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111827;margin:0}h1{font-size:14pt;margin:0 0 8px}table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:7pt}th,td{border:1px solid #94a3b8;padding:3px 4px;text-align:left;vertical-align:top;overflow-wrap:anywhere;word-break:normal}th{background:#e2e8f0;font-weight:700}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><h1>${escapeHtml(title)}</h1><table><colgroup>${colgroup}</colgroup><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#0f172a;margin:0}h1{font-size:13pt;font-weight:800;color:#0f172a;margin:0 0 10px}table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:7pt}th,td{border:1px solid #cbd5e1;padding:4px 5px;text-align:left;vertical-align:middle;overflow-wrap:anywhere;word-break:normal}th{background:#f1f5f9;color:#334155;font-weight:700;text-transform:uppercase;font-size:6.5pt;letter-spacing:0.02em}tr:nth-child(even){background:#f8fafc}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><h1>${escapeHtml(title)}</h1><table><colgroup>${colgroup}</colgroup><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table></body></html>`;
 }
 
 export function printObjectRows(rows, title = 'Export') {

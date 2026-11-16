@@ -7442,6 +7442,7 @@ html.dark .activite-page .activite-n4-table td[style] {
 /* Les styles complets du mode sombre sont désormais centralisés dans src/dark-mode.css */
 
 /* ── Zone Intelligence : Leaflet custom styling ── */
+/* ── Zone Intelligence : Leaflet custom styling & animations premium ── */
 .custom-div-icon {
   background: transparent !important;
   border: none !important;
@@ -7455,30 +7456,101 @@ html.dark .activite-page .activite-n4-table td[style] {
   cursor: grabbing;
 }
 
+/* Animations de pulsation radar pour le laboratoire et les prescripteurs clés */
+@keyframes vactis-radar-pulse {
+  0% { transform: scale(0.9); opacity: 0.85; }
+  50% { transform: scale(1.6); opacity: 0; }
+  100% { transform: scale(0.9); opacity: 0; }
+}
+
+@keyframes vactis-beacon-glow {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.15); }
+}
+
+.vactis-radar-ring {
+  animation: vactis-radar-pulse 2.2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+.vactis-beacon-halo {
+  animation: vactis-beacon-glow 3s ease-in-out infinite;
+}
+
+/* Contrôles Leaflet (Boutons Zoom) ultra-modernes */
+.leaflet-bar {
+  border: none !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08) !important;
+  border-radius: 1rem !important;
+  overflow: hidden !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+}
+
+.leaflet-bar a {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #0f172a !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-weight: 800 !important;
+  font-size: 15px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.leaflet-bar a:hover {
+  background-color: #f8fafc !important;
+  color: #0d9488 !important;
+}
+
+html.dark .leaflet-bar {
+  border-color: rgba(51, 65, 85, 0.7) !important;
+}
+
+html.dark .leaflet-bar a {
+  background-color: rgba(15, 23, 42, 0.92) !important;
+  color: #f8fafc !important;
+  border-bottom: 1px solid #1e293b !important;
+}
+
+html.dark .leaflet-bar a:hover {
+  background-color: #1e293b !important;
+  color: #14b8a6 !important;
+}
+
+/* Popups Leaflet élégants avec Glassmorphism et bordures arrondies */
 .vactis-map-popup .leaflet-popup-content-wrapper {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(16px);
   color: #0f172a;
-  border-radius: 1rem;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
-  padding: 0.25rem;
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 35px -10px rgba(15, 23, 42, 0.18), 0 10px 15px -3px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  padding: 0.15rem;
 }
 
 .vactis-map-popup .leaflet-popup-tip {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
 }
 
 .vactis-map-popup .leaflet-popup-content {
-  margin: 0.75rem;
-  line-height: 1.4;
+  margin: 0.85rem;
+  line-height: 1.45;
 }
 
 html.dark .vactis-map-popup .leaflet-popup-content-wrapper {
-  background: #0f172a;
+  background: rgba(15, 23, 42, 0.96);
   color: #f8fafc;
-  border-color: #334155;
+  border-color: rgba(51, 65, 85, 0.85);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55);
 }
 
 html.dark .vactis-map-popup .leaflet-popup-tip {
-  background: #0f172a;
+  background: rgba(15, 23, 42, 0.96);
+}
+
+/* Rendu sombre haute définition pour les calques Leaflet (100% sans filigrane) */
+.vactis-map-dark .leaflet-tile-pane {
+  filter: brightness(0.68) invert(1) contrast(2.2) hue-rotate(195deg) saturate(0.35);
 }

@@ -199,7 +199,7 @@ export default function Login({ onShowRegister }) {
             role="alert"
           >
             <span className="alert-icon" aria-hidden="true">
-              {isLocked ? '⏳' : '⚠'}
+              {!isLocked && '!'}
             </span>
             <div>
               {error}

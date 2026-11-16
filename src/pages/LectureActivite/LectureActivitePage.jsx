@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import {
   ResponsiveContainer,
   Area,
@@ -31,6 +32,7 @@ import {
 } from '../../api/activite.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
+import { getLatestCompletedMonth } from '../../utils/reportingPeriod.js';
 import {
   getEvolutionMeta,
   getQualificationMeta,
@@ -599,7 +601,7 @@ export default function LectureActivitePage() {
         const list = await getMoisDisponibles(token);
         if (!cancelled && list && list.length > 0) {
           setMoisList(list);
-          setSelectedMois((prev) => prev || list[0]);
+          setSelectedMois((prev) => (prev && list.includes(prev) ? prev : getLatestCompletedMonth(list)));
         }
       } catch (err) {
         logError(err);
@@ -2418,7 +2420,7 @@ export default function LectureActivitePage() {
                   onClick={() => setSelectedModalData(null)}
                   aria-label="Fermer"
                 >
-                  ✕
+                  <X size={18} aria-hidden="true" />
                 </button>
               </div>
 
@@ -2443,7 +2445,7 @@ export default function LectureActivitePage() {
                         setModalPage(1);
                       }}
                     >
-                      ✕
+                      <X size={14} aria-hidden="true" />
                     </button>
                   )}
                 </div>
@@ -2494,7 +2496,7 @@ export default function LectureActivitePage() {
                           </td>
                           <td>
                             {r.reclamation ? (
-                              <span className="activite-badge activite-badge--red">🚩 Oui</span>
+                              <span className="activite-badge activite-badge--red">Oui</span>
                             ) : (
                               <span className="activite-badge activite-badge--gray">Non</span>
                             )}
