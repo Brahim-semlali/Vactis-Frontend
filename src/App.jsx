@@ -1,20 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useAuth } from './context/AuthContext.jsx';
 import Home from './pages/Home.jsx';
-import Login from './pages/Authentification/Login.jsx';
-import Register from './pages/Authentification/Register.jsx';
+import AuthPage from './pages/Authentification/AuthPage.jsx';
 
 export default function App() {
   const { isAuthenticated } = useAuth();
-  const [view, setView] = useState('login');
+  // Après une connexion réussie, l'application ne s'affiche qu'une fois
+  // l'animation de sortie de la page d'authentification terminée.
+  const [sortieAuthTerminee, setSortieAuthTerminee] = useState(isAuthenticated);
 
-  if (isAuthenticated) {
-    return <Home />;
-  }
+  useEffect(() => {
+    if (!isAuthenticated) setSortieAuthTerminee(false);
+  }, [isAuthenticated]);
 
-  if (view === 'register') {
-    return <Register onShowLogin={() => setView('login')} />;
-  }
-
-  return <Login onShowRegister={() => setView('register')} />;
+  // Home reste volontairement hors d'AnimatePresence : ses propres animations
+  // d'entrée ne doivent pas hériter du contexte de présence de la page de connexion.
+  return (
+    <>
+      <AnimatePresence initial={false} onExitComplete={() => setSortieAuthTerminee(true)}>
+        {!isAuthenticated && <AuthPage key="auth" />}
+      </AnimatePresence>
+      {isAuthenticated && sortieAuthTerminee && <Home />}
+    </>
+  );
 }

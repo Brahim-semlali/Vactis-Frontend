@@ -1,0 +1,492 @@
+/* ==========================================================================
+   VACTIS — Authentification : mise en page
+   Jetons de couleur, fond animé de la page, coque en verre, panneau du
+   formulaire et zone de bascule Connexion ↔ Inscription.
+   Les deux autres feuilles : auth-showcase.css (panneau de gauche et
+   illustration) et auth-form.css (champs, boutons, alertes).
+   ========================================================================== */
+
+/* Couleur d'accent animable : elle glisse doucement d'un mode à l'autre */
+@property --vxa-accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #087cf0;
+}
+
+@keyframes vxa-rise {
+  from { opacity: 0; translate: 0 14px; }
+}
+
+@keyframes vxa-pop {
+  from { opacity: 0; scale: 0.8; }
+}
+
+@keyframes vxa-spin {
+  to { rotate: 360deg; }
+}
+
+@keyframes vxa-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -6px; }
+}
+
+@keyframes vxa-shimmer {
+  to { background-position: 200% 0; }
+}
+
+@keyframes vxa-shell-in {
+  from { opacity: 0; translate: 0 24px; scale: 0.985; }
+}
+
+@keyframes vxa-blob {
+  0%, 100% { translate: 0 0; scale: 1; }
+  33% { translate: 4vw -3vh; scale: 1.06; }
+  66% { translate: -3vw 4vh; scale: 0.95; }
+}
+
+@keyframes vxa-flow {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes vxa-drift {
+  0%, 100% { translate: 0 0; rotate: 0deg; }
+  50% { translate: 0 -18px; rotate: 8deg; }
+}
+
+@keyframes vxa-halo {
+  50% { scale: 1.14; opacity: 0.65; }
+}
+
+/* ── Jetons ─────────────────────────────────────────────────────────────── */
+
+.vxa-page {
+  --vxa-night: #061b35;
+  --vxa-night-2: #0a2a52;
+  --vxa-blue: #087cf0;
+  --vxa-cyan: #00d4e8;
+  --vxa-accent: #087cf0;
+  --vxa-ink: #0b1f3a;
+  --vxa-text: #33465f;
+  --vxa-muted: #64748b;
+  --vxa-line: #dbe5f1;
+  --vxa-field-bg: #f5f8fd;
+  --vxa-field-hover: #ffffff;
+  --vxa-page-bg: #edf3fb;
+  --vxa-glass: rgba(255, 255, 255, 0.58);
+  --vxa-glass-border: rgba(255, 255, 255, 0.75);
+  --vxa-panel-top: rgba(255, 255, 255, 0.86);
+  --vxa-panel-bottom: rgba(246, 250, 255, 0.7);
+  --vxa-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --vxa-radius: 1.75rem;
+
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 1rem;
+  overflow-x: hidden;
+  background: var(--vxa-page-bg);
+  color: var(--vxa-ink);
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  transition: --vxa-accent 0.6s ease;
+}
+
+.vxa-page[data-mode='register'] {
+  --vxa-accent: #00b4e0;
+}
+
+/* ── Fond de page ───────────────────────────────────────────────────────── */
+
+.vxa-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(60vw 50vw at 0% 0%, rgba(8, 124, 240, 0.14), transparent 60%),
+    radial-gradient(55vw 45vw at 100% 100%, rgba(0, 212, 232, 0.14), transparent 60%),
+    linear-gradient(160deg, #f5f9fe 0%, #e5eef9 100%);
+}
+
+.vxa-bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.42;
+  animation: vxa-blob 26s ease-in-out infinite;
+}
+
+.vxa-bg-blob--a {
+  top: -12vw;
+  left: -8vw;
+  width: 40vw;
+  height: 40vw;
+  background: #8cc4ff;
+}
+
+.vxa-bg-blob--b {
+  right: -10vw;
+  bottom: -14vw;
+  width: 42vw;
+  height: 42vw;
+  background: #7fe3f2;
+  animation-duration: 30s;
+  animation-delay: -9s;
+}
+
+.vxa-bg-blob--c {
+  top: 42%;
+  left: 44%;
+  width: 22vw;
+  height: 22vw;
+  background: #b9d7ff;
+  opacity: 0.3;
+  animation-duration: 34s;
+  animation-delay: -15s;
+}
+
+.vxa-bg-flows {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.vxa-flow-line {
+  fill: none;
+  stroke: rgba(8, 124, 240, 0.09);
+  stroke-width: 1.2;
+}
+
+/* Paquet de données qui parcourt chaque courbe */
+.vxa-flow-pulse {
+  fill: none;
+  stroke: rgba(8, 140, 240, 0.5);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 4 96;
+  stroke-dashoffset: 100;
+  animation: vxa-flow 11s linear infinite;
+  animation-delay: calc(var(--i, 0) * -2.7s);
+}
+
+.vxa-particles {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Quelques éléments en verre qui flottent pour donner de la profondeur */
+.vxa-bg-float {
+  position: absolute;
+  width: 3.4rem;
+  height: 3.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 1rem;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.15));
+  box-shadow: 0 18px 30px -18px rgba(8, 124, 240, 0.45);
+  opacity: 0.7;
+  animation: vxa-drift 14s ease-in-out infinite;
+}
+
+.vxa-bg-float--a {
+  top: 12%;
+  left: 3.5%;
+  rotate: 12deg;
+}
+
+.vxa-bg-float--b {
+  right: 4%;
+  top: 16%;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.75rem;
+  animation-duration: 17s;
+  animation-delay: -5s;
+}
+
+.vxa-bg-float--c {
+  right: 9%;
+  bottom: 7%;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  animation-duration: 20s;
+  animation-delay: -11s;
+}
+
+/* ── Coque en verre ─────────────────────────────────────────────────────── */
+
+.vxa-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  width: min(100%, 1500px);
+  height: calc(100vh - 2rem);
+  height: calc(100dvh - 2rem);
+  min-height: 640px;
+  max-height: 960px;
+  padding: 0.6rem;
+  border: 1px solid var(--vxa-glass-border);
+  border-radius: calc(var(--vxa-radius) + 0.6rem);
+  background: var(--vxa-glass);
+  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  backdrop-filter: blur(22px) saturate(1.2);
+  box-shadow:
+    0 40px 90px -40px rgba(6, 27, 53, 0.45),
+    0 18px 40px -24px rgba(8, 124, 240, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  animation: vxa-shell-in 0.9s var(--vxa-ease) both;
+}
+
+/* ── Panneau du formulaire (droite) ─────────────────────────────────────── */
+
+/* Surface en verre dépoli, bordure lumineuse en dégradé */
+.vxa-panel {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  margin-left: 0.6rem;
+  border-radius: var(--vxa-radius);
+  background: linear-gradient(165deg, var(--vxa-panel-top), var(--vxa-panel-bottom));
+  box-shadow: 0 24px 50px -36px rgba(6, 27, 53, 0.35);
+}
+
+.vxa-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(8, 124, 240, 0.12) 40%, rgba(0, 212, 232, 0.25));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Vagues lumineuses discrètes dans les coins */
+.vxa-panel-decor span {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.vxa-panel-decor span:first-child {
+  top: -28%;
+  right: -30%;
+  width: 75%;
+  aspect-ratio: 1;
+  background: radial-gradient(circle, color-mix(in srgb, var(--vxa-accent) 14%, transparent), transparent 65%);
+}
+
+.vxa-panel-decor span:last-child {
+  bottom: -38%;
+  left: -32%;
+  width: 80%;
+  aspect-ratio: 1;
+  border: 1px solid rgba(8, 124, 240, 0.08);
+  box-shadow:
+    0 0 0 2.4rem rgba(8, 124, 240, 0.025),
+    0 0 0 4.8rem rgba(0, 212, 232, 0.02);
+}
+
+.vxa-panel-scroll {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: clamp(1.5rem, 4vh, 3rem) clamp(1.5rem, 4vw, 4rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(8, 124, 240, 0.3) transparent;
+}
+
+/* Centré verticalement, sans couper le haut quand le contenu déborde */
+.vxa-panel-inner {
+  width: min(100%, 26.5rem);
+  margin: auto;
+}
+
+/* Le logo apparaît avec framer-motion (zoom + netteté) ; l'anneau s'élargit une fois */
+.vxa-panel-logo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 4.6rem;
+  height: 4.6rem;
+  margin: 0 auto 1rem;
+}
+
+.vxa-panel-logo-ring {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid color-mix(in srgb, var(--vxa-accent) 55%, transparent);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  animation: vxa-logo-ring 1.4s var(--vxa-ease) 0.5s both;
+}
+
+@keyframes vxa-logo-ring {
+  0% { scale: 0.5; opacity: 0.9; }
+  100% { scale: 1.9; opacity: 0; }
+}
+
+.vxa-panel-logo-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--vxa-accent) 24%, transparent), transparent 70%);
+  animation: vxa-halo 4s ease-in-out infinite;
+}
+
+.vxa-panel-logo img {
+  position: relative;
+  width: 3.8rem;
+  height: auto;
+  filter: drop-shadow(0 8px 16px rgba(8, 124, 240, 0.3));
+  animation: vxa-float 6s ease-in-out infinite;
+}
+
+/* ── Zone de bascule Connexion ↔ Inscription ────────────────────────────── */
+
+/* La marge négative laisse la place aux halos de focus malgré overflow: hidden */
+.vxa-stage {
+  position: relative;
+  margin: -12px;
+  overflow: hidden;
+}
+
+.vxa-stage-inner {
+  position: relative;
+  padding: 12px;
+}
+
+.vxa-stage-panel {
+  width: 100%;
+}
+
+/* ── Mode sombre ────────────────────────────────────────────────────────── */
+
+html.dark .vxa-page {
+  --vxa-ink: #eef4ff;
+  --vxa-text: #c3d0e2;
+  --vxa-muted: #8a9bb4;
+  --vxa-line: #1f3550;
+  --vxa-field-bg: #0e1f35;
+  --vxa-field-hover: #112640;
+  --vxa-page-bg: #040c18;
+  --vxa-glass: rgba(10, 24, 44, 0.62);
+  --vxa-glass-border: rgba(124, 196, 255, 0.1);
+  --vxa-panel-top: rgba(13, 30, 54, 0.88);
+  --vxa-panel-bottom: rgba(8, 20, 38, 0.78);
+}
+
+html.dark .vxa-panel::before {
+  background: linear-gradient(160deg, rgba(124, 196, 255, 0.28), rgba(124, 196, 255, 0.05) 40%, rgba(0, 212, 232, 0.18));
+}
+
+html.dark .vxa-bg {
+  background:
+    radial-gradient(60vw 50vw at 0% 0%, rgba(8, 124, 240, 0.16), transparent 60%),
+    radial-gradient(55vw 45vw at 100% 100%, rgba(0, 212, 232, 0.12), transparent 60%),
+    linear-gradient(160deg, #06101f 0%, #030a15 100%);
+}
+
+html.dark .vxa-bg-blob {
+  opacity: 0.16;
+}
+
+html.dark .vxa-flow-line {
+  stroke: rgba(124, 196, 255, 0.07);
+}
+
+html.dark .vxa-bg-float {
+  border-color: rgba(124, 196, 255, 0.16);
+  background: linear-gradient(140deg, rgba(124, 196, 255, 0.12), rgba(124, 196, 255, 0.02));
+  opacity: 0.5;
+}
+
+html.dark .vxa-shell {
+  box-shadow:
+    0 40px 90px -40px rgba(0, 0, 0, 0.9),
+    0 18px 40px -24px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(124, 196, 255, 0.08);
+}
+
+html.dark .vxa-panel-decor span:last-child {
+  border-color: rgba(124, 196, 255, 0.07);
+  box-shadow:
+    0 0 0 2.4rem rgba(124, 196, 255, 0.02),
+    0 0 0 4.8rem rgba(0, 212, 232, 0.015);
+}
+
+/* ── Adaptation aux écrans ──────────────────────────────────────────────── */
+
+/* Tablette : deux colonnes de même largeur */
+@media (max-width: 1100px) {
+  .vxa-shell {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* Mobile : le formulaire passe en premier plan, le panneau devient un bandeau */
+@media (max-width: 900px) {
+  .vxa-page {
+    align-items: flex-start;
+    padding: 0.75rem;
+  }
+
+  .vxa-shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    width: min(100%, 560px);
+    height: auto;
+    min-height: calc(100vh - 1.5rem);
+    min-height: calc(100dvh - 1.5rem);
+    max-height: none;
+  }
+
+  .vxa-panel {
+    margin: 0.5rem 0 0;
+  }
+
+  .vxa-panel-scroll {
+    height: auto;
+    padding: 1.75rem 1.25rem 1.5rem;
+    overflow: visible;
+  }
+
+  .vxa-bg-float {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .vxa-page {
+    padding: 0.5rem;
+  }
+
+  .vxa-shell {
+    min-height: calc(100vh - 1rem);
+    min-height: calc(100dvh - 1rem);
+    padding: 0.4rem;
+    border-radius: 1.4rem;
+  }
+
+  .vxa-panel-scroll {
+    padding: 1.5rem 1rem 1.25rem;
+  }
+}

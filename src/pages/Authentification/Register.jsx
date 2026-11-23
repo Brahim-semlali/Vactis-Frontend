@@ -1,6 +1,10 @@
 import { useState } from 'react';
-import AuthLayout from '../../components/AuthLayout.jsx';
+import { AnimatePresence } from 'framer-motion';
 import AuthField from '../../components/AuthField.jsx';
+import AuthAlert from '../../components/auth/AuthAlert.jsx';
+import AuthFormHeader from '../../components/auth/AuthFormHeader.jsx';
+import AuthSubmitButton from '../../components/auth/AuthSubmitButton.jsx';
+import AuthSwitchPrompt from '../../components/auth/AuthSwitchPrompt.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { logger } from '../../utils/logger.js';
 
@@ -17,34 +21,55 @@ function passwordStrength(value) {
   return { level: 3, label: 'Fort' };
 }
 
+/**
+ * Le formulaire saisit un « nom complet » ; l'API attend un prénom et un nom.
+ * Le premier mot devient le prénom, le reste le nom (« Marie de la Tour »
+ * → « Marie » / « de la Tour »). Un prénom composé s'écrit avec un trait d'union.
+ */
+export function splitFullName(value) {
+  const [firstName = '', ...rest] = value.trim().split(/\s+/).filter(Boolean);
+  return { firstName, lastName: rest.join(' ') };
+}
+
 export default function Register({ onShowLogin }) {
   const { register } = useAuth();
 
+  const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
+  const [errorPulse, setErrorPulse] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const strength = passwordStrength(password);
   const passwordsMatch = confirm.length > 0 && password === confirm;
   const passwordsMismatch = confirm.length > 0 && password !== confirm;
 
+  function fail(message) {
+    setError(message);
+    setErrorPulse((n) => n + 1);
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
 
+    const { firstName, lastName } = splitFullName(fullName);
+    if (!firstName || !lastName) {
+      fail('Indiquez votre prénom et votre nom');
+      return;
+    }
+
     if (password !== confirm) {
-      setError('Les mots de passe ne correspondent pas');
+      fail('Les mots de passe ne correspondent pas');
       return;
     }
 
     if (password.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères');
+      fail('Le mot de passe doit contenir au moins 6 caractères');
       return;
     }
 
@@ -54,13 +79,14 @@ export default function Register({ onShowLogin }) {
       await register({
         username: username.trim(),
         password,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        firstName,
+        lastName,
         email: email.trim(),
-        phone: phone.trim() || null,
+        phone: null,
       });
+      setSuccess(true);
     } catch (err) {
-      setError(err.message || 'Impossible de créer le compte');
+      fail(err.message || 'Impossible de créer le compte');
       logger.warn('Inscription échouée', { username: username.trim(), message: err.message });
     } finally {
       setLoading(false);
@@ -68,55 +94,46 @@ export default function Register({ onShowLogin }) {
   }
 
   return (
-    <AuthLayout
-      title="Inscription"
-      subtitle="Rejoignez la plateforme en quelques minutes"
-      footer={
-        <p>
-          Déjà inscrit ?{' '}
-          <button type="button" className="link-btn" onClick={onShowLogin}>
-            Se connecter
-          </button>
-        </p>
-      }
-    >
-      <form className="auth-form auth-form--register" onSubmit={handleSubmit} noValidate>
-        {error && (
-          <div className="alert alert-error" role="alert">
-            <span className="alert-icon" aria-hidden="true">⚠</span>
-            <div>{error}</div>
-          </div>
-        )}
+    <>
+      <AuthFormHeader title="Créez votre compte" subtitle="Rejoignez votre espace VACTIS" />
 
-        <div className="field-row">
-          <AuthField
-            label="Prénom"
-            icon="user"
-            type="text"
-            name="firstName"
-            autoComplete="given-name"
-            required
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            placeholder="Jean"
-            disabled={loading}
-          />
-
-          <AuthField
-            label="Nom"
-            type="text"
-            name="lastName"
-            autoComplete="family-name"
-            required
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            placeholder="Dupont"
-            disabled={loading}
-          />
-        </div>
+      <form className="vxa-form vxa-form--compact" onSubmit={handleSubmit} noValidate>
+        <AnimatePresence initial={false}>
+          {error && (
+            <AuthAlert key="register-alert" pulseKey={errorPulse}>
+              <p className="vxa-alert-text">{error}</p>
+            </AuthAlert>
+          )}
+        </AnimatePresence>
 
         <AuthField
-          label="Email"
+          label="Nom complet"
+          icon="user"
+          type="text"
+          name="fullName"
+          autoComplete="name"
+          required
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="Jean Dupont"
+          disabled={loading}
+        />
+
+        <AuthField
+          label="Nom d'utilisateur"
+          icon="username"
+          type="text"
+          name="username"
+          autoComplete="username"
+          required
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="jdupont"
+          disabled={loading}
+        />
+
+        <AuthField
+          label="Adresse e-mail"
           icon="mail"
           type="email"
           name="email"
@@ -129,64 +146,32 @@ export default function Register({ onShowLogin }) {
         />
 
         <AuthField
-          label="Téléphone (optionnel)"
-          icon="phone"
-          type="tel"
-          name="phone"
-          autoComplete="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="06 12 34 56 78"
-          disabled={loading}
-        />
-
-        <AuthField
-          label="Nom d'utilisateur"
-          icon="user"
-          type="text"
-          name="username"
-          autoComplete="username"
+          label="Mot de passe"
+          icon="lock"
+          type="password"
+          name="password"
+          autoComplete="new-password"
           required
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="votre_nom"
+          minLength={6}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="6 caractères minimum"
           disabled={loading}
-        />
-
-        <div className="field-group">
-          <AuthField
-            label="Mot de passe"
-            icon="lock"
-            type="password"
-            name="password"
-            autoComplete="new-password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            disabled={loading}
-          />
-
+        >
           {password.length > 0 && (
-            <div className="password-strength" aria-live="polite">
-              <div className="password-strength-bars">
+            <div className={`vxa-strength is-level-${strength.level}`} aria-live="polite">
+              <span className="vxa-strength-bars" aria-hidden="true">
                 {[1, 2, 3].map((step) => (
-                  <span
-                    key={step}
-                    className={`password-strength-bar ${
-                      strength.level >= step ? `password-strength-bar--${strength.level}` : ''
-                    }`}
-                  />
+                  <span key={step} className={strength.level >= step ? 'is-on' : undefined} />
                 ))}
-              </div>
-              <span className="password-strength-label">{strength.label}</span>
+              </span>
+              <span className="vxa-strength-label">{strength.label}</span>
             </div>
           )}
-        </div>
+        </AuthField>
 
         <AuthField
-          label="Confirmer le mot de passe"
+          label="Confirmation du mot de passe"
           icon="lock"
           type="password"
           name="confirmPassword"
@@ -195,21 +180,18 @@ export default function Register({ onShowLogin }) {
           minLength={6}
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
-          placeholder="••••••••"
+          placeholder="Saisissez-le à nouveau"
           disabled={loading}
-          className={passwordsMismatch ? 'field--error' : passwordsMatch ? 'field--success' : ''}
+          status={passwordsMismatch ? 'error' : passwordsMatch ? 'success' : undefined}
+          hint={passwordsMismatch ? 'Les mots de passe ne correspondent pas' : undefined}
         />
 
-        {passwordsMismatch && (
-          <p className="field-hint field-hint--error">Les mots de passe ne correspondent pas</p>
-        )}
-
-        <button type="submit" className="btn btn-primary btn-block auth-submit" disabled={loading}>
-          {loading && <span className="btn-spinner" aria-hidden="true" />}
-          {loading ? 'Création…' : 'Créer mon compte'}
-          {!loading && <span className="auth-submit-arrow" aria-hidden="true">→</span>}
-        </button>
+        <AuthSubmitButton loading={loading} loadingLabel="Création…" success={success} successLabel="Compte créé">
+          Créer mon compte
+        </AuthSubmitButton>
       </form>
-    </AuthLayout>
+
+      <AuthSwitchPrompt question="Déjà un compte ?" action="Se connecter" onClick={onShowLogin} disabled={loading} />
+    </>
   );
 }

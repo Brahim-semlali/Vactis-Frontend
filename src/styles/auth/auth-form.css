@@ -1,0 +1,794 @@
+/* ==========================================================================
+   VACTIS — Authentification : formulaires
+   Titre, champs, options, bouton principal, alertes et lien de bascule.
+   Les éléments apparaissent en cascade à chaque affichage d'un formulaire.
+   ========================================================================== */
+
+@keyframes vxa-border-flow {
+  to { background-position: 200% 0; }
+}
+
+@keyframes vxa-shine {
+  0% { translate: -130% 0; }
+  30%, 100% { translate: 330% 0; }
+}
+
+@keyframes vxa-progress {
+  from { translate: -100% 0; }
+  to { translate: 260% 0; }
+}
+
+@keyframes vxa-blink {
+  50% { opacity: 0.35; }
+}
+
+@keyframes vxa-ripple {
+  from { scale: 0; opacity: 1; }
+  to { scale: 28; opacity: 0; }
+}
+
+/* ── Titre ──────────────────────────────────────────────────────────────── */
+
+.vxa-form-head {
+  margin-bottom: 1.6rem;
+  text-align: center;
+}
+
+/* Le titre (mot par mot) et le sous-titre sont animés par framer-motion */
+.vxa-form-head h1 {
+  margin: 0;
+  color: var(--vxa-ink);
+  font-size: clamp(1.8rem, 2.2vw, 2.25rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  outline: none;
+}
+
+.vxa-form-head-word {
+  display: inline-block;
+}
+
+.vxa-form-head p {
+  margin: 0.5rem 0 0;
+  color: var(--vxa-muted);
+  font-size: 0.93rem;
+  line-height: 1.5;
+}
+
+/* ── Formulaire et apparition en cascade ────────────────────────────────── */
+
+.vxa-form {
+  display: grid;
+  gap: 1.05rem;
+}
+
+.vxa-form--compact {
+  gap: 0.85rem;
+}
+
+.vxa-form > * {
+  animation: vxa-rise 0.55s var(--vxa-ease) both;
+}
+
+.vxa-form > :nth-child(1) { animation-delay: 0.16s; }
+.vxa-form > :nth-child(2) { animation-delay: 0.22s; }
+.vxa-form > :nth-child(3) { animation-delay: 0.28s; }
+.vxa-form > :nth-child(4) { animation-delay: 0.34s; }
+.vxa-form > :nth-child(5) { animation-delay: 0.4s; }
+.vxa-form > :nth-child(6) { animation-delay: 0.46s; }
+.vxa-form > :nth-child(n + 7) { animation-delay: 0.52s; }
+
+/* L'alerte a sa propre animation (framer-motion) */
+.vxa-form > .vxa-alert {
+  animation: none;
+}
+
+/* ── Champs ─────────────────────────────────────────────────────────────── */
+
+.vxa-field {
+  display: grid;
+  gap: 0.42rem;
+  min-width: 0;
+}
+
+.vxa-field-label {
+  color: var(--vxa-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+/* Champ actif : libellé coloré qui glisse légèrement */
+.vxa-field-label {
+  transition: color 0.2s ease, translate 0.3s var(--vxa-ease);
+}
+
+.vxa-field:focus-within .vxa-field-label {
+  color: var(--vxa-blue);
+  translate: 2px 0;
+}
+
+.vxa-field-control {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 3.15rem;
+  border: 1px solid var(--vxa-line);
+  border-radius: 0.95rem;
+  background: var(--vxa-field-bg);
+  box-shadow: 0 1px 2px rgba(6, 27, 53, 0.04);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.3s var(--vxa-ease),
+    translate 0.3s var(--vxa-ease);
+}
+
+.vxa-form--compact .vxa-field-control {
+  min-height: 2.95rem;
+}
+
+.vxa-field:not(.is-disabled) .vxa-field-control:hover {
+  border-color: #c4d4e8;
+  background: var(--vxa-field-hover);
+}
+
+/* Bordure en dégradé bleu → cyan, visible uniquement au focus */
+.vxa-field-control::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: linear-gradient(110deg, var(--vxa-blue), var(--vxa-cyan), var(--vxa-blue));
+  background-size: 200% 100%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.vxa-field-control:focus-within {
+  border-color: transparent;
+  background: var(--vxa-field-hover);
+  translate: 0 -1px;
+  box-shadow: 0 0 0 4px rgba(8, 124, 240, 0.1), 0 14px 28px -18px rgba(8, 124, 240, 0.55);
+}
+
+.vxa-field-control:focus-within::before {
+  opacity: 1;
+  animation: vxa-border-flow 3s linear infinite;
+}
+
+.vxa-field-icon {
+  flex-shrink: 0;
+  margin-left: 1rem;
+  color: #8193ab;
+  transition: color 0.2s ease, scale 0.3s var(--vxa-ease);
+}
+
+.vxa-field-control:focus-within .vxa-field-icon {
+  color: var(--vxa-blue);
+  scale: 1.08;
+}
+
+.vxa-field-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.8rem 0.9rem;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--vxa-ink);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.vxa-field-input::placeholder {
+  color: #9aa9bd;
+}
+
+.vxa-field-input:disabled {
+  cursor: not-allowed;
+}
+
+/* Remplissage automatique du navigateur : on garde le fond du champ */
+.vxa-field-input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 100px var(--vxa-field-hover) inset;
+  -webkit-text-fill-color: var(--vxa-ink);
+  caret-color: var(--vxa-ink);
+}
+
+.vxa-field-toggle {
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  padding: 0 0.95rem;
+  border: 0;
+  border-radius: 0 0.95rem 0.95rem 0;
+  background: none;
+  color: #8193ab;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.vxa-field-toggle:hover:not(:disabled),
+.vxa-field-toggle:focus-visible {
+  color: var(--vxa-blue);
+}
+
+.vxa-field-toggle:focus-visible {
+  outline: 2px solid var(--vxa-blue);
+  outline-offset: -4px;
+}
+
+.vxa-field-toggle:disabled {
+  cursor: not-allowed;
+}
+
+.vxa-field-toggle svg {
+  animation: vxa-pop 0.25s var(--vxa-ease) both;
+}
+
+/* Pastille « Maj » quand le verrouillage des majuscules est actif */
+.vxa-field-caps {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+  padding: 0.2rem 0.45rem 0.2rem 0.35rem;
+  border-radius: 0.45rem;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  animation: vxa-pop 0.25s var(--vxa-ease) both;
+}
+
+.vxa-field-status {
+  flex-shrink: 0;
+  margin-right: 0.15rem;
+  color: #10b981;
+  animation: vxa-pop 0.3s var(--vxa-ease) both;
+}
+
+.vxa-field-status:last-child {
+  margin-right: 0.95rem;
+}
+
+.vxa-field.is-error .vxa-field-control {
+  border-color: #fca5a5;
+  background: #fff7f7;
+}
+
+.vxa-field.is-error .vxa-field-control::before {
+  background-image: linear-gradient(110deg, #f43f5e, #fb923c, #f43f5e);
+}
+
+.vxa-field.is-success .vxa-field-control {
+  border-color: #86efac;
+}
+
+.vxa-field.is-disabled .vxa-field-control {
+  opacity: 0.6;
+}
+
+.vxa-field-hint {
+  margin: 0;
+  color: #dc2626;
+  font-size: 0.78rem;
+  animation: vxa-rise 0.3s var(--vxa-ease) both;
+}
+
+/* Jauge de robustesse du mot de passe */
+.vxa-strength {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  animation: vxa-rise 0.3s var(--vxa-ease) both;
+}
+
+.vxa-strength-bars {
+  display: flex;
+  flex: 1;
+  gap: 0.3rem;
+}
+
+.vxa-strength-bars span {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--vxa-line);
+  transition: background-color 0.3s ease;
+}
+
+.vxa-strength.is-level-1 .is-on { background: #ef4444; }
+.vxa-strength.is-level-2 .is-on { background: #f59e0b; }
+.vxa-strength.is-level-3 .is-on { background: #10b981; }
+
+.vxa-strength-label {
+  min-width: 3rem;
+  color: var(--vxa-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+/* ── Options et liens ───────────────────────────────────────────────────── */
+
+.vxa-form-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  font-size: 0.82rem;
+}
+
+.vxa-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--vxa-text);
+  cursor: pointer;
+  user-select: none;
+}
+
+.vxa-check input {
+  appearance: none;
+  flex-shrink: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  border: 1.5px solid #bfcde0;
+  border-radius: 0.35rem;
+  background: #ffffff no-repeat center / 0%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    background-size 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease;
+}
+
+.vxa-check:hover input:not(:checked) {
+  border-color: var(--vxa-blue);
+}
+
+.vxa-check input:checked {
+  border-color: var(--vxa-blue);
+  background-color: var(--vxa-blue);
+  background-size: 78%;
+  box-shadow: 0 0 0 3px rgba(8, 124, 240, 0.15);
+}
+
+.vxa-check input:focus-visible {
+  outline: 2px solid var(--vxa-blue);
+  outline-offset: 2px;
+}
+
+/* Lien avec soulignement qui se dessine au survol */
+.vxa-link {
+  position: relative;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--vxa-blue);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.vxa-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+  scale: 0 1;
+  transform-origin: right;
+  transition: scale 0.3s var(--vxa-ease);
+}
+
+.vxa-link:hover:not(:disabled)::after,
+.vxa-link:focus-visible::after {
+  scale: 1 1;
+  transform-origin: left;
+}
+
+.vxa-link:hover:not(:disabled) {
+  color: #0a5ad8;
+}
+
+.vxa-link:focus-visible {
+  outline: 2px solid var(--vxa-blue);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.vxa-link:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* ── Bouton principal ───────────────────────────────────────────────────── */
+
+.vxa-submit {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 3.3rem;
+  margin-top: 0.3rem;
+  padding: 0.5rem 3.4rem;
+  border: 0;
+  border-radius: 1rem;
+  background-image: linear-gradient(100deg, #00d4e8 0%, #087cf0 45%, #0a52d6 75%, #00c2e6 100%);
+  background-size: 220% 100%;
+  background-position: 0% 0;
+  box-shadow: 0 14px 30px -14px rgba(8, 124, 240, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    background-position 0.6s var(--vxa-ease),
+    box-shadow 0.3s ease,
+    translate 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.vxa-submit:hover:not(:disabled) {
+  background-position: 100% 0;
+  box-shadow: 0 18px 34px -14px rgba(8, 124, 240, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  translate: 0 -1px;
+}
+
+.vxa-submit:active:not(:disabled) {
+  translate: 0 0;
+}
+
+.vxa-submit:focus-visible {
+  outline: 3px solid rgba(8, 124, 240, 0.35);
+  outline-offset: 3px;
+}
+
+.vxa-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.78;
+}
+
+/* Reflet qui traverse le bouton à intervalle régulier */
+.vxa-submit::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: 35%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  translate: -130% 0;
+  pointer-events: none;
+  animation: vxa-shine 5.5s ease-in-out 2s infinite;
+}
+
+.vxa-submit:disabled::after {
+  animation: none;
+}
+
+/* Barre de progression pendant la soumission */
+.vxa-submit.is-loading::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 40%;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.75);
+  animation: vxa-progress 1.1s ease-in-out infinite;
+}
+
+.vxa-submit-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.vxa-submit-spinner {
+  animation: vxa-spin 0.8s linear infinite;
+}
+
+/* Onde qui part du point de clic */
+.vxa-submit-ripple {
+  position: absolute;
+  z-index: -1;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+  animation: vxa-ripple 0.65s ease-out forwards;
+}
+
+/* Connexion réussie : dégradé vert → cyan et coche */
+.vxa-submit.is-success,
+.vxa-submit.is-success:disabled {
+  background-image: linear-gradient(100deg, #10b981 0%, #0ea5a4 55%, #00c2e6 100%);
+  box-shadow: 0 14px 30px -14px rgba(16, 185, 129, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  opacity: 1;
+  cursor: default;
+}
+
+.vxa-submit-check {
+  padding: 0.15rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  animation: vxa-pop 0.35s var(--vxa-ease) both;
+}
+
+.vxa-submit-icon {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.16);
+  translate: 0 -50%;
+  transition: translate 0.3s var(--vxa-ease), background-color 0.3s ease;
+}
+
+.vxa-submit:hover:not(:disabled) .vxa-submit-icon {
+  background-color: rgba(255, 255, 255, 0.28);
+  translate: 0.2rem -50%;
+}
+
+/* ── Alertes ────────────────────────────────────────────────────────────── */
+
+.vxa-alert {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid;
+  border-radius: 0.95rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.vxa-alert--error {
+  border-color: #fecdd3;
+  background: #fff1f3;
+  color: #be123c;
+}
+
+.vxa-alert--warning {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.vxa-alert-shake {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.vxa-alert-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.vxa-alert-body {
+  flex: 1;
+  min-width: 0;
+  padding-top: 0.2rem;
+}
+
+.vxa-alert-text {
+  margin: 0;
+  font-weight: 600;
+}
+
+.vxa-lock {
+  margin-top: 0.5rem;
+}
+
+.vxa-lock-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.vxa-lock-head strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.vxa-lock-bar {
+  display: block;
+  height: 4px;
+  margin-top: 0.45rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.vxa-lock-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+  transform: scaleX(var(--p, 1));
+  transform-origin: left;
+  transition: transform 1s linear;
+}
+
+.vxa-attempts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+}
+
+.vxa-attempts-segments {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.vxa-attempts-segments span {
+  width: 1.15rem;
+  height: 0.3rem;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.18;
+  transition: opacity 0.3s ease;
+}
+
+.vxa-attempts-segments span.is-on {
+  opacity: 0.8;
+}
+
+.vxa-attempts.is-critical .vxa-attempts-segments span.is-on {
+  animation: vxa-blink 1.2s ease-in-out infinite;
+}
+
+/* ── Bascule et mention de sécurité ─────────────────────────────────────── */
+
+.vxa-switch {
+  margin: 1.4rem 0 0;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--vxa-line);
+  color: var(--vxa-muted);
+  font-size: 0.88rem;
+  text-align: center;
+  animation: vxa-rise 0.55s var(--vxa-ease) 0.5s both;
+}
+
+.vxa-switch .vxa-link {
+  font-weight: 700;
+}
+
+.vxa-secure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  margin: 1.2rem 0 0;
+  color: var(--vxa-muted);
+  font-size: 0.76rem;
+  animation: vxa-rise 0.55s var(--vxa-ease) 0.6s both;
+}
+
+.vxa-secure svg {
+  color: var(--vxa-blue);
+}
+
+/* ── Mode sombre ────────────────────────────────────────────────────────── */
+
+html.dark .vxa-field:not(.is-disabled) .vxa-field-control:hover {
+  border-color: #2a4766;
+}
+
+html.dark .vxa-field-control {
+  box-shadow: none;
+}
+
+html.dark .vxa-field-control:focus-within {
+  box-shadow: 0 0 0 4px rgba(8, 124, 240, 0.18), 0 14px 28px -18px rgba(0, 0, 0, 0.8);
+}
+
+html.dark .vxa-field:focus-within .vxa-field-label,
+html.dark .vxa-field-control:focus-within .vxa-field-icon,
+html.dark .vxa-field-toggle:hover:not(:disabled) {
+  color: #4fb3ff;
+}
+
+html.dark .vxa-field-icon,
+html.dark .vxa-field-toggle {
+  color: #7489a6;
+}
+
+html.dark .vxa-field-input::placeholder {
+  color: #5f738d;
+}
+
+html.dark .vxa-field.is-error .vxa-field-control {
+  border-color: rgba(251, 113, 133, 0.45);
+  background: rgba(190, 18, 60, 0.08);
+}
+
+html.dark .vxa-field.is-success .vxa-field-control {
+  border-color: rgba(52, 211, 153, 0.45);
+}
+
+html.dark .vxa-field-hint {
+  color: #fda4af;
+}
+
+html.dark .vxa-field-caps {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fcd34d;
+}
+
+html.dark .vxa-check input {
+  border-color: #2c4666;
+  background-color: var(--vxa-field-bg);
+}
+
+html.dark .vxa-check input:checked {
+  border-color: var(--vxa-blue);
+  background-color: var(--vxa-blue);
+}
+
+html.dark .vxa-link {
+  color: #4fb3ff;
+}
+
+html.dark .vxa-link:hover:not(:disabled) {
+  color: #8fd0ff;
+}
+
+html.dark .vxa-alert--error {
+  border-color: rgba(251, 113, 133, 0.3);
+  background: rgba(190, 18, 60, 0.12);
+  color: #fda4af;
+}
+
+html.dark .vxa-alert--warning {
+  border-color: rgba(251, 191, 36, 0.3);
+  background: rgba(180, 83, 9, 0.14);
+  color: #fcd34d;
+}
+
+html.dark .vxa-secure svg {
+  color: #4fb3ff;
+}

@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import AuthLayout from '../../components/AuthLayout.jsx';
+import { AnimatePresence } from 'framer-motion';
+import { ArrowRight, Clock, LockKeyhole } from 'lucide-react';
 import AuthField from '../../components/AuthField.jsx';
+import AuthAlert from '../../components/auth/AuthAlert.jsx';
+import AuthFormHeader from '../../components/auth/AuthFormHeader.jsx';
+import AuthSubmitButton from '../../components/auth/AuthSubmitButton.jsx';
+import AuthSwitchPrompt from '../../components/auth/AuthSwitchPrompt.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { AuthError, getAccountStatus } from '../../api/auth.js';
 import { formatLockedUntil, logger } from '../../utils/logger.js';
+
+const MAX_SEGMENTS_TENTATIVES = 10;
 
 function formatCountdown(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
@@ -90,6 +97,11 @@ export default function Login({ onShowRegister }) {
   const [maxAttempts, setMaxAttempts] = useState(null);
   const [remainingAttempts, setRemainingAttempts] = useState(null);
   const [loading, setLoading] = useState(false);
+  // Incrémenté à chaque refus pour rejouer l'animation de l'alerte
+  const [errorPulse, setErrorPulse] = useState(0);
+  // Retours visuels : identifiants refusés (champs en rouge) et connexion réussie
+  const [credentialsRejected, setCredentialsRejected] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const setters = {
     setIsLocked,
@@ -155,6 +167,7 @@ export default function Login({ onShowRegister }) {
 
     try {
       await login(trimmed, password);
+      setSuccess(true);
       logger.info('Session ouverte depuis la page login', { username: trimmed });
     } catch (err) {
       if (err instanceof AuthError && err.code === 'ACCOUNT_LOCKED') {
@@ -162,10 +175,12 @@ export default function Login({ onShowRegister }) {
       } else if (err instanceof AuthError && err.code === 'BAD_CREDENTIALS') {
         setRemainingAttempts(err.remainingAttempts);
         setMaxAttempts(err.maxAttempts);
+        setCredentialsRejected(true);
       }
 
       const message = buildErrorMessage(err, status);
       setError(message);
+      setErrorPulse((n) => n + 1);
       logger.warn('Connexion refusée sur la page login', {
         username: trimmed,
         code: err instanceof AuthError ? err.code : null,
@@ -179,42 +194,58 @@ export default function Login({ onShowRegister }) {
 
   const formDisabled = loading || isLocked;
 
-  return (
-    <AuthLayout
-      title="Bienvenue !"
-      subtitle="Connectez-vous à votre espace personnel"
-      footer={
-        <p>
-          Pas encore de compte ?{' '}
-          <button type="button" className="link-btn" onClick={onShowRegister} disabled={loading}>
-            Créer un compte
-          </button>
-        </p>
-      }
-    >
-      <form className="auth-form" onSubmit={handleSubmit} noValidate>
-        {error && (
-          <div
-            className={`alert ${isLocked ? 'alert-warning' : 'alert-error'}`}
-            role="alert"
-          >
-            <span className="alert-icon" aria-hidden="true">
-              {!isLocked && '!'}
-            </span>
-            <div>
-              {error}
-              {isLocked && countdown > 0 && (
-                <p className="lock-countdown">Temps restant : {formatCountdown(countdown)}</p>
-              )}
-            </div>
-          </div>
-        )}
+  const lockTotalSeconds = lockMinutes ? Number(lockMinutes) * 60 : 0;
+  const lockProgress = lockTotalSeconds > 0 ? Math.max(0, Math.min(1, countdown / lockTotalSeconds)) : null;
 
-        {!isLocked && remainingAttempts != null && maxAttempts != null && error && (
-          <p className="attempts-info">
-            Tentatives restantes : <strong>{remainingAttempts}</strong> / {maxAttempts}
-          </p>
-        )}
+  const tentativesMax = maxAttempts != null ? Number(maxAttempts) : NaN;
+  const tentativesRestantes = remainingAttempts != null ? Number(remainingAttempts) : NaN;
+  const showAttempts =
+    !isLocked && Number.isFinite(tentativesMax) && Number.isFinite(tentativesRestantes) && tentativesMax > 0;
+
+  return (
+    <>
+      <AuthFormHeader title="Ravi de vous revoir" subtitle="Connectez-vous à votre espace personnel" />
+
+      <form className="vxa-form" onSubmit={handleSubmit} noValidate>
+        <AnimatePresence initial={false}>
+          {error && (
+            <AuthAlert
+              key="login-alert"
+              tone={isLocked ? 'warning' : 'error'}
+              icon={isLocked ? LockKeyhole : undefined}
+              pulseKey={errorPulse}
+            >
+              <p className="vxa-alert-text">{error}</p>
+
+              {isLocked && countdown > 0 && (
+                <div className="vxa-lock">
+                  <p className="vxa-lock-head">
+                    <Clock size={13} strokeWidth={2.4} aria-hidden="true" />
+                    Temps restant : <strong>{formatCountdown(countdown)}</strong>
+                  </p>
+                  {lockProgress != null && (
+                    <span className="vxa-lock-bar" aria-hidden="true">
+                      <span style={{ '--p': lockProgress }} />
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {showAttempts && (
+                <div className={`vxa-attempts ${tentativesRestantes <= 1 ? 'is-critical' : ''}`}>
+                  <span className="vxa-attempts-segments" aria-hidden="true">
+                    {Array.from({ length: Math.min(tentativesMax, MAX_SEGMENTS_TENTATIVES) }, (_, i) => (
+                      <span key={i} className={i < tentativesRestantes ? 'is-on' : undefined} />
+                    ))}
+                  </span>
+                  <span>
+                    Tentatives restantes : <strong>{tentativesRestantes}</strong> / {tentativesMax}
+                  </span>
+                </div>
+              )}
+            </AuthAlert>
+          )}
+        </AnimatePresence>
 
         <AuthField
           label="Nom d'utilisateur"
@@ -224,10 +255,14 @@ export default function Login({ onShowRegister }) {
           autoComplete="username"
           required
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={(e) => {
+            setUsername(e.target.value);
+            setCredentialsRejected(false);
+          }}
           onBlur={(e) => refreshAccountStatus(e.target.value)}
           placeholder="Entrez votre nom d'utilisateur"
           disabled={formDisabled}
+          status={credentialsRejected ? 'error' : undefined}
         />
 
         <AuthField
@@ -239,27 +274,43 @@ export default function Login({ onShowRegister }) {
           required
           minLength={6}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setCredentialsRejected(false);
+          }}
           placeholder="Entrez votre mot de passe"
           disabled={formDisabled}
+          status={credentialsRejected ? 'error' : undefined}
         />
 
-        <div className="auth-options">
-          <label className="remember-option">
+        <div className="vxa-form-options">
+          <label className="vxa-check">
             <input type="checkbox" name="remember" />
             <span>Se souvenir de moi</span>
           </label>
-          <button type="button" className="forgot-link" disabled={formDisabled}>
+          <button type="button" className="vxa-link" disabled={formDisabled}>
             Mot de passe oublié ?
           </button>
         </div>
 
-        <button type="submit" className="btn btn-primary btn-block auth-submit" disabled={formDisabled}>
-          {loading && <span className="btn-spinner" aria-hidden="true" />}
-          {loading ? 'Connexion…' : isLocked ? 'Compte suspendu' : 'Se connecter'}
-          {!loading && !isLocked && <span className="auth-submit-arrow" aria-hidden="true">→</span>}
-        </button>
+        <AuthSubmitButton
+          loading={loading}
+          loadingLabel="Connexion…"
+          success={success}
+          successLabel="Connexion réussie"
+          disabled={formDisabled}
+          icon={isLocked ? LockKeyhole : ArrowRight}
+        >
+          {isLocked ? 'Compte suspendu' : 'Se connecter'}
+        </AuthSubmitButton>
       </form>
-    </AuthLayout>
+
+      <AuthSwitchPrompt
+        question="Pas encore de compte ?"
+        action="Créer un compte"
+        onClick={onShowRegister}
+        disabled={loading}
+      />
+    </>
   );
 }
