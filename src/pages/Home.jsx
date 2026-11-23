@@ -18,6 +18,8 @@ import RapportCommercialPage from './RapportCommercial/RapportCommercialPage.jsx
 import ZoneIntelligencePage from './ZoneIntelligence/ZoneIntelligencePage.jsx';
 import ReclamationsPage from './ReclamationsPage';
 import ImportExportExcelPage from './Administration/ImportExportExcelPage.jsx';
+import DashboardDirectionPage from './DashboardDirection/DashboardDirectionPage.jsx';
+import SuiviEquipePage from './SuiviEquipe/SuiviEquipePage.jsx';
 import { IMPORTED_DATASET_CHANGED_EVENT } from '../lib/importRefresh.js';
 
 const workflowSteps = [
@@ -177,6 +179,14 @@ function resolvePageContent(activeRoute, username, navigate) {
 
   if (activeRoute === '/reclamations') {
     return <ReclamationsPage />;
+  }
+
+  if (activeRoute === '/dashboard-direction') {
+    return <DashboardDirectionPage navigate={navigate} />;
+  }
+
+  if (activeRoute === '/suivi-equipe') {
+    return <SuiviEquipePage />;
   }
 
   if (isPublicRoute(activeRoute)) {
