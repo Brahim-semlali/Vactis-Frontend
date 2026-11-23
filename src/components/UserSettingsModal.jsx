@@ -640,7 +640,7 @@ export default function UserSettingsModal({ onClose, initialTab = 'profile' }) {
                 {/* Light Mode Card */}
                 <button
                   type="button"
-                  onClick={() => setTheme('light')}
+                  onClick={(e) => setTheme('light', e)}
                   className={`group relative flex flex-col p-4 rounded-2xl border-2 text-left transition-all ${
                     theme === 'light'
                       ? 'border-teal-500 bg-teal-50/40 dark:bg-slate-800/80 shadow-md ring-2 ring-teal-500/20'
@@ -690,7 +690,7 @@ export default function UserSettingsModal({ onClose, initialTab = 'profile' }) {
                 {/* Dark Mode Card */}
                 <button
                   type="button"
-                  onClick={() => setTheme('dark')}
+                  onClick={(e) => setTheme('dark', e)}
                   className={`group relative flex flex-col p-4 rounded-2xl border-2 text-left transition-all ${
                     theme === 'dark'
                       ? 'border-teal-500 bg-teal-50/40 dark:bg-slate-800/90 shadow-md ring-2 ring-teal-500/20'

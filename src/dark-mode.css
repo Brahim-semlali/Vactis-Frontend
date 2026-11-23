@@ -14,15 +14,16 @@
 html.dark,
 body.dark,
 :root[data-theme="dark"] {
-  --bg: #0b131f;
-  --bg-soft: #111d2d;
-  --card: #162436;
-  --card-hover: #1c2e44;
-  --card-border: #23374d;
-  --text: #f1f5f9;
-  --text-secondary: #cbd5e1;
-  --muted: #94a3b8;
-  --muted-soft: #64748b;
+  /* Palette neutre inspirée du thème sombre de GitHub */
+  --bg: #0d1117;
+  --bg-soft: #151b23;
+  --card: #151b23;
+  --card-hover: #1c2128;
+  --card-border: #30363d;
+  --text: #e6edf3;
+  --text-secondary: #c9d1d9;
+  --muted: #9198a1;
+  --muted-soft: #6e7681;
 
   --primary: #14b8a6;
   --primary-dark: #0d9488;
@@ -30,17 +31,17 @@ body.dark,
   --primary-light: #164e4b;
   --primary-soft: #133a37;
 
-  --sidebar-bg: #0d1722;
-  --sidebar-secondary: #14212e;
-  --sidebar-border: #243547;
-  --sidebar-text: #e2e8f0;
-  --sidebar-muted: #8fa0b2;
-  --sidebar-hover: #1a2b39;
-  --sidebar-active-bg: #133e3a;
+  --sidebar-bg: #010409;
+  --sidebar-secondary: #0d1117;
+  --sidebar-border: #21262d;
+  --sidebar-text: #e6edf3;
+  --sidebar-muted: #9198a1;
+  --sidebar-hover: rgba(177, 186, 196, 0.08);
+  --sidebar-active-bg: rgba(20, 184, 166, 0.14);
   --sidebar-active-text: #5eead4;
-  --sidebar-icon: #9aabba;
+  --sidebar-icon: #9198a1;
 
-  --shadow-base: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --shadow-base: 0 18px 40px -12px rgba(0, 0, 0, 0.6);
   --shadow-soft: 0 8px 20px rgba(0, 0, 0, 0.3);
 
   color-scheme: dark;
@@ -62,15 +63,15 @@ html.dark ::-webkit-scrollbar {
   height: 8px;
 }
 html.dark ::-webkit-scrollbar-track {
-  background: #0d1722;
+  background: #151b23;
 }
 html.dark ::-webkit-scrollbar-thumb {
-  background: #25394e;
+  background: #30363d;
   border-radius: 999px;
-  border: 2px solid #0d1722;
+  border: 2px solid #151b23;
 }
 html.dark ::-webkit-scrollbar-thumb:hover {
-  background: #334e6b;
+  background: #484f58;
 }
 
 /* Sélection de texte */
@@ -91,12 +92,12 @@ html.dark .text-slate-800 {
 
 html.dark .text-slate-700,
 html.dark .text-slate-600 {
-  color: #cbd5e1 !important;
+  color: #c9d1d9 !important;
 }
 
 html.dark .text-slate-500,
 html.dark .text-slate-400 {
-  color: #94a3b8 !important;
+  color: #9198a1 !important;
 }
 
 /* Couleurs vives en mode clair rendues lumineuses et lisibles sur fond sombre */
@@ -217,11 +218,11 @@ html.dark .bg-slate-100,
 html.dark .bg-slate-100\/50,
 html.dark .bg-slate-100\/70,
 html.dark .bg-slate-100\/90 {
-  background-color: #192736 !important;
+  background-color: #21262d !important;
 }
 
 html.dark .bg-slate-200 {
-  background-color: #22354a !important;
+  background-color: #30363d !important;
 }
 
 /* FONDS TEINTÉS (ROSE, TEAL, ÉMERAUDE, AMBRE, BLEU, CIEL) :
@@ -230,7 +231,7 @@ html.dark .bg-rose-50,
 html.dark .bg-rose-100,
 html.dark .bg-rose-50\/60,
 html.dark .bg-rose-200 {
-  background-color: #38121a !important;
+  background-color: rgba(244, 63, 94, 0.1) !important;
 }
 
 html.dark .bg-teal-50,
@@ -240,13 +241,13 @@ html.dark .bg-teal-50\/40,
 html.dark .bg-teal-50\/50,
 html.dark .bg-teal-50\/70,
 html.dark .bg-teal-50\/80 {
-  background-color: #0d2927 !important;
+  background-color: rgba(20, 184, 166, 0.1) !important;
 }
 
 html.dark .bg-emerald-50,
 html.dark .bg-emerald-100,
 html.dark .bg-emerald-50\/70 {
-  background-color: #0b291e !important;
+  background-color: rgba(16, 185, 129, 0.1) !important;
 }
 
 html.dark .bg-sky-50,
@@ -256,7 +257,7 @@ html.dark .bg-sky-50\/50,
 html.dark .bg-sky-50\/60,
 html.dark .bg-sky-50\/70,
 html.dark .bg-sky-50\/90 {
-  background-color: #0d2438 !important;
+  background-color: rgba(14, 165, 233, 0.1) !important;
 }
 
 html.dark .bg-amber-50,
@@ -264,65 +265,65 @@ html.dark .bg-amber-100,
 html.dark .bg-amber-50\/40,
 html.dark .bg-amber-50\/80,
 html.dark .bg-amber-50\/90 {
-  background-color: #332107 !important;
+  background-color: rgba(245, 158, 11, 0.1) !important;
 }
 
 html.dark .bg-blue-50,
 html.dark .bg-blue-100 {
-  background-color: #0f2038 !important;
+  background-color: rgba(59, 130, 246, 0.1) !important;
 }
 
 html.dark .bg-red-50,
 html.dark .bg-red-100 {
-  background-color: #381014 !important;
+  background-color: rgba(239, 68, 68, 0.1) !important;
 }
 
 html.dark .bg-indigo-50,
 html.dark .bg-indigo-100 {
-  background-color: #171836 !important;
+  background-color: rgba(99, 102, 241, 0.11) !important;
 }
 
 html.dark .bg-purple-50,
 html.dark .bg-purple-100 {
-  background-color: #241133 !important;
+  background-color: rgba(168, 85, 247, 0.11) !important;
 }
 
 /* BORDURES TEINTÉES HARMONIEUSES */
 html.dark .border-rose-100,
 html.dark .border-rose-200,
 html.dark .border-rose-200\/60 {
-  border-color: #6e2030 !important;
+  border-color: rgba(244, 63, 94, 0.3) !important;
 }
 
 html.dark .border-teal-100,
 html.dark .border-teal-200,
 html.dark .border-teal-200\/60,
 html.dark .border-teal-200\/80 {
-  border-color: #18524b !important;
+  border-color: rgba(45, 212, 191, 0.26) !important;
 }
 
 html.dark .border-emerald-100,
 html.dark .border-emerald-200,
 html.dark .border-emerald-200\/60 {
-  border-color: #165239 !important;
+  border-color: rgba(52, 211, 153, 0.26) !important;
 }
 
 html.dark .border-sky-100,
 html.dark .border-sky-200,
 html.dark .border-sky-200\/60,
 html.dark .border-sky-200\/90 {
-  border-color: #1a476b !important;
+  border-color: rgba(56, 189, 248, 0.26) !important;
 }
 
 html.dark .border-amber-100,
 html.dark .border-amber-200,
 html.dark .border-amber-200\/60,
 html.dark .border-amber-200\/90 {
-  border-color: #613e0c !important;
+  border-color: rgba(251, 191, 36, 0.28) !important;
 }
 
 html.dark .border-blue-200 {
-  border-color: #1a3c69 !important;
+  border-color: #3d444d !important;
 }
 
 html.dark .border-red-200 {
@@ -341,24 +342,24 @@ html.dark .border-white\/80,
 html.dark .border-white\/15,
 html.dark .dark\:border-slate-800,
 html.dark .dark\:border-slate-700 {
-  border-color: #23374d !important;
+  border-color: rgba(145, 152, 161, 0.13) !important;
 }
 
 html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #23374d !important;
+  border-color: rgba(145, 152, 161, 0.13) !important;
 }
 
 /* Hover de surface */
 html.dark .hover\:bg-slate-50:hover,
 html.dark .hover\:bg-slate-100:hover,
 html.dark .hover\:bg-slate-200:hover {
-  background-color: #213347 !important;
+  background-color: #30363d !important;
 }
 
 html.dark .hover\:bg-sky-50:hover,
 html.dark .hover\:bg-sky-50\/30:hover,
 html.dark .hover\:bg-sky-50\/50:hover {
-  background-color: #182e42 !important;
+  background-color: #21262d !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -371,17 +372,17 @@ html.dark thead.bg-slate-50\/80,
 html.dark tr.bg-slate-50\/90,
 html.dark .medecins-table th,
 html.dark .controle-table th {
-  background-color: #131e2d !important;
-  border-bottom: 1px solid #23374d !important;
+  background-color: #151b23 !important;
+  border-bottom: 1px solid #30363d !important;
 }
 
 html.dark table th,
 html.dark th,
 html.dark .medecins-table th,
 html.dark .controle-table th {
-  color: #94a3b8 !important;
+  color: #9198a1 !important;
   font-weight: 700;
-  border-color: #23374d !important;
+  border-color: #30363d !important;
   letter-spacing: 0.06em;
 }
 
@@ -391,8 +392,8 @@ html.dark td,
 html.dark .medecins-table td,
 html.dark .controle-table td {
   background-color: transparent;
-  border-color: #1e3044 !important;
-  color: #e2e8f0;
+  border-color: #30363d !important;
+  color: #e6edf3;
 }
 
 /* Survol de ligne */
@@ -400,7 +401,7 @@ html.dark table tbody tr:hover,
 html.dark tr.hover\:bg-sky-50\/30:hover,
 html.dark .medecins-table-row:hover,
 html.dark .controle-table tbody tr:hover {
-  background-color: #172738 !important;
+  background-color: #21262d !important;
 }
 
 /* Ligne active / sélectionnée */
@@ -408,7 +409,7 @@ html.dark tr.bg-sky-50\/90,
 html.dark tr.border-l-sky-500,
 html.dark tr[data-state="selected"],
 html.dark .medecins-table-row--active {
-  background-color: #153349 !important;
+  background-color: #30363d !important;
   border-left-color: #38bdf8 !important;
 }
 
@@ -421,30 +422,30 @@ html.dark tr.border-l-sky-500 .text-sky-950 {
 
 /* Nom et sous-titres dans la table */
 html.dark table td .text-slate-900 {
-  color: #f8fafc !important;
+  color: #f0f6fc !important;
 }
 html.dark table td .text-slate-700 {
-  color: #cbd5e1 !important;
+  color: #c9d1d9 !important;
 }
 html.dark table td .text-slate-500 {
-  color: #94a3b8 !important;
+  color: #9198a1 !important;
 }
 
 /* Boutons dans la table */
 html.dark button.bg-sky-50 {
-  background-color: #1a384e !important;
+  background-color: #30363d !important;
   color: #38bdf8 !important;
-  border: 1px solid #235478 !important;
+  border: 1px solid #484f58 !important;
 }
 
 html.dark button.bg-slate-100 {
-  background-color: #1e2f42 !important;
-  color: #cbd5e1 !important;
+  background-color: #30363d !important;
+  color: #c9d1d9 !important;
 }
 html.dark button.bg-slate-100:hover {
-  background-color: #1a384e !important;
+  background-color: #30363d !important;
   color: #38bdf8 !important;
-  border-color: #235478 !important;
+  border-color: #484f58 !important;
 }
 
 /* Bouton Réserver dans la table des actions */
@@ -465,7 +466,7 @@ html.dark button.bg-teal-50:hover {
 /* SEGMENT A */
 html.dark .badge--segment-a,
 html.dark .medecins-badge--segment-a {
-  background-color: #0b291e !important;
+  background-color: rgba(16, 185, 129, 0.1) !important;
   color: #6ee7b7 !important;
   border: 1px solid #165239 !important;
 }
@@ -473,15 +474,15 @@ html.dark .medecins-badge--segment-a {
 /* SEGMENT B */
 html.dark .badge--segment-b,
 html.dark .medecins-badge--segment-b {
-  background-color: #0d2438 !important;
+  background-color: rgba(14, 165, 233, 0.1) !important;
   color: #7dd3fc !important;
-  border: 1px solid #1a476b !important;
+  border: 1px solid #3d444d !important;
 }
 
 /* SEGMENT C */
 html.dark .badge--segment-c,
 html.dark .medecins-badge--segment-c {
-  background-color: #332107 !important;
+  background-color: rgba(245, 158, 11, 0.1) !important;
   color: #fde047 !important;
   border: 1px solid #613e0c !important;
 }
@@ -490,70 +491,70 @@ html.dark .medecins-badge--segment-c {
 html.dark .badge--segment-d,
 html.dark .medecins-badge--segment-d,
 html.dark .fiche-badge--segment-d {
-  background-color: #192736 !important;
-  color: #cbd5e1 !important;
-  border: 1px solid #273d52 !important;
+  background-color: #21262d !important;
+  color: #c9d1d9 !important;
+  border: 1px solid #30363d !important;
 }
 
 /* STATUTS VACTIS */
 html.dark .badge--actif,
 html.dark .medecins-badge--actif {
-  background-color: #0b291e !important;
+  background-color: rgba(16, 185, 129, 0.1) !important;
   color: #6ee7b7 !important;
   border: 1px solid #165239 !important;
 }
 
 html.dark .badge--progression,
 html.dark .medecins-badge--progression {
-  background-color: #0d2927 !important;
+  background-color: rgba(20, 184, 166, 0.1) !important;
   color: #5eead4 !important;
   border: 1px solid #18524b !important;
 }
 
 html.dark .badge--surveillance,
 html.dark .medecins-badge--surveillance {
-  background-color: #332107 !important;
+  background-color: rgba(245, 158, 11, 0.1) !important;
   color: #fde047 !important;
   border: 1px solid #613e0c !important;
 }
 
 html.dark .badge--onboarding,
 html.dark .medecins-badge--onboarding {
-  background-color: #0d2438 !important;
+  background-color: rgba(14, 165, 233, 0.1) !important;
   color: #7dd3fc !important;
-  border: 1px solid #1a476b !important;
+  border: 1px solid #3d444d !important;
 }
 
 html.dark .badge--silence,
 html.dark .medecins-badge--silence {
-  background-color: #38121a !important;
+  background-color: rgba(244, 63, 94, 0.1) !important;
   color: #fca5b5 !important;
   border: 1px solid #6e2030 !important;
 }
 
 html.dark .badge--urgent {
-  background-color: #381014 !important;
+  background-color: rgba(239, 68, 68, 0.1) !important;
   color: #fca5a5 !important;
   border: 1px solid #6e1a22 !important;
 }
 
 html.dark .badge--muted,
 html.dark .medecins-badge--muted {
-  background-color: #192736 !important;
-  color: #94a3b8 !important;
-  border: 1px solid #273d52 !important;
+  background-color: #21262d !important;
+  color: #9198a1 !important;
+  border: 1px solid #30363d !important;
 }
 
 /* Pastilles Note terrain (4/5, 5/5, etc.) */
 html.dark span.bg-teal-50 {
-  background-color: #0d2927 !important;
+  background-color: rgba(20, 184, 166, 0.1) !important;
   color: #5eead4 !important;
   border: 1px solid #18524b !important;
 }
 
 /* Pastilles Note Potentiel Médecin (☆ 5/5) */
 html.dark span.bg-amber-50 {
-  background-color: #332107 !important;
+  background-color: rgba(245, 158, 11, 0.1) !important;
   color: #fde047 !important;
   border: 1px solid #613e0c !important;
 }
@@ -561,129 +562,16 @@ html.dark span.bg-amber-50 {
 /* Pastille Note non renseignée */
 html.dark span.bg-slate-100:has(.animate-pulse),
 html.dark span.bg-slate-100:has(.bg-amber-400) {
-  background-color: #192736 !important;
-  color: #cbd5e1 !important;
-  border: 1px solid #273d52 !important;
+  background-color: #21262d !important;
+  color: #c9d1d9 !important;
+  border: 1px solid #30363d !important;
 }
 
 /* --------------------------------------------------------------------------
-   7. AUTHENTIFICATION (LOGIN & REGISTER) - CORRECTION CARTE BLANCHE
+   7. AUTHENTIFICATION (LOGIN & REGISTER)
+   Le mode sombre des pages d'authentification est défini avec leurs styles,
+   dans styles/auth/ (sections « Mode sombre »).
    -------------------------------------------------------------------------- */
-html.dark .auth-page {
-  background-color: #061320 !important;
-}
-
-/* La carte formulaire d'authentification passe en mode sombre assorti au showcase */
-html.dark .auth-card {
-  background-color: #0b1726 !important;
-  border: 1px solid #1c3249 !important;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 4px 14px rgba(0, 198, 215, 0.08) !important;
-}
-
-html.dark .auth-header h1 {
-  color: #f1f5f9 !important;
-}
-
-html.dark .auth-subtitle {
-  color: #94a3b8 !important;
-}
-
-html.dark .field-label {
-  color: #e2e8f0 !important;
-}
-
-/* Le conteneur du champ (field-control) */
-html.dark .field-control {
-  background-color: #102133 !important;
-  border: 1px solid #203850 !important;
-  box-shadow: none !important;
-}
-
-html.dark .field-control:focus-within {
-  background-color: #13273c !important;
-  border-color: var(--primary) !important;
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.25) !important;
-}
-
-/* L'input réel à l'intérieur du conteneur ne doit pas avoir de fond parasite */
-html.dark .field-control input {
-  background-color: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  color: #f1f5f9 !important;
-}
-
-html.dark .field-control input::placeholder {
-  color: #64748b !important;
-}
-
-html.dark .field-icon {
-  color: #94a3b8 !important;
-}
-
-html.dark .field-control:focus-within .field-icon {
-  color: var(--primary-hover) !important;
-}
-
-html.dark .field-toggle {
-  color: #94a3b8 !important;
-}
-html.dark .field-toggle:hover {
-  color: #f1f5f9 !important;
-}
-
-/* Option "Se souvenir de moi" et case à cocher */
-html.dark .remember-option {
-  color: #cbd5e1 !important;
-}
-
-html.dark .remember-option input[type="checkbox"] {
-  appearance: none !important;
-  background-color: #102133 !important;
-  border: 1px solid #233e59 !important;
-  border-radius: 0.3rem !important;
-  cursor: pointer !important;
-}
-
-html.dark .remember-option input[type="checkbox"]:checked {
-  background-color: var(--primary) !important;
-  border-color: var(--primary) !important;
-  box-shadow: inset 0 0 0 2px #0b1726 !important;
-}
-
-/* Lien Mot de passe oublié */
-html.dark .forgot-link {
-  color: #38bdf8 !important;
-}
-html.dark .forgot-link:hover:not(:disabled) {
-  color: #7dd3fc !important;
-}
-
-/* Footer d'authentification */
-html.dark .auth-footer,
-html.dark .auth-footer p {
-  color: #94a3b8 !important;
-}
-
-html.dark .auth-footer .link-btn {
-  color: #2dd4bf !important;
-}
-html.dark .auth-footer .link-btn:hover {
-  color: #5eead4 !important;
-}
-
-/* Alertes d'authentification */
-html.dark .alert-error {
-  background-color: #38121a !important;
-  border-color: #6e2030 !important;
-  color: #fca5b5 !important;
-}
-
-html.dark .alert-warning {
-  background-color: #332107 !important;
-  border-color: #613e0c !important;
-  color: #fde047 !important;
-}
 
 /* --------------------------------------------------------------------------
    8. SECTION EXPLICATION DE CALCUL (« POURQUOI CES VALEURS ? »)
@@ -691,8 +579,8 @@ html.dark .alert-warning {
 /* Conteneur principal */
 html.dark .action-detail-explanation,
 html.dark .calculation-explanation {
-  background: #122132 !important;
-  border: 1px solid #233e54 !important;
+  background: #21262d !important;
+  border: 1px solid #30363d !important;
 }
 
 /* Bouton accordéon racine (« Pourquoi ces valeurs ? ») */
@@ -711,44 +599,44 @@ html.dark .calculation-explanation button span.text-sky-700 {
 /* Panneaux intérieurs (cartes de calcul) */
 html.dark .action-detail-value-panel,
 html.dark .calculation-explanation > div > div {
-  background: #172739 !important;
-  border: 1px solid #243c52 !important;
+  background: #21262d !important;
+  border: 1px solid #30363d !important;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Boutons de bascule par bloc */
 html.dark .action-detail-value-panel button span,
 html.dark .calculation-explanation button span {
-  color: #94a3b8;
+  color: #9198a1;
 }
 html.dark .action-detail-value-panel button:hover span,
 html.dark .calculation-explanation button:hover span {
-  color: #e2e8f0;
+  color: #e6edf3;
 }
 html.dark .action-detail-value-panel strong.text-slate-900,
 html.dark .calculation-explanation strong.text-slate-900 {
-  color: #f8fafc !important;
+  color: #f0f6fc !important;
 }
 
 /* Cartes métriques individuelles */
 html.dark .action-metric,
 html.dark .calculation-explanation details.group {
-  background: #121e2c !important;
-  border: 1px solid #203347 !important;
+  background: #151b23 !important;
+  border: 1px solid #30363d !important;
 }
 
 html.dark .action-metric > div:first-child,
 html.dark .calculation-explanation details.group > summary {
-  background: #18283a !important;
-  color: #f1f5f9 !important;
-  border-bottom: 1px solid #203347 !important;
+  background: #21262d !important;
+  color: #e6edf3 !important;
+  border-bottom: 1px solid #30363d !important;
 }
 
 /* Contenu des détails et explications */
 html.dark .action-metric > div:last-child,
 html.dark .calculation-explanation details.group > div {
-  background: #121e2c !important;
-  color: #cbd5e1 !important;
+  background: #151b23 !important;
+  color: #c9d1d9 !important;
 }
 
 /* Lignes de formule et paramètres */
@@ -773,19 +661,19 @@ html.dark .calculation-explanation .text-indigo-700 {
 
 html.dark .action-metric .text-slate-500,
 html.dark .calculation-explanation .text-slate-500 {
-  color: #94a3b8 !important;
+  color: #9198a1 !important;
 }
 
 html.dark .action-metric strong,
 html.dark .calculation-explanation strong {
-  color: #f1f5f9;
+  color: #e6edf3;
 }
 
 /* Pastille Source */
 html.dark .action-metric span.bg-sky-50 {
-  background: #1a364c !important;
+  background: #30363d !important;
   color: #7dd3fc !important;
-  border: 1px solid #254a69;
+  border: 1px solid #3d444d;
 }
 
 /* Blocs Contribution */
@@ -809,8 +697,8 @@ html.dark .action-contribution--teal {
 
 /* Bloc Poids Économique (CA normalisé & Volume normalisé) */
 html.dark .economic-weight-breakdown > div {
-  background: #172a3b !important;
-  border: 1px solid #23445e !important;
+  background: #21262d !important;
+  border: 1px solid #3d444d !important;
 }
 
 html.dark .economic-weight-breakdown strong {
@@ -822,13 +710,13 @@ html.dark .economic-weight-breakdown span {
 }
 
 html.dark .economic-weight-breakdown small {
-  color: #94a3b8 !important;
+  color: #9198a1 !important;
 }
 
 /* Donut & Score Segment */
 html.dark .action-score-donut > div {
-  background: #18283a !important;
-  color: #f8fafc !important;
+  background: #21262d !important;
+  color: #f0f6fc !important;
 }
 
 html.dark .action-score-segment {
@@ -860,23 +748,23 @@ html.dark .explanation-metric-icon--orange {
    -------------------------------------------------------------------------- */
 html.dark .action-detail-card {
   background: var(--card) !important;
-  border-color: #23374d !important;
+  border-color: #30363d !important;
 }
 
 html.dark .action-detail-hero {
-  background: #182738 !important;
-  border-color: #253d54 !important;
+  background: #21262d !important;
+  border-color: #30363d !important;
   color: var(--text) !important;
 }
 
 html.dark .action-detail-hero .bg-sky-50 {
-  background: #163248 !important;
-  border-color: #235173 !important;
+  background: #30363d !important;
+  border-color: #484f58 !important;
   color: #38bdf8 !important;
 }
 
 html.dark .action-detail-hero h2 {
-  color: #f8fafc !important;
+  color: #f0f6fc !important;
 }
 
 html.dark .action-detail-hero p.text-sky-700 {
@@ -885,13 +773,13 @@ html.dark .action-detail-hero p.text-sky-700 {
 
 /* Blocs d'informations générales et lieux */
 html.dark .action-detail-card .bg-slate-50 {
-  background: #142232 !important;
-  border-color: #22374d !important;
+  background: #21262d !important;
+  border-color: #30363d !important;
 }
 
 html.dark .action-detail-card .bg-white {
-  background: #18283a !important;
-  border-color: #253d54 !important;
+  background: #21262d !important;
+  border-color: #30363d !important;
 }
 
 /* Cartes alertes de silence & urgence */
@@ -922,17 +810,17 @@ html.dark .action-detail-recommendation {
    10. FORMULAIRES GÉNÉRAUX, INPUTS ET MODALES
    -------------------------------------------------------------------------- */
 /* Inputs généraux hors du conteneur d'authentification */
-html.dark input:not([type="checkbox"]):not([type="radio"]):not(.field-control input),
+html.dark input:not([type="checkbox"]):not([type="radio"]):not(.vxa-field-input),
 html.dark select,
 html.dark textarea,
 html.dark [role="combobox"] {
-  background-color: #132232 !important;
-  border-color: #273e54 !important;
-  color: #f1f5f9 !important;
+  background-color: #21262d !important;
+  border-color: #30363d !important;
+  color: #e6edf3 !important;
   color-scheme: dark;
 }
 
-html.dark input:focus:not(.field-control input),
+html.dark input:focus:not(.vxa-field-input),
 html.dark select:focus,
 html.dark textarea:focus,
 html.dark [role="combobox"]:focus {
@@ -943,15 +831,15 @@ html.dark [role="combobox"]:focus {
 /* Menus déroulants et selects Radix */
 html.dark [role="listbox"],
 html.dark [data-radix-popper-content-wrapper] > div {
-  background-color: #172738 !important;
-  border: 1px solid #29425a !important;
+  background-color: #21262d !important;
+  border: 1px solid #3d444d !important;
   color: var(--text) !important;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5) !important;
 }
 
 html.dark [role="option"]:hover,
 html.dark [role="option"][data-highlighted] {
-  background-color: #21364c !important;
+  background-color: #30363d !important;
   color: var(--primary-hover) !important;
 }
 
@@ -960,7 +848,7 @@ html.dark [role="dialog"],
 html.dark .modal-card,
 html.dark .modal-content {
   background-color: var(--card) !important;
-  border-color: #273e54 !important;
+  border-color: #30363d !important;
   color: var(--text) !important;
 }
 
@@ -977,7 +865,7 @@ html.dark .sidebar-brand {
 }
 
 html.dark .sidebar-brand-name {
-  color: #f8fafc !important;
+  color: #f0f6fc !important;
 }
 
 html.dark .sidebar-brand-subtitle {
@@ -989,7 +877,7 @@ html.dark .sidebar-collapse-button {
 }
 html.dark .sidebar-collapse-button:hover {
   background-color: var(--sidebar-hover) !important;
-  color: #f1f5f9 !important;
+  color: #e6edf3 !important;
 }
 
 html.dark .menu-section-header {
@@ -1019,7 +907,7 @@ html.dark .menu-subitem-active {
 }
 
 html.dark .sidebar-profile {
-  background: linear-gradient(180deg, #182635, #111d29) !important;
+  background: linear-gradient(180deg, #21262d, #151b23) !important;
   border-color: var(--sidebar-border) !important;
   color: var(--text) !important;
 }
@@ -1029,7 +917,7 @@ html.dark .sidebar-profile:hover {
 }
 
 html.dark .sidebar-profile-menu {
-  background-color: #162436 !important;
+  background-color: #21262d !important;
   border-color: var(--sidebar-border) !important;
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.45) !important;
 }
@@ -1066,7 +954,7 @@ html.dark .activite-cr-card,
 html.dark .activite-table-container,
 html.dark .activite-n4-table-container {
   background: var(--card) !important;
-  border-color: #23374d !important;
+  border-color: #30363d !important;
 }
 
 html.dark .activite-section-nav {
@@ -1105,18 +993,18 @@ html.dark .activite-clickable-card-sub {
 }
 
 html.dark .activite-clickable-card {
-  background: #18283a !important;
-  border-color: #273d54 !important;
+  background: #21262d !important;
+  border-color: #30363d !important;
 }
 html.dark .activite-clickable-card-title {
-  color: #f1f5f9 !important;
+  color: #e6edf3 !important;
 }
 
 html.dark .activite-insight-card,
 html.dark .activite-insight-card--neutral,
 html.dark .activite-insight-card--info {
-  background: #18283a !important;
-  border-color: #273d54 !important;
+  background: #21262d !important;
+  border-color: #30363d !important;
 }
 html.dark .activite-insight-card h4 {
   color: #5eead4 !important;
@@ -1126,14 +1014,14 @@ html.dark .activite-insight-card--info h4 {
 }
 html.dark .activite-insight-card p,
 html.dark .activite-insight-card p strong {
-  color: #cbd5e1 !important;
+  color: #c9d1d9 !important;
 }
 
 /* Tooltips Recharts en mode sombre */
 html.dark .recharts-default-tooltip {
-  background-color: #172738 !important;
-  border: 1px solid #273d54 !important;
-  color: #f1f5f9 !important;
+  background-color: #21262d !important;
+  border: 1px solid #30363d !important;
+  color: #e6edf3 !important;
   border-radius: 10px !important;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4) !important;
 }
@@ -1142,8 +1030,166 @@ html.dark .recharts-tooltip-label {
   font-weight: 700;
 }
 html.dark .recharts-cartesian-grid line {
-  stroke: #1f3044 !important;
+  stroke: #30363d !important;
 }
 html.dark .recharts-cartesian-axis-tick text {
-  fill: #94a3b8 !important;
+  fill: #9198a1 !important;
 }
+
+/* --------------------------------------------------------------------------
+   13. FINITIONS : PROFONDEUR, VERRE ET LUMIÈRE
+   Surfaces étagées, halos discrets, en-tête translucide et contrastes doux.
+   -------------------------------------------------------------------------- */
+
+/* Fond de l'application uni, en-tête et barre latérale plus sombres (comme GitHub) */
+html.dark .app-shell,
+html.dark .app-shell > div,
+html.dark .app-shell main {
+  background: var(--bg) !important;
+}
+
+html.dark .app-shell header {
+  background: #010409 !important;
+  border-bottom-color: #21262d !important;
+}
+html.dark .vx-header-chip {
+  background-color: #151b23 !important;
+  border-color: #30363d !important;
+}
+html.dark .vx-header-chip:hover {
+  background-color: #21262d !important;
+  border-color: #3d444d !important;
+}
+
+/* Cartes : liseré de lumière en haut + ombre portée profonde */
+html.dark .rounded-2xl.bg-white,
+html.dark .rounded-3xl.bg-white,
+html.dark .rounded-xl.bg-white.border,
+html.dark .activite-card-section {
+  background-color: var(--card) !important;
+  border-color: rgba(145, 152, 161, 0.12) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 14px 34px -20px rgba(0, 0, 0, 0.75) !important;
+}
+
+/* Tableaux : en-tête discret, survol avec repère teal */
+html.dark table thead,
+html.dark table thead tr {
+  background-color: rgba(145, 152, 161, 0.05) !important;
+}
+html.dark table tbody tr {
+  transition: background-color 0.16s ease, box-shadow 0.16s ease;
+}
+html.dark table tbody tr:hover {
+  background-color: rgba(20, 184, 166, 0.06) !important;
+  box-shadow: inset 2px 0 0 rgba(45, 212, 191, 0.7);
+}
+
+/* Champs : fond plus profond que la carte, anneau de focus lumineux */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not(.vxa-field-input),
+html.dark select,
+html.dark textarea {
+  background-color: rgba(8, 15, 25, 0.55) !important;
+  border-color: rgba(145, 152, 161, 0.18) !important;
+}
+html.dark input:not([type="checkbox"]):not([type="radio"]):not(.vxa-field-input):hover,
+html.dark select:hover,
+html.dark textarea:hover {
+  border-color: rgba(145, 152, 161, 0.3) !important;
+}
+html.dark input:focus:not(.vxa-field-input),
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: rgba(45, 212, 191, 0.7) !important;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.18) !important;
+}
+html.dark button:focus-visible,
+html.dark a:focus-visible {
+  outline: 2px solid rgba(45, 212, 191, 0.7);
+  outline-offset: 2px;
+}
+
+/* Modales : verre sombre et ombre ample */
+html.dark [role="dialog"],
+html.dark .modal-card,
+html.dark .modal-content {
+  border-color: rgba(145, 152, 161, 0.14) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 30px 80px -20px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Barre latérale : dégradé vertical, entrée active lumineuse */
+html.dark aside.sidebar {
+  background: #010409 !important;
+  border-right-color: #21262d !important;
+}
+html.dark aside.sidebar .menu-subitem-active {
+  background: linear-gradient(90deg, rgba(20, 184, 166, 0.2), rgba(20, 184, 166, 0.04)) !important;
+  box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.12) !important;
+}
+html.dark aside.sidebar .menu-section-items {
+  border-left-color: rgba(145, 152, 161, 0.12);
+}
+html.dark aside.sidebar .sidebar-collapse-button {
+  background: rgba(145, 152, 161, 0.06);
+}
+html.dark .sidebar-backdrop {
+  background: rgba(2, 6, 12, 0.55);
+}
+
+/* Barre de défilement plus fine et plus discrète */
+html.dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(145, 152, 161, 0.22);
+  border-color: transparent;
+  background-clip: padding-box;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(145, 152, 161, 0.38);
+  background-clip: padding-box;
+}
+
+/* --------------------------------------------------------------------------
+   14. CLASSES TAILWIND « dark:*-slate-* » → GRIS NEUTRES (sans teinte bleue)
+   -------------------------------------------------------------------------- */
+html.dark .dark\:bg-slate-950 { background-color: #010409 !important; }
+html.dark .dark\:bg-slate-950\/70 { background-color: rgba(1, 4, 9, 0.7) !important; }
+html.dark .dark\:bg-slate-950\/20 { background-color: rgba(1, 4, 9, 0.2) !important; }
+html.dark .dark\:bg-slate-900 { background-color: #151b23 !important; }
+html.dark .dark\:bg-slate-900\/95 { background-color: rgba(21, 27, 35, 0.95) !important; }
+html.dark .dark\:bg-slate-850 { background-color: #151b23 !important; }
+html.dark .dark\:bg-slate-850\/80 { background-color: rgba(21, 27, 35, 0.8) !important; }
+html.dark .dark\:bg-slate-800 { background-color: #21262d !important; }
+html.dark .dark\:bg-slate-800\/90 { background-color: rgba(33, 38, 45, 0.9) !important; }
+html.dark .dark\:bg-slate-800\/80 { background-color: rgba(33, 38, 45, 0.8) !important; }
+html.dark .dark\:bg-slate-800\/70 { background-color: rgba(33, 38, 45, 0.7) !important; }
+html.dark .dark\:bg-slate-800\/60 { background-color: rgba(33, 38, 45, 0.6) !important; }
+html.dark .dark\:bg-slate-800\/50 { background-color: rgba(33, 38, 45, 0.5) !important; }
+html.dark .dark\:bg-slate-800\/40 { background-color: rgba(33, 38, 45, 0.4) !important; }
+html.dark .dark\:bg-slate-800\/30 { background-color: rgba(33, 38, 45, 0.3) !important; }
+html.dark .dark\:bg-slate-700 { background-color: #30363d !important; }
+html.dark .dark\:bg-slate-600 { background-color: #3d444d !important; }
+html.dark .dark\:hover\:bg-slate-800:hover { background-color: #21262d !important; }
+html.dark .dark\:hover\:bg-slate-700:hover { background-color: #30363d !important; }
+
+html.dark .dark\:border-slate-800,
+html.dark .dark\:divide-slate-800 > :not([hidden]) ~ :not([hidden]) { border-color: #21262d !important; }
+html.dark .dark\:border-slate-700,
+html.dark .dark\:border-slate-700\/80,
+html.dark .dark\:border-slate-700\/60 { border-color: #30363d !important; }
+html.dark .dark\:ring-slate-700 { --tw-ring-color: #30363d; }
+html.dark .dark\:border-slate-600 { border-color: #3d444d !important; }
+
+html.dark .dark\:text-white,
+html.dark .dark\:text-slate-50,
+html.dark .dark\:text-slate-100 { color: #f0f6fc !important; }
+html.dark .dark\:text-slate-200 { color: #e6edf3 !important; }
+html.dark .dark\:text-slate-300 { color: #c9d1d9 !important; }
+html.dark .dark\:text-slate-400 { color: #9198a1 !important; }
+html.dark .dark\:text-slate-500 { color: #8b949e !important; }
+html.dark .dark\:bg-\[\#192736\] { background-color: #21262d !important; }
+html.dark .dark\:border-\[\#273d52\] { border-color: #30363d !important; }
