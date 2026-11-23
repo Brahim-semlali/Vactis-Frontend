@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import Sidebar from './Sidebar.jsx';
 import NotificationDropdown from './NotificationDropdown.jsx';
+import ScrollToTopButton from './ScrollToTopButton.jsx';
+
+const PAGE_EASE = [0.22, 1, 0.36, 1];
 
 export default function AppLayout({ children, canAccessReclamations = false }) {
+  const reduceMotion = useReducedMotion();
   const { username, userProfile, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [collapsed, setCollapsed] = useState(false);
@@ -56,6 +60,8 @@ export default function AppLayout({ children, canAccessReclamations = false }) {
 
       <div className="flex-1 flex flex-col min-w-0 bg-[#f0f2f5] dark:bg-[var(--bg)]">
         <header className="relative z-[60] h-16 px-4 sm:px-6 md:px-8 bg-white dark:bg-[var(--card)] border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shadow-[0_1px_0_rgba(15,23,42,0.03)] shrink-0 transition-colors">
+          <span key={activeRoute} className="vx-route-progress" aria-hidden="true" />
+          <span className="vx-header-accent" aria-hidden="true" />
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -89,16 +95,16 @@ export default function AppLayout({ children, canAccessReclamations = false }) {
               type="button"
               onClick={toggleTheme}
               title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 transition-all active:scale-95 cursor-pointer shadow-xs"
+              className="vx-header-chip vx-theme-toggle flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 transition-all active:scale-95 cursor-pointer shadow-xs"
               aria-label={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
             >
               {theme === 'dark' ? (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-400">
+                <svg key="soleil" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="vx-theme-icon text-amber-400">
                   <circle cx="12" cy="12" r="4" />
                   <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
                 </svg>
               ) : (
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
+                <svg key="lune" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="vx-theme-icon text-indigo-600">
                   <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
                 </svg>
               )}
@@ -108,7 +114,7 @@ export default function AppLayout({ children, canAccessReclamations = false }) {
             <button
               type="button"
               onClick={() => navigate('/parametres')}
-              className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
+              className="vx-header-chip flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-slate-100/90 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
               title="Accéder à mes paramètres"
             >
               {userProfile?.avatar ? (
@@ -127,7 +133,7 @@ export default function AppLayout({ children, canAccessReclamations = false }) {
 
             <button
               type="button"
-              className="px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 transition-all active:scale-95 shadow-xs cursor-pointer"
+              className="vx-header-chip px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-slate-700 border border-slate-200/80 dark:border-slate-700 transition-all active:scale-95 shadow-xs cursor-pointer"
               onClick={logout}
             >
               Déconnexion
@@ -139,15 +145,17 @@ export default function AppLayout({ children, canAccessReclamations = false }) {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeRoute}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="vx-page"
+              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 14 }}
+              animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+              transition={{ duration: 0.32, ease: PAGE_EASE }}
             >
               {typeof children === 'function' ? children({ activeRoute, navigate }) : children}
             </motion.div>
           </AnimatePresence>
         </main>
+        <ScrollToTopButton />
       </div>
     </div>
   );

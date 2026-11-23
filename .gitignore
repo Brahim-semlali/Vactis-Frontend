@@ -53,3 +53,7 @@ desktop.ini
 *.swo
 *~
 *.local
+
+# ── Caches / builds de test ──────────────────────────────────
+.parcel-cache-clean/
+dist-import-check/

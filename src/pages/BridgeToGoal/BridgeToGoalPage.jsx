@@ -1,10 +1,21 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import VactisPilotBanner from '../../components/VactisPilotBanner';
 import { getBridgeGoalMonthlyTarget, getBridgeToGoal, saveBridgeGoalMonthlyTarget } from '../../api/vactis.js';
 import { getMoisDisponibles } from '../../api/activite.js';
 import { getSettings, updateBridgeGoalTarget } from '../../api/settings.js';
 import { getLatestCompletedMonth } from '../../utils/reportingPeriod.js';
+import { ChartNoAxesColumn, FileX2, RefreshCw, Target, Users, Wallet, Activity as ActivityIcon } from 'lucide-react';
+import {
+  HeroBadge,
+  Kpi,
+  PageHero,
+  Stagger,
+  fmtEntier,
+  fmtMad,
+  heroButtonClass,
+  heroGhostButtonClass,
+  heroSelectClass,
+} from '../../components/pilotage/PilotageUI.jsx';
 
 const COVERAGE_DECISIONS = {
   PORTEFEUILLE_SUFFISANT: {
@@ -235,80 +246,60 @@ export default function BridgeToGoalPage() {
   const selectedBlock = opportunitesBlocs[selectedBlockIndex] || opportunitesBlocs[0] || null;
 
   return (
-    <div className="space-y-6 max-w-[1700px] mx-auto pb-16 font-sans antialiased text-slate-800 dark:text-slate-100">
-      {/* 1. Header institutionnel Pilote VACTIS */}
-      <VactisPilotBanner profil="Laboratoire d'anatomopathologie — CA et cas" />
+    <div className="pilotage-stagger space-y-6 max-w-[1700px] mx-auto pb-16 font-sans antialiased text-slate-800 dark:text-slate-100">
 
       {/* 2. En-tête de la page Bridge to Goal */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-xs">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-xl bg-cyan-50 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-400">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="18" y1="20" x2="18" y2="10" />
-                <line x1="12" y1="20" x2="12" y2="4" />
-                <line x1="6" y1="20" x2="6" y2="14" />
-              </svg>
-            </span>
-            <span className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-400">
-              Simulation & Trajectoire Budgétaire
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight">
-            Bridge to Goal
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium max-w-3xl">
-            Prospective financière, analyse Run-Rate d'atterrissage et plan d'action pour combler l'écart vers l'objectif annuel.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-2 pt-2 text-xs font-semibold">
+      <PageHero
+        icon={ChartNoAxesColumn}
+        eyebrow="Simulation & trajectoire budgétaire"
+        title="Bridge to Goal"
+        description="Prospective financière, analyse Run-Rate d'atterrissage et plan d'action pour combler l'écart vers l'objectif annuel."
+        badges={data && (
+          <>
+            {data.statutYtd && <HeroBadge icon={Target} className="bg-white/20 text-white ring-white/30 font-bold">{data.statutYtd}</HeroBadge>}
+            {Number.isFinite(data.varianceYtdPct) && <HeroBadge>Écart YTD {data.varianceYtdPct > 0 ? '+' : ''}{data.varianceYtdPct} %</HeroBadge>}
+          </>
+        )}
+        actions={(
+          <div className="flex flex-wrap items-center gap-2">
             <label htmlFor="bridge-to-goal-mois" className="sr-only">Choisir le mois Bridge to Goal</label>
             <select
               id="bridge-to-goal-mois"
               value={moisInput}
               onChange={(event) => setMoisInput(event.target.value)}
               disabled={moisDisponibles.length === 0 || loading}
-              className="px-3 py-1 rounded-full bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-cyan-200 dark:border-cyan-800 font-semibold outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-60"
+              className={heroSelectClass}
             >
               {moisDisponibles.length === 0
                 ? <option value="">Aucun mois disponible</option>
                 : moisDisponibles.map((mois) => <option key={mois} value={mois}>{mois}</option>)}
             </select>
-          </div>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          {isAdmin && (
-            editingAnnualTarget ? (
-              <button type="button" onClick={() => setEditingAnnualTarget(false)} className="inline-flex items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-xs font-bold text-sky-800 transition hover:bg-sky-100">
-                Fermer objectif annuel
-              </button>
-            ) : (
-              <button type="button" onClick={() => { setEditingTarget(false); setAnnualMessage(''); setAnnualError(''); setEditingAnnualTarget(true); }} className="inline-flex items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-xs font-bold text-sky-800 transition hover:bg-sky-100">
-                Objectif annuel
-              </button>
-            )
-          )}
+            {isAdmin && (
+              editingAnnualTarget ? (
+                <button type="button" onClick={() => setEditingAnnualTarget(false)} className={heroGhostButtonClass}>
+                  Fermer objectif annuel
+                </button>
+              ) : (
+                <button type="button" onClick={() => { setEditingTarget(false); setAnnualMessage(''); setAnnualError(''); setEditingAnnualTarget(true); }} className={heroGhostButtonClass}>
+                  Objectif annuel
+                </button>
+              )
+            )}
 
-          {isAdmin && !editingTarget && !editingAnnualTarget && (
-            <button type="button" onClick={() => { setEditingAnnualTarget(false); setGoalError(''); setGoalMessage(''); setEditingTarget(true); }} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer">
-              Objectif du mois
+            {isAdmin && !editingTarget && !editingAnnualTarget && (
+              <button type="button" onClick={() => { setEditingAnnualTarget(false); setGoalError(''); setGoalMessage(''); setEditingTarget(true); }} className={heroGhostButtonClass}>
+                Objectif du mois
+              </button>
+            )}
+
+            <button type="button" onClick={fetchData} disabled={loading} className={heroButtonClass}>
+              <RefreshCw aria-hidden="true" className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <span>Rafraîchir</span>
             </button>
-          )}
-
-          <button
-            type="button"
-            onClick={fetchData}
-            disabled={loading}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-bold transition-all shadow-xs active:scale-95 disabled:opacity-50 cursor-pointer"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={loading ? 'animate-spin' : ''}>
-              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-            </svg>
-            <span>Rafraîchir</span>
-          </button>
-        </div>
-      </div>
+          </div>
+        )}
+      />
 
       {isAdmin && editingTarget && (
         <section className="overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-sm dark:border-cyan-900 dark:bg-slate-900" aria-labelledby="monthly-goal-editor-title">
@@ -472,53 +463,18 @@ export default function BridgeToGoalPage() {
       </div>
 
       {/* 4. En-tête Synthèse Laboratoire (4 Métriques Clés) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800">
-          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 block mb-1">
-            CA Mois Total Data
-          </span>
-          <div className="text-2xl font-black text-slate-950 dark:text-white">
-            {caMoisTotalLabo.toLocaleString('fr-FR')} MAD
-          </div>
-          <p className="text-[10px] text-slate-400 mt-1">Activité réelle du laboratoire</p>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800">
-          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 block mb-1">
-            Cas Mois Total Data
-          </span>
-          <div className="text-2xl font-black text-cyan-600 dark:text-cyan-400">
-            {casMoisTotalLabo}
-          </div>
-          <p className="text-[10px] text-slate-400 mt-1">Tous types de dossiers validés</p>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800">
-          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 block mb-1">
-            CA Portefeuille
-          </span>
-          <div className="text-2xl font-black text-slate-950 dark:text-white">
-            {(data?.caPortefeuille ?? 0).toLocaleString('fr-FR')} MAD
-          </div>
-            <p className="text-[10px] text-slate-400 mt-1">Activité facturée aux médecins identifiés</p>
-        </div>
-
-        <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800">
-          <span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 block mb-1">
-            Cas non affectés
-          </span>
-          <div className="text-2xl font-black text-slate-950 dark:text-white">
-            {nonAffectesCount}
-          </div>
-          <p className="text-[10px] text-slate-400 mt-1">{(data?.caNonAffectes ?? 0).toLocaleString('fr-FR')} MAD sans médecin rattaché</p>
-        </div>
-      </div>
+      <Stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Kpi icon={Wallet} tone="teal" label="CA Mois Total Data" value={caMoisTotalLabo} format={fmtMad} hint="Activité réelle du laboratoire" />
+        <Kpi icon={ActivityIcon} tone="sky" label="Cas Mois Total Data" value={casMoisTotalLabo} format={fmtEntier} hint="Tous types de dossiers validés" valueClassName="!text-cyan-600 dark:!text-cyan-400" />
+        <Kpi icon={Users} tone="indigo" label="CA Portefeuille" value={data?.caPortefeuille ?? 0} format={fmtMad} hint="Activité facturée aux médecins identifiés" />
+        <Kpi icon={FileX2} tone="amber" label="Cas non affectés" value={nonAffectesCount} format={fmtEntier} hint={`${(data?.caNonAffectes ?? 0).toLocaleString('fr-FR')} MAD sans médecin rattaché`} />
+      </Stagger>
 
       {/* 5. ÉTAPE 1 : Passé — Base de comparaison */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-4">
+      <div className="bg-white dark:bg-slate-900 pilotage-step rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 flex items-center justify-center text-xs font-black">
+            <span className="pilotage-step-number">
               1
             </span>
             <h3 className="text-base font-black text-slate-950 dark:text-white">
@@ -529,31 +485,31 @@ export default function BridgeToGoalPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
+          <div className="pilotage-lift p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">CA YTD Réel</span>
             <div className="text-lg font-black text-slate-950 dark:text-white">{caYtdReel.toLocaleString('fr-FR')} MAD</div>
             <span className="text-[10px] text-slate-400">Total observé</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
+          <div className="pilotage-lift p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">Période Couverte</span>
             <div className="text-lg font-black text-slate-950 dark:text-white">{moisInput}</div>
             <span className="text-[10px] text-slate-400">Mois actif de calcul</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
+          <div className="pilotage-lift p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">Mois Écoulés</span>
             <div className="text-lg font-black text-cyan-600 dark:text-cyan-400">{moisEcoules} mois</div>
             <span className="text-[10px] text-slate-400">Base de proratisation</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
+          <div className="pilotage-lift p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">CA N-1 Comparable</span>
             <div className="text-lg font-black text-slate-950 dark:text-white">{caNMoins1Comparable.toLocaleString('fr-FR')} MAD</div>
             <span className="text-[10px] text-slate-400">Référence N-1 fin 8 mois</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
+          <div className="pilotage-lift p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">CA Moyen Mensuel</span>
             <div className="text-lg font-black text-slate-950 dark:text-white">{caMoyenMensuel.toLocaleString('fr-FR')} MAD</div>
             <span className="text-[10px] text-slate-400">Moyenne glissante</span>
@@ -562,10 +518,10 @@ export default function BridgeToGoalPage() {
       </div>
 
       {/* 6. ÉTAPE 2 : Présent — Où on en est vs objectif prorata */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-4">
+      <div className="bg-white dark:bg-slate-900 pilotage-step rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 flex items-center justify-center text-xs font-black">
+            <span className="pilotage-step-number">
               2
             </span>
             <h3 className="text-base font-black text-slate-950 dark:text-white">
@@ -594,7 +550,7 @@ export default function BridgeToGoalPage() {
             </span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
+          <div className="pilotage-lift p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
               Objectif YTD Proratisé
             </span>
@@ -627,10 +583,10 @@ export default function BridgeToGoalPage() {
       </div>
 
       {/* 7. ÉTAPE 3 : Run-rate — Où on va si rien ne change */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-4">
+      <div className="bg-white dark:bg-slate-900 pilotage-step rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 flex items-center justify-center text-xs font-black">
+            <span className="pilotage-step-number">
               3
             </span>
             <h3 className="text-base font-black text-slate-950 dark:text-white">
@@ -640,7 +596,7 @@ export default function BridgeToGoalPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
+          <div className="pilotage-lift p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
               Run-Rate Annuel
             </span>
@@ -670,7 +626,7 @@ export default function BridgeToGoalPage() {
             <span className="text-[10px] text-sky-700 dark:text-sky-300">Objectif annuel configuré par l’administration</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
+          <div className="pilotage-lift p-4 rounded-2xl bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800">
             <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">
               Mois Restants
             </span>
@@ -700,10 +656,10 @@ export default function BridgeToGoalPage() {
       </div>
 
       {/* 8. ÉTAPE 4 : Futur — Comment combler le gap via opportunités VACTIS */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-5">
+      <div className="bg-white dark:bg-slate-900 pilotage-step rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 flex items-center justify-center text-xs font-black">
+            <span className="pilotage-step-number">
               4
             </span>
             <div>
@@ -854,7 +810,7 @@ export default function BridgeToGoalPage() {
       </div>
 
       {/* 9. Décision VACTIS & Arbitrage Managérial (Section 13) */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-6">
+      <div className="bg-white dark:bg-slate-900 pilotage-step rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 space-y-6">
         <div>
           <span className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-600 dark:text-cyan-400 block mb-1">
             Section 13 — Arbitrage Stratégique

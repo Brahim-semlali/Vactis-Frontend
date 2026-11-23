@@ -55,19 +55,6 @@ export async function getMedecins(token, filters = {}) {
   return data;
 }
 
-export async function syncMedecinsFromDataFictif(token) {
-  logger.info('Synchronisation du classeur de données fictives');
-
-  const response = await fetch(`${API_BASE}/api/medecins/sync`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (!response.ok) {
-    throw await parseError(response);
-  }
-}
-
 export async function getMedecinById(token, id) {
   logger.info('Chargement fiche médecin', { id });
 

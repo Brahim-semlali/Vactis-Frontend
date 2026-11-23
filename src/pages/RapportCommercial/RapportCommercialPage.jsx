@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, BadgeCheck, ClipboardList, Download, Flag, Printer, RefreshCw, Users, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import VactisPilotBanner from '../../components/VactisPilotBanner';
 import { getBridgeToGoal } from '../../api/vactis.js';
 import {
   getCompteRenduTerrain,
@@ -12,6 +11,18 @@ import {
 } from '../../api/activite.js';
 import { getMedecins } from '../../api/medecins.js';
 import RapportCommercialInsights from './RapportCommercialInsights.jsx';
+import { FileX2, Stethoscope, Wallet } from 'lucide-react';
+import {
+  HeroBadge,
+  Kpi as KpiCarte,
+  PageHero,
+  Stagger,
+  fmtEntier,
+  fmtMad,
+  heroButtonClass,
+  heroGhostButtonClass,
+  heroSelectClass,
+} from '../../components/pilotage/PilotageUI.jsx';
 import { getLatestCompletedMonth } from '../../utils/reportingPeriod.js';
 import { downloadExcelXml, isAdminProfile } from '../../utils/adminExports.js';
 
@@ -101,36 +112,42 @@ function LegacyRapportCommercialPage({ navigate }) {
   };
 
   return (
-    <div className="rapport-commercial space-y-6 max-w-[1700px] mx-auto pb-16 font-sans antialiased text-slate-800 dark:text-slate-100">
+    <div className="rapport-commercial pilotage-stagger space-y-6 max-w-[1700px] mx-auto pb-16 font-sans antialiased text-slate-800 dark:text-slate-100">
       <style>{`@media print { body { background: #fff !important; } .rapport-no-print, aside, nav { display: none !important; } .rapport-commercial { max-width: none !important; padding: 0 !important; color: #111827 !important; } .rapport-commercial section { break-inside: avoid; box-shadow: none !important; } }`}</style>
-      <VactisPilotBanner profil="Laboratoire d'anatomopathologie — CA et cas" />
-      <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-xs">
-        <div>
-          <span className="text-[11px] font-black uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-400">Lecture commerciale YTD</span>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-950 dark:text-white tracking-tight">Rapport commercial</h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium max-w-3xl">Synthèse de l’activité facturée, de la période couverte et de la situation actuelle par rapport à l’objectif proratisé.</p>
-          <div className="flex flex-wrap items-center gap-2 pt-3 text-xs font-semibold">
+      <PageHero
+        icon={ClipboardList}
+
+        eyebrow="Lecture commerciale YTD"
+        title="Rapport commercial"
+        description="Synthèse de l’activité facturée, de la période couverte et de la situation actuelle par rapport à l’objectif proratisé."
+        badges={(
+          <>
+            <HeroBadge icon={Activity}>Période {data?.periode ?? (loading ? 'Chargement…' : '—')}</HeroBadge>
+            {data?.statutYtd && <HeroBadge icon={Flag} className="bg-white/20 text-white ring-white/30 font-bold">{data.statutYtd}</HeroBadge>}
+          </>
+        )}
+        actions={(
+          <div className="flex flex-wrap items-center gap-2">
             <label htmlFor="rapport-commercial-mois" className="sr-only">Choisir le mois</label>
             <select
               id="rapport-commercial-mois"
               value={moisSelectionne}
               onChange={(event) => setMoisSelectionne(event.target.value)}
               disabled={moisDisponibles.length === 0 || loading}
-              className="px-3 py-1 rounded-full bg-white dark:bg-slate-900 border border-cyan-200 dark:border-cyan-800 text-slate-700 dark:text-slate-200 font-semibold outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-60"
+              className={heroSelectClass}
             >
               {moisDisponibles.length === 0 ? <option value="">Aucun mois disponible</option> : moisDisponibles.map((mois) => <option key={mois} value={mois}>{mois}</option>)}
             </select>
-            <span className="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">Période {data?.periode ?? (loading ? 'Chargement…' : '—')}</span>
+            <div className="rapport-no-print flex flex-wrap items-center gap-2">
+              {isAdmin && <>
+                <button type="button" onClick={() => isAdmin && window.print()} className={heroGhostButtonClass} title="Imprimer ou enregistrer en PDF"><Printer size={15} /> PDF</button>
+                <button type="button" onClick={exportExcel} disabled={!data} className={heroGhostButtonClass} title="Télécharger le rapport au format Excel"><Download size={15} /> Excel</button>
+              </>}
+              <button type="button" onClick={loadReport} disabled={loading} className={heroButtonClass}><RefreshCw size={14} className={loading ? 'animate-spin' : ''} />{loading ? 'Chargement...' : 'Rafraîchir'}</button>
+            </div>
           </div>
-        </div>
-        <div className="rapport-no-print flex flex-wrap items-center gap-2">
-          {isAdmin && <>
-            <button type="button" onClick={() => isAdmin && window.print()} className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold" title="Imprimer ou enregistrer en PDF"><Printer size={15} /> PDF</button>
-            <button type="button" onClick={exportExcel} disabled={!data} className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold disabled:opacity-50" title="Télécharger le rapport au format Excel"><Download size={15} /> Excel</button>
-          </>}
-          <button type="button" onClick={loadReport} disabled={loading} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold disabled:opacity-50"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} />{loading ? 'Chargement...' : 'Rafraîchir'}</button>
-        </div>
-      </section>
+        )}
+      />
 
       {error && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
       {!data && <div role="status" className="rounded-2xl border border-slate-200 bg-white px-4 py-5 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">{loading ? 'Chargement des indicateurs depuis le serveur…' : 'Les indicateurs ne sont pas affichés sans réponse valide de la base de données.'}</div>}
@@ -143,12 +160,12 @@ function LegacyRapportCommercialPage({ navigate }) {
       {data && <>
       <section className="space-y-4">
         <h2 className="text-base font-black text-slate-950 dark:text-white">Contexte activité laboratoire</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <ContextMetric label="CA mois total" value={formatMad(data?.caMoisTotal)} hint="Activité réelle du laboratoire" />
-          <ContextMetric label="Cas mois total" value={Number(data?.casMoisTotal ?? 0).toLocaleString('fr-FR')} hint="Tous types de dossiers" />
-          <ContextMetric label="Médecins identifiés" value={Number(data?.medecinsIdentifies ?? 0).toLocaleString('fr-FR')} hint="Avec activité sur la période" />
-          <ContextMetric label="Non affectés" value={Number(data?.nonAffectesCount ?? 0).toLocaleString('fr-FR')} hint="Dossiers sans médecin rattaché" />
-        </div>
+        <Stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCarte icon={Wallet} tone="teal" label="CA mois total" value={Number(data?.caMoisTotal ?? 0)} format={fmtMad} hint="Activité réelle du laboratoire" />
+          <KpiCarte icon={Activity} tone="sky" label="Cas mois total" value={Number(data?.casMoisTotal ?? 0)} format={fmtEntier} hint="Tous types de dossiers" />
+          <KpiCarte icon={Stethoscope} tone="indigo" label="Médecins identifiés" value={Number(data?.medecinsIdentifies ?? 0)} format={fmtEntier} hint="Avec activité sur la période" />
+          <KpiCarte icon={FileX2} tone="amber" label="Non affectés" value={Number(data?.nonAffectesCount ?? 0)} format={fmtEntier} hint="Dossiers sans médecin rattaché" />
+        </Stagger>
       </section>
 
       <ReportSection number="1" title="Passé — Base de comparaison">
@@ -341,8 +358,7 @@ function RapportCommercialTerrainPage() {
   return (
     <main className="rapport-commercial mx-auto w-full max-w-[1500px] space-y-4 pb-10 text-slate-800 dark:text-slate-100">
       <style>{`@media print { .rapport-no-print, aside, nav { display:none !important; } body { background:#fff !important; } .rapport-commercial section { break-inside:avoid; box-shadow:none !important; } }`}</style>
-      <VactisPilotBanner profil="Pilotage terrain — visites et portefeuilles commerciaux" />
-      <header className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white px-5 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <header className="vx-hero flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white px-5 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex min-w-[240px] items-start gap-3">
           <span className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 text-cyan-700 dark:border-cyan-900 dark:bg-cyan-950 dark:text-cyan-300"><ClipboardList size={18} /></span>
           <div>
@@ -483,11 +499,11 @@ function Kpi({ icon: Icon, label, value, tone }) {
   };
   const iconColors = { dark: 'bg-white/10 text-cyan-200', green: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300', amber: 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300', cyan: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300', rose: 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300' };
   const labelColors = { dark: 'text-slate-300', green: 'text-slate-500 dark:text-slate-400', amber: 'text-slate-500 dark:text-slate-400', cyan: 'text-slate-500 dark:text-slate-400', rose: 'text-slate-500 dark:text-slate-400' };
-  return <div className={`min-h-[94px] rounded-xl border p-3 shadow-sm ${colors[tone]}`}><div className="flex items-start justify-between gap-2"><span className={`max-w-[130px] text-[9px] font-black uppercase leading-4 tracking-wide ${labelColors[tone]}`}>{label}</span><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconColors[tone]}`}><Icon size={15} /></span></div><strong className={`mt-2 block text-[23px] font-black leading-none ${tone === 'dark' ? 'text-white' : 'text-slate-950 dark:text-white'}`}>{value}</strong></div>;
+  return <div className={`pilotage-lift min-h-[94px] rounded-xl border p-3 shadow-sm ${colors[tone]}`}><div className="flex items-start justify-between gap-2"><span className={`max-w-[130px] text-[9px] font-black uppercase leading-4 tracking-wide ${labelColors[tone]}`}>{label}</span><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconColors[tone]}`}><Icon size={15} /></span></div><strong className={`mt-2 block text-[23px] font-black leading-none ${tone === 'dark' ? 'text-white' : 'text-slate-950 dark:text-white'}`}>{value}</strong></div>;
 }
 
 function DataSection({ number, title, subtitle, children }) {
-  return <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5"><div className="mb-3 flex items-center gap-3"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[11px] font-black text-white dark:bg-cyan-700">{number}</span><div><h2 className="text-sm font-black text-slate-950 dark:text-white">{title}</h2><p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">{subtitle}</p></div></div>{children}</section>;
+  return <section className="pilotage-step rounded-2xl border border-slate-200/80 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:p-5"><div className="mb-3 flex items-center gap-3"><span className="pilotage-step-number">{number}</span><div><h2 className="text-sm font-black text-slate-950 dark:text-white">{title}</h2><p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">{subtitle}</p></div></div>{children}</section>;
 }
 
 function DataTable({ headers, rows, empty, onRowClick }) {
@@ -502,11 +518,7 @@ function SmallMetric({ label, value, tone = 'slate' }) {
 
 
 function ReportSection({ number, title, status, statusClass, children }) {
-  return <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-4"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-black">{number}</span><h2 className="text-base font-black text-slate-950 dark:text-white">{title}</h2></div>{status && <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusClass}`}>{status}</span>}</div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">{children}</div></section>;
-}
-
-function ContextMetric({ label, value, hint }) {
-  return <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs"><span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400 block mb-1">{label}</span><div className="text-2xl font-black text-slate-950 dark:text-white">{value}</div><p className="text-[10px] text-slate-400 mt-1">{hint}</p></div>;
+  return <section className="pilotage-step bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 space-y-4"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2.5"><span className="pilotage-step-number">{number}</span><h2 className="text-base font-black text-slate-950 dark:text-white">{title}</h2></div>{status && <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusClass}`}>{status}</span>}</div><div className="pilotage-stagger grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">{children}</div></section>;
 }
 
 function Metric({ label, value, hint, tone = 'default' }) {
@@ -515,5 +527,5 @@ function Metric({ label, value, hint, tone = 'default' }) {
     rose: 'bg-rose-50/70 border-rose-200 text-rose-700',
     blue: 'bg-sky-50 border-sky-200 text-sky-900 dark:bg-sky-950/40 dark:border-sky-800 dark:text-sky-100',
   };
-  return <div className={`p-4 rounded-2xl border ${tones[tone]}`}><span className="text-[10px] font-black uppercase tracking-wider opacity-70 block mb-1">{label}</span><div className="text-xl font-black">{value}</div><span className="text-[10px] opacity-70">{hint}</span></div>;
+  return <div className={`pilotage-lift p-4 rounded-2xl border ${tones[tone]}`}><span className="text-[10px] font-black uppercase tracking-wider opacity-70 block mb-1">{label}</span><div className="text-xl font-black">{value}</div><span className="text-[10px] opacity-70">{hint}</span></div>;
 }

@@ -245,7 +245,7 @@ export default function UserSettingsPage() {
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 pb-12 transition-colors">
       {/* Page Header */}
-      <header className="flex flex-col gap-3 border-b border-slate-200 dark:border-slate-800 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <header className="vx-hero flex flex-col gap-3 border-b border-slate-200 dark:border-slate-800 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em] text-teal-600 dark:text-teal-400">
             Espace Personnel

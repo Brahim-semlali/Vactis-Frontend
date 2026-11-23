@@ -108,7 +108,7 @@ export default function RapportCommercialInsights({ token, data, moisSelectionne
     <>
       {insightError && <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">{insightError}</p>}
 
-      {data && <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4">
+      {data && <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
           <div>
             <span className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-400">Tendance d’activité · {anneeSelectionnee}</span>
@@ -142,7 +142,7 @@ export default function RapportCommercialInsights({ token, data, moisSelectionne
         <div className="flex flex-wrap items-center gap-4 border-t border-slate-100 pt-3 text-[10px] font-semibold text-slate-500 dark:border-slate-800"><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-cyan-700" /> Chiffre d’affaires mensuel</span><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-amber-600" /> Nombre de cas</span><span className="ml-auto">{evolution.length} mois avec données</span></div>
       </section>}
 
-      {data && <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-4">
+      {data && <section className="pilotage-step bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
           <div>
             <span className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-400">Portefeuille médecins</span>
@@ -188,7 +188,7 @@ export default function RapportCommercialInsights({ token, data, moisSelectionne
         </div>
       </section>}
 
-      <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-4">
+      <section className="pilotage-step bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 space-y-4">
         <div>
           <span className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-400">Segmentation du portefeuille</span>
           <h2 className="text-base font-black text-slate-950 dark:text-white">Répartition et CA moyen par segment</h2>
@@ -216,7 +216,7 @@ export default function RapportCommercialInsights({ token, data, moisSelectionne
         {selectionMedecins?.emplacement === 'segments' && <DoctorsSelection token={token} selection={selectionMedecins} onClose={() => setSelectionMedecins(null)} />}
       </section>
 
-      <section className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 shadow-xs space-y-4">
+      <section className="pilotage-step bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 p-6 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
           <div>
             <span className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700 dark:text-cyan-400">Leviers commerciaux</span>

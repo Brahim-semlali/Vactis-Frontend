@@ -9,13 +9,14 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts';
-import { getMedecinByCode, getMedecinById, getMedecinEvolution, getMedecins, patchNoteInput, syncMedecinsFromDataFictif } from '../../api/medecins.js';
+import { getMedecinByCode, getMedecinById, getMedecinEvolution, getMedecins, patchNoteInput } from '../../api/medecins.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 import { formatMad, formatPercent, formatSignedPercent } from '../../utils/indicatorFormatting.js';
 
 // UI components shadcn/ui
 import { Card } from '../../components/ui/card.jsx';
+import { AnimatedValue } from '../../components/pilotage/PilotageUI.jsx';
 import { Badge } from '../../components/ui/badge.jsx';
 import { CustomSelect } from '../../components/ui/select.jsx';
 import { Skeleton } from '../../components/ui/skeleton.jsx';
@@ -330,40 +331,30 @@ function getBadgeVariant(type, value) {
 }
 
 function KpiCardComponent({ label, icon, tone, value, active, onClick }) {
-  const toneClasses = {
-    sky: 'bg-sky-50 text-sky-700 border-sky-100',
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    amber: 'bg-amber-50 text-amber-700 border-amber-100',
-    blue: 'bg-sky-50 text-sky-700 border-sky-100',
-    red: 'bg-rose-50 text-rose-700 border-rose-100',
-    purple: 'bg-sky-50 text-sky-700 border-sky-100',
-  };
-
-  const bgTone = toneClasses[tone] || toneClasses.sky;
-
   return (
-    <motion.div whileHover={{ y: -3, scale: 1.015 }} transition={{ duration: 0.2 }}>
+    <motion.div className="h-full" whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 400, damping: 26 }}>
       <Card
         onClick={onClick}
-        className={`p-4 sm:p-5 flex items-center justify-between h-full bg-white border rounded-2xl shadow-2xs transition-all ${
+        className={`vx-kpi vx-kpi--${tone || 'sky'} h-full p-4 sm:p-5 bg-white border rounded-2xl ${
           onClick ? 'cursor-pointer' : ''
         } ${
           active
-            ? 'border-amber-400 ring-2 ring-amber-400/30 bg-amber-50/40 shadow-xs'
-            : 'border-slate-200/80 hover:shadow-md'
+            ? 'vx-kpi--active border-amber-400 ring-2 ring-amber-400/30'
+            : 'border-slate-200/80'
         }`}
       >
-        <div className="flex flex-col">
-          <span className="text-2xl font-black tracking-tight text-slate-900">
-            {value ?? '—'}
-          </span>
-          <span className="text-xs font-semibold pt-0.5 text-slate-500">
-            {label}
+        <div className="vx-kpi-head">
+          <span className="vx-kpi-label">{label}</span>
+          <span className="vx-kpi-icon" aria-hidden="true">
+            <MedecinsIcon name={icon} size={18} />
           </span>
         </div>
-        <div className={`p-2.5 sm:p-3 rounded-2xl flex items-center justify-center shrink-0 border ${bgTone}`}>
-          <MedecinsIcon name={icon} size={20} />
-        </div>
+        <span className="vx-kpi-value">
+          {typeof value === 'number' ? <AnimatedValue value={value} /> : (value ?? '—')}
+        </span>
+        {onClick && (
+          <span className="vx-kpi-hint">{active ? 'Filtre actif · cliquer pour retirer' : 'Cliquer pour filtrer'}</span>
+        )}
       </Card>
     </motion.div>
   );
@@ -509,13 +500,9 @@ function EvolutionChartCard({ data = [], loading = false }) {
 }
 
 export default function MedecinsPage() {
-  const { token, userProfile } = useAuth();
-  const roleName = String(userProfile?.role ?? userProfile?.roles?.nameRole ?? userProfile?.roles?.[0]?.nameRole ?? '').toUpperCase();
-  const canSyncFictifData = roleName.includes('ADMIN');
+  const { token } = useAuth();
   const [filters, setFilters] = useState(FILTER_DEFAULTS);
   const [pageData, setPageData] = useState(null);
-  const [syncingFictifData, setSyncingFictifData] = useState(false);
-  const [syncSuccess, setSyncSuccess] = useState(false);
 
   // Selection & View Mode state: 'table' or 'detail'
   const [selectedMedecin, setSelectedMedecin] = useState(null);
@@ -648,26 +635,6 @@ export default function MedecinsPage() {
       setLoading(false);
     }
   }, [token, filters]);
-
-  const handleSyncFictifData = async () => {
-    const confirmed = window.confirm(
-      'Cette opération remplace complètement le jeu fictif. Elle supprime les anciens médecins, dossiers, actions, alertes, réclamations et historiques de visites, puis importe le classeur actuel. Continuer ?'
-    );
-    if (!confirmed) return;
-
-    setSyncingFictifData(true);
-    setSyncSuccess(false);
-    setError(null);
-    try {
-      await syncMedecinsFromDataFictif(token);
-      await loadMedecins();
-      setSyncSuccess(true);
-    } catch (err) {
-      setError(err.message ?? 'Erreur lors de la synchronisation des données fictives.');
-    } finally {
-      setSyncingFictifData(false);
-    }
-  };
 
   useEffect(() => {
     loadMedecins();
@@ -1021,7 +988,7 @@ export default function MedecinsPage() {
   return (
     <div className="space-y-6">
       {/* Pure White Clean Hero Section */}
-      <Card className="p-6 bg-white border border-slate-200/90 rounded-2xl shadow-2xs">
+      <Card className="vx-hero p-6 bg-white border border-slate-200/90 rounded-2xl shadow-2xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
@@ -1048,17 +1015,6 @@ export default function MedecinsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {canSyncFictifData && (
-              <button
-                type="button"
-                className="inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-extrabold text-sm transition-all shadow-2xs hover:shadow-xs active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
-                onClick={handleSyncFictifData}
-                disabled={syncingFictifData || loading}
-              >
-                <MedecinsIcon name="refresh" size={16} />
-                {syncingFictifData ? 'Synchronisation…' : 'Synchroniser le jeu fictif'}
-              </button>
-            )}
             <button
               type="button"
               className="inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-2xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/90 font-extrabold text-sm transition-all shadow-2xs hover:shadow-xs active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
@@ -1073,12 +1029,6 @@ export default function MedecinsPage() {
           </div>
         </div>
       </Card>
-
-      {syncSuccess && (
-        <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-          Synchronisation terminée. Les médecins, dossiers et actions affichés proviennent du classeur actuel.
-        </div>
-      )}
 
       {/* AFFICHAGE CONDITIONNEL : Masquer les filtres et les KPIs en mode 'detail' */}
       {viewMode === 'table' && (
@@ -1250,7 +1200,7 @@ export default function MedecinsPage() {
               </fieldset>
             </div>
 
-            <Table>
+            <Table className="vx-data-table">
               <TableHeader>
                 <TableRow className="hover:bg-slate-50/80 cursor-default bg-slate-50/90">
                   {TABLE_COLUMNS.map((column, idx) => {
@@ -1953,39 +1903,39 @@ export default function MedecinsPage() {
                     <div className={`${openCalculationBlocks.segment ? '' : 'hidden'} mt-3 space-y-2 text-xs leading-relaxed text-slate-600`}>
                       <div className="action-metric action-metric--potential rounded-lg border border-sky-100 bg-sky-50/50">
                         <div className="p-3 font-bold text-slate-900"><span className="explanation-metric-icon explanation-metric-icon--blue"><MedecinsIcon name="trend" size={18} /></span><span>1. Potentiel</span></div>
-                        <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : potentiel = note / 5 × 100 ; contribution = potentiel × 0,40</p><p className="font-semibold text-teal-800"><strong>Valeur</strong> : note utilisée par le scoring = {formatScore(Number(selectedMedecin.potentielSur100) / 20)} / 5 <span className="ml-1 rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700">Source : {formatPotentialSource(selectedMedecin.sourcePotentiel)}</span></p><p className="font-semibold text-teal-800"><strong>Calcul</strong> : ({formatScore(Number(selectedMedecin.potentielSur100) / 20)} / 5) × 100 = {formatScore(selectedMedecin.potentielSur100)}</p><p className="font-semibold text-teal-800"><strong>Résultat</strong> : {formatScore(selectedMedecin.potentielSur100)} × 0,40 = {formatWeightedScore(selectedMedecin.potentielSur100, 0.4)}</p><div className="action-contribution action-contribution--blue"><span>Contribution</span><strong>{formatWeightedScore(selectedMedecin.potentielSur100, 0.4)}</strong><small>40% du score final</small></div></div>
+                        <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><p className="font-semibold text-teal-800"><strong>Valeur</strong> : note utilisée par le scoring = {formatScore(Number(selectedMedecin.potentielSur100) / 20)} / 5 <span className="ml-1 rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700">Source : {formatPotentialSource(selectedMedecin.sourcePotentiel)}</span></p><p className="font-semibold text-teal-800"><strong>Calcul</strong> : ({formatScore(Number(selectedMedecin.potentielSur100) / 20)} / 5) × 100 = {formatScore(selectedMedecin.potentielSur100)}</p><p className="font-semibold text-teal-800"><strong>Résultat</strong> : {formatScore(selectedMedecin.potentielSur100)} × 0,40 = {formatWeightedScore(selectedMedecin.potentielSur100, 0.4)}</p><div className="action-contribution action-contribution--blue"><span>Contribution</span><strong>{formatWeightedScore(selectedMedecin.potentielSur100, 0.4)}</strong><small>40% du score final</small></div></div>
                       </div>
                       <div className="action-metric action-metric--performance rounded-lg border border-sky-100 bg-sky-50/50">
                         <div className="p-3 font-bold text-slate-900"><span className="explanation-metric-icon explanation-metric-icon--violet"><MedecinsIcon name="performance" size={18} /></span><span>2. Performance</span></div>
                         <div className="px-3 pt-2 text-xs font-bold text-indigo-700">Position CA : {selectedMedecin.rangPerformance ?? '—'} / {selectedMedecin.totalPortefeuillePerformance ?? '—'} ; N − 1 = {selectedMedecin.totalPortefeuillePerformance != null ? selectedMedecin.totalPortefeuillePerformance - 1 : '—'}</div>
-                        <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : performance = 100 × (rang − 1) / (N − 1) ; contribution = performance × 0,40</p><p className="font-semibold text-teal-800"><strong>Valeur</strong> : CA moyen = {formatCaMois(selectedMedecin.caMensuelMoyen)} ; performance = {formatScore(selectedMedecin.performanceSur100)} / 100</p><p className="font-semibold text-teal-800"><strong>Calcul</strong> : {formatScore(selectedMedecin.performanceSur100)} × 0,40 = {formatWeightedScore(selectedMedecin.performanceSur100, 0.4)}</p><p className="text-[11px] text-slate-500"><strong>Sens</strong> : 0 = CA moyen le plus faible ; 100 = CA moyen le plus élevé ; position relative dans le portefeuille.</p><p className="font-semibold text-teal-800"><strong>Résultat</strong> : contribution performance = {formatWeightedScore(selectedMedecin.performanceSur100, 0.4)}</p><div className="action-contribution action-contribution--violet"><span>Contribution</span><strong>{formatWeightedScore(selectedMedecin.performanceSur100, 0.4)}</strong><small>40% du score final</small></div></div>
+                        <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><p className="font-semibold text-teal-800"><strong>Valeur</strong> : CA moyen = {formatCaMois(selectedMedecin.caMensuelMoyen)} ; performance = {formatScore(selectedMedecin.performanceSur100)} / 100</p><p className="font-semibold text-teal-800"><strong>Calcul</strong> : {formatScore(selectedMedecin.performanceSur100)} × 0,40 = {formatWeightedScore(selectedMedecin.performanceSur100, 0.4)}</p><p className="font-semibold text-teal-800"><strong>Résultat</strong> : contribution performance = {formatWeightedScore(selectedMedecin.performanceSur100, 0.4)}</p><div className="action-contribution action-contribution--violet"><span>Contribution</span><strong>{formatWeightedScore(selectedMedecin.performanceSur100, 0.4)}</strong><small>40% du score final</small></div></div>
                       </div>
                       <div className="action-metric action-metric--economic rounded-lg border border-sky-100 bg-sky-50/50">
                         <div className="p-3 font-bold text-slate-900"><span className="explanation-metric-icon explanation-metric-icon--teal"><MedecinsIcon name="pie" size={18} /></span><span>3. Poids économique</span></div>
                         <div className="economic-weight-breakdown"><div><strong>CA normalisé</strong><span>{formatScore(selectedMedecin.caNormaliseSur100)} / 100</span><small>CA médecin {formatCaMois(selectedMedecin.caMois)} / maximum portefeuille {formatCaMois(selectedMedecin.maxCaPortefeuille)}</small></div><div><strong>Volume normalisé</strong><span>{formatScore(selectedMedecin.volumeNormaliseSur100)} / 100</span><small>{selectedMedecin.totalCas ?? '—'} cas / maximum portefeuille {formatScore(selectedMedecin.maxVolumePortefeuille)} cas</small></div></div>
-                        <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : poids économique = 50% CA normalisé + 50% volume normalisé ; contribution = poids × 0,20</p><p className="font-semibold text-teal-800"><strong>Valeur</strong> : poids économique = {formatScore(selectedMedecin.poidsEcoSur100)} / 100</p><p className="font-semibold text-teal-800"><strong>Calcul</strong> : {formatScore(selectedMedecin.poidsEcoSur100)} × 0,20 = {formatWeightedScore(selectedMedecin.poidsEcoSur100, 0.2)}</p><p className="font-semibold text-teal-800"><strong>Résultat</strong> : contribution économique = {formatWeightedScore(selectedMedecin.poidsEcoSur100, 0.2)}</p><div className="action-contribution action-contribution--teal"><span>Contribution</span><strong>{formatWeightedScore(selectedMedecin.poidsEcoSur100, 0.2)}</strong><small>20% du score final</small></div></div>
+                        <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><p className="font-semibold text-teal-800"><strong>Valeur</strong> : poids économique = {formatScore(selectedMedecin.poidsEcoSur100)} / 100</p><p className="font-semibold text-teal-800"><strong>Calcul</strong> : {formatScore(selectedMedecin.poidsEcoSur100)} × 0,20 = {formatWeightedScore(selectedMedecin.poidsEcoSur100, 0.2)}</p><p className="font-semibold text-teal-800"><strong>Résultat</strong> : contribution économique = {formatWeightedScore(selectedMedecin.poidsEcoSur100, 0.2)}</p><div className="action-contribution action-contribution--teal"><span>Contribution</span><strong>{formatWeightedScore(selectedMedecin.poidsEcoSur100, 0.2)}</strong><small>20% du score final</small></div></div>
                       </div>
                       <div className="action-metric action-metric--final rounded-lg border border-sky-100 bg-sky-50/50">
                         <div className="p-3 font-bold text-slate-900"><span className="explanation-metric-icon explanation-metric-icon--orange"><MedecinsIcon name="trophy" size={18} /></span><span>4. Score final</span></div>
-                        <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : score final = 40% potentiel + 40% performance + 20% poids économique</p><p className="font-semibold text-teal-800"><strong>Étape 1</strong> : potentiel × 0,40 = {formatWeightedScore(selectedMedecin.potentielSur100, 0.4)}</p><p className="font-semibold text-teal-800"><strong>Étape 2</strong> : performance × 0,40 = {formatWeightedScore(selectedMedecin.performanceSur100, 0.4)}</p><p className="font-semibold text-teal-800"><strong>Étape 3</strong> : poids économique × 0,20 = {formatWeightedScore(selectedMedecin.poidsEcoSur100, 0.2)}</p><p className="font-semibold text-teal-800"><strong>Résultat</strong> : {formatWeightedScore(selectedMedecin.potentielSur100, 0.4)} + {formatWeightedScore(selectedMedecin.performanceSur100, 0.4)} + {formatWeightedScore(selectedMedecin.poidsEcoSur100, 0.2)} = <strong className="text-slate-900">{formatScore(selectedMedecin.scoreValeur)} / 100</strong> ; segment <strong className="text-slate-900">{selectedMedecin.segment || '—'}</strong></p><div className="action-score-donut" style={{ background: `conic-gradient(#f97316 ${Math.min(100, Math.max(0, Number(selectedMedecin.scoreValeur ?? 0)))}%, #e5e7eb 0)` }}><div><strong>{formatScore(selectedMedecin.scoreValeur)}</strong><span>/ 100</span></div></div><span className="action-score-segment">SEGMENT&nbsp; {selectedMedecin.segment || '—'}</span></div>
+                        <div className="space-y-1 border-t border-sky-100 px-3 pb-3 pt-2"><p className="font-semibold text-teal-800"><strong>Étape 1</strong> : potentiel × 0,40 = {formatWeightedScore(selectedMedecin.potentielSur100, 0.4)}</p><p className="font-semibold text-teal-800"><strong>Étape 2</strong> : performance × 0,40 = {formatWeightedScore(selectedMedecin.performanceSur100, 0.4)}</p><p className="font-semibold text-teal-800"><strong>Étape 3</strong> : poids économique × 0,20 = {formatWeightedScore(selectedMedecin.poidsEcoSur100, 0.2)}</p><p className="font-semibold text-teal-800"><strong>Résultat</strong> : {formatWeightedScore(selectedMedecin.potentielSur100, 0.4)} + {formatWeightedScore(selectedMedecin.performanceSur100, 0.4)} + {formatWeightedScore(selectedMedecin.poidsEcoSur100, 0.2)} = <strong className="text-slate-900">{formatScore(selectedMedecin.scoreValeur)} / 100</strong> ; segment <strong className="text-slate-900">{selectedMedecin.segment || '—'}</strong></p><div className="action-score-donut" style={{ background: `conic-gradient(#f97316 ${Math.min(100, Math.max(0, Number(selectedMedecin.scoreValeur ?? 0)))}%, #e5e7eb 0)` }}><div><strong>{formatScore(selectedMedecin.scoreValeur)}</strong><span>/ 100</span></div></div><span className="action-score-segment">SEGMENT&nbsp; {selectedMedecin.segment || '—'}</span></div>
                       </div>
                     </div>
                   </div>
                   <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
                     <button type="button" onClick={() => toggleCalculationBlock('statut')} className="flex w-full items-center justify-between text-left text-xs font-extrabold uppercase tracking-wider text-slate-500"><span>Statut {formatEnumLabel(selectedMedecin.statut || selectedMedecin.statutPilotage)}</span><span className="text-base text-sky-700">{openCalculationBlocks.statut ? '⌃' : '⌄'}</span></button>
                     <div className={`${openCalculationBlocks.statut ? '' : 'hidden'} mt-3 space-y-2 text-xs leading-relaxed text-slate-600`}>
-                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>1. Référence récente</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : référence = moyenne de M-1, M-2 et M-3</p><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : CA = {formatScore(selectedMedecin.referenceCa)} MAD ; volume = {formatScore(selectedMedecin.referenceVolume)} cas</p></div></details>
-                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>2. Variations CA / volume</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : variation = (valeur courante − référence) / max(référence, plancher) × 100</p><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : CA = {formatScore(selectedMedecin.variationCa)}% avec plancher 300 ; volume = {formatScore(selectedMedecin.variationVolume)}% avec plancher 1</p></div></details>
-                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>3. Variation mixte</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : 60% variation CA + 40% variation volume</p><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : ({formatScore(selectedMedecin.variationCa)} × 0,60) + ({formatScore(selectedMedecin.variationVolume)} × 0,40) = <strong className="text-slate-900">{formatScore(selectedMedecin.variationMixteSur100)}%</strong></p></div></details>
-                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>4. Décision du statut</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : progression &gt; 20% ; stable de −10% à 20% ; surveillance de −40% à −10% ; rétention de −70% à −40% ; silence critique &lt; −70%</p><p className="mt-1 font-semibold text-teal-800"><strong>Résultat</strong> : {formatEnumLabel(selectedMedecin.statut || selectedMedecin.statutPilotage)}</p></div></details>
+                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>1. Référence récente</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : CA = {formatScore(selectedMedecin.referenceCa)} MAD ; volume = {formatScore(selectedMedecin.referenceVolume)} cas</p></div></details>
+                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>2. Variations CA / volume</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : CA = {formatScore(selectedMedecin.variationCa)}% avec plancher 300 ; volume = {formatScore(selectedMedecin.variationVolume)}% avec plancher 1</p></div></details>
+                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>3. Variation mixte</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : ({formatScore(selectedMedecin.variationCa)} × 0,60) + ({formatScore(selectedMedecin.variationVolume)} × 0,40) = <strong className="text-slate-900">{formatScore(selectedMedecin.variationMixteSur100)}%</strong></p></div></details>
+                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>4. Décision du statut</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="mt-1 font-semibold text-teal-800"><strong>Résultat</strong> : {formatEnumLabel(selectedMedecin.statut || selectedMedecin.statutPilotage)}</p></div></details>
                     </div>
                   </div>
                   <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
                     <button type="button" onClick={() => toggleCalculationBlock('fiabilite')} className="flex w-full items-center justify-between text-left text-xs font-extrabold uppercase tracking-wider text-slate-500"><span>Fiabilité & silence</span><span className="text-base text-sky-700">{openCalculationBlocks.fiabilite ? '⌃' : '⌄'}</span></button>
                     <div className={`${openCalculationBlocks.fiabilite ? '' : 'hidden'} mt-3 space-y-2 text-xs leading-relaxed text-slate-600`}>
-                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>1. Fiabilité</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : FIABLE si au moins 3 mois actifs et 6 mois d’ancienneté ; PARTIEL si au moins 2 mois actifs ; sinon NON FIABLE</p><p className="mt-1 font-semibold text-teal-800"><strong>Résultat</strong> : {formatEnumLabel(selectedMedecin.fiabilite)}</p></div></details>
-                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>2. Intervalle effectif</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : intervalle = moyenne des écarts entre les dernières dates</p><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : intervalle = {selectedMedecin.intervalleEffectif ?? '—'} jours</p></div></details>
-                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>3. Score de silence</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : score = min(100, jours sans activité / intervalle × 20)</p><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : min(100, {selectedMedecin.joursSansActivite ?? '—'} ÷ {selectedMedecin.intervalleEffectif ?? '—'} × 20) = <strong className="text-slate-900">{formatScore(selectedMedecin.scoreSilence)} / 100</strong></p></div></details>
+                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>1. Fiabilité</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="mt-1 font-semibold text-teal-800"><strong>Résultat</strong> : {formatEnumLabel(selectedMedecin.fiabilite)}</p></div></details>
+                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>2. Intervalle effectif</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : intervalle = {selectedMedecin.intervalleEffectif ?? '—'} jours</p></div></details>
+                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>3. Score de silence</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : min(100, {selectedMedecin.joursSansActivite ?? '—'} ÷ {selectedMedecin.intervalleEffectif ?? '—'} × 20) = <strong className="text-slate-900">{formatScore(selectedMedecin.scoreSilence)} / 100</strong></p></div></details>
                     </div>
                   </div>
                   <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
@@ -1999,9 +1949,9 @@ export default function MedecinsPage() {
                   <div className="rounded-xl border border-white/80 bg-white p-4 shadow-2xs">
                     <button type="button" onClick={() => toggleCalculationBlock('risque')} className="flex w-full items-center justify-between text-left text-xs font-extrabold uppercase tracking-wider text-slate-500"><span>Risque</span><span className="text-base text-sky-700">{openCalculationBlocks.risque ? '⌃' : '⌄'}</span></button>
                     <div className={`${openCalculationBlocks.risque ? '' : 'hidden'} mt-3 space-y-2 text-xs leading-relaxed text-slate-600`}>
-                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>1. Baisse</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : baisse de référence et baisse courte</p><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : référence = {formatScore(selectedMedecin.baisseReference)}% ; courte = {formatScore(selectedMedecin.baisseCourte)}%</p></div></details>
-                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>2. Tendance</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : tendance = 40% baisse de référence + 60% baisse courte</p><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : ({formatScore(selectedMedecin.baisseReference)} × 0,40) + ({formatScore(selectedMedecin.baisseCourte)} × 0,60)</p></div></details>
-                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>3. Risque final</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="text-[11px] text-sky-700"><strong>Relation</strong> : risque = (60% tendance + 40% silence) × poids économique</p><p className="mt-1 font-semibold text-teal-800"><strong>Résultat</strong> : <strong className="text-slate-900">{formatScore(selectedMedecin.scoreRisque)} / 100</strong> ; niveau = <strong className="text-slate-900">{formatEnumLabel(selectedMedecin.risqueUrgence)}</strong></p></div></details>
+                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>1. Baisse</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : référence = {formatScore(selectedMedecin.baisseReference)}% ; courte = {formatScore(selectedMedecin.baisseCourte)}%</p></div></details>
+                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>2. Tendance</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="mt-1 font-semibold text-teal-800"><strong>Application</strong> : ({formatScore(selectedMedecin.baisseReference)} × 0,40) + ({formatScore(selectedMedecin.baisseCourte)} × 0,60)</p></div></details>
+                      <details className="group rounded-lg border border-sky-100 bg-sky-50/50"><summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-bold text-slate-900 [&::-webkit-details-marker]:hidden"><span>3. Risque final</span><span className="text-base text-sky-700 transition-transform group-open:rotate-180">⌄</span></summary><div className="border-t border-sky-100 px-3 pb-3 pt-2"><p className="mt-1 font-semibold text-teal-800"><strong>Résultat</strong> : <strong className="text-slate-900">{formatScore(selectedMedecin.scoreRisque)} / 100</strong> ; niveau = <strong className="text-slate-900">{formatEnumLabel(selectedMedecin.risqueUrgence)}</strong></p></div></details>
                     </div>
                   </div>
                 </div>}

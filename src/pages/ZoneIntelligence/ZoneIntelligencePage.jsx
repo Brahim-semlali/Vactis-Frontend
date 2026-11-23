@@ -24,6 +24,8 @@ import {
   TrendingUp,
   Activity,
   ChevronRight,
+  ChevronLeft,
+  Minus,
   Sparkles,
   Map as MapIcon,
   Maximize2,
@@ -133,6 +135,20 @@ const MAP_TILES = {
     attribution: 'Tiles &copy; Esri &mdash; Earthstar Geographics',
     subdomains: '',
     isDarkFilter: false,
+    isSatellite: true,
+  },
+  esri_hybrid: {
+    id: 'esri_hybrid',
+    name: 'Satellite + noms',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    overlayUrls: [
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    ],
+    attribution: 'Tiles &copy; Esri &mdash; Earthstar Geographics',
+    subdomains: '',
+    isDarkFilter: false,
+    isSatellite: true,
   },
 };
 
@@ -219,13 +235,36 @@ function createLaboratoryPinIcon() {
 }
 
 // Étiquette visuelle moderne pour les quartiers de Marrakech
-function createQuartierLabelIcon(name) {
+function createQuartierLabelIcon(name, isActive = false, isDarkMap = false) {
+  const base = isActive
+    ? 'bg-teal-600 text-white border-teal-300/60 shadow-teal-600/30'
+    : isDarkMap
+      ? 'bg-slate-900/80 text-slate-100 border-white/15'
+      : 'bg-white/90 text-slate-700 border-slate-300/70';
   return L.divIcon({
     className: 'custom-quartier-label',
-    html: `<div class="px-2.5 py-0.5 rounded-full bg-slate-900/75 dark:bg-slate-900/90 backdrop-blur-md text-white text-[10px] font-black border border-white/20 whitespace-nowrap shadow-lg tracking-tight hover:scale-105 transition-transform">${name}</div>`,
-    iconSize: [80, 22],
-    iconAnchor: [40, 11],
+    html: `<div style="transform: translateX(-50%); display: inline-flex;" class="items-center gap-1 px-2 py-[3px] rounded-md ${base} backdrop-blur-sm text-[10px] font-bold uppercase tracking-wide border whitespace-nowrap shadow-sm"><span class="w-1 h-1 rounded-full ${isActive ? 'bg-white' : 'bg-teal-500'}"></span>${name}</div>`,
+    iconSize: [0, 20],
+    iconAnchor: [0, 10],
   });
+}
+
+const STATUT_LABELS = {
+  PROGRESSION: 'Progression',
+  ACTIF_STABLE: 'Actif stable',
+  ONBOARDING: 'Onboarding',
+  SURVEILLANCE: 'Surveillance',
+  RETENTION: 'Rétention',
+  SILENCE_CRITIQUE: 'Silence critique',
+  A_REACTIVER: 'À réactiver',
+  INACTIF: 'Inactif',
+};
+
+function formatCompactMad(value) {
+  const n = Number(value) || 0;
+  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} M`;
+  if (Math.abs(n) >= 10_000) return `${(n / 1_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} k`;
+  return n.toLocaleString('fr-FR');
 }
 
 // Contrôleur de carte pour animer et centrer sur un quartier ou une entité choisie
@@ -245,6 +284,18 @@ function MapController({ targetCenter, targetZoom, targetMarkerKey, markerRefs, 
       }
     }
   }, [targetCenter, targetZoom, targetMarkerKey, markerRefs, targetTimestamp, map]);
+  return null;
+}
+
+// Expose l'instance Leaflet pour les contrôles personnalisés (zoom, recentrage)
+function MapInstanceBridge({ mapRef }) {
+  const map = useMap();
+  useEffect(() => {
+    mapRef.current = map;
+    return () => {
+      mapRef.current = null;
+    };
+  }, [map, mapRef]);
   return null;
 }
 
@@ -287,6 +338,8 @@ export default function ZoneIntelligencePage({ navigate }) {
   const [activeTileKey, setActiveTileKey] = useState(isDark ? 'dark' : 'osm');
   const [layerSelectorOpen, setLayerSelectorOpen] = useState(false);
   const [hudCollapsed, setHudCollapsed] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const mapRef = useRef(null);
 
   // Mise à jour automatique si le thème change et que l'utilisateur n'a pas sélectionné un calque spécial
   useEffect(() => {
@@ -604,6 +657,15 @@ export default function ZoneIntelligencePage({ navigate }) {
     return counts;
   }, [medecins]);
 
+  const countsByStatut = useMemo(() => {
+    const counts = {};
+    filteredMedecins.forEach((d) => {
+      const st = (d.statut || 'ACTIF_STABLE').toUpperCase();
+      counts[st] = (counts[st] || 0) + 1;
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }, [filteredMedecins]);
+
   const totalPortfolioDocs = medecins.length + medecinsSansCoords.length;
   const coveragePct = totalPortfolioDocs > 0 ? Math.round((medecins.length / totalPortfolioDocs) * 100) : 100;
 
@@ -739,11 +801,10 @@ export default function ZoneIntelligencePage({ navigate }) {
   const activeTile = MAP_TILES[activeTileKey] || MAP_TILES.osm;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4.25rem)] relative overflow-hidden bg-slate-900 font-sans">
+    <div className="relative h-[calc(100vh-4.25rem)] overflow-hidden bg-slate-100 dark:bg-slate-950 font-sans">
       {/* Toast de notification flottant */}
       {toastMessage && (
         <div className="absolute top-5 left-1/2 -translate-x-1/2 z-[3000] bg-slate-950/90 text-white px-5 py-2.5 rounded-2xl shadow-2xl text-xs sm:text-sm font-semibold flex items-center gap-2.5 backdrop-blur-xl border border-teal-500/40 animate-in fade-in slide-in-from-top-4 duration-200">
-          <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
           <Check className="w-4 h-4 text-teal-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
@@ -751,550 +812,43 @@ export default function ZoneIntelligencePage({ navigate }) {
 
       {/* Bannière Mode Positionnement Médecin */}
       {positioningDoctor && (
-        <div className="absolute top-5 left-1/2 -translate-x-1/2 z-[2500] bg-gradient-to-r from-sky-600 to-indigo-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-4 text-xs sm:text-sm border border-white/30 backdrop-blur-md animate-pulse">
-          <Navigation className="w-5 h-5 text-sky-200 animate-spin shrink-0" />
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[2500] bg-slate-950/90 text-white pl-4 pr-2 py-2 rounded-2xl shadow-2xl flex items-center gap-3 text-xs border border-sky-400/40 backdrop-blur-xl">
+          <span className="w-8 h-8 rounded-xl bg-sky-500/20 flex items-center justify-center shrink-0">
+            <Navigation className="w-4 h-4 text-sky-300 animate-pulse" />
+          </span>
           <span>
-            <strong>Mode ciblage :</strong> Cliquez sur la carte pour positionner{' '}
-            <strong className="underline decoration-sky-300">Dr. {positioningDoctor.prenom} {positioningDoctor.nom}</strong>
+            Cliquez sur la carte pour positionner{' '}
+            <strong className="text-sky-300">Dr. {positioningDoctor.prenom} {positioningDoctor.nom}</strong>
           </span>
           <button
             type="button"
             onClick={() => setPositioningDoctor(null)}
-            className="ml-2 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-xl text-xs font-black transition-colors"
+            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors"
           >
             Annuler
           </button>
         </div>
       )}
 
-      {/* Barre supérieure principale (Glassmorphism & Contrôles tactiques) */}
-      <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800 px-4 sm:px-6 py-3 shrink-0 shadow-sm z-20 transition-colors">
-        {/* Barre de recherche globale Médecins & Labos */}
-        <div ref={searchContainerRef} className="relative mb-3">
-          <div className={`flex items-center gap-2 rounded-2xl border transition-all px-3 py-2 ${
-            searchDropdownOpen
-              ? 'bg-white dark:bg-slate-800 border-teal-400 shadow-lg shadow-teal-500/10 ring-2 ring-teal-400/20'
-              : 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-teal-300'
-          }`}>
-            <Search className="w-4 h-4 text-teal-500 shrink-0" />
-            <input
-              type="text"
-              placeholder="Rechercher un médecin, laboratoire ou agence…"
-              value={globalSearch}
-              onChange={(e) => {
-                setGlobalSearch(e.target.value);
-                setSearchDropdownOpen(e.target.value.trim().length > 0);
-              }}
-              onFocus={() => globalSearch.trim().length > 0 && setSearchDropdownOpen(true)}
-              className="flex-1 bg-transparent outline-none text-xs font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 min-w-0"
-            />
-            {globalSearch && (
-              <button
-                type="button"
-                onClick={() => { setGlobalSearch(''); setSearchDropdownOpen(false); }}
-                className="p-0.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-            {globalSearch && searchResults.total > 0 && (
-              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 shrink-0">
-                {searchResults.total}
-              </span>
-            )}
-          </div>
-
-          {/* Dropdown résultats */}
-          {searchDropdownOpen && globalSearch.trim().length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-[4000] mt-1.5 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-80 overflow-y-auto">
-              {searchResults.total === 0 ? (
-                <div className="px-4 py-6 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
-                  <Search className="w-6 h-6 opacity-30" />
-                  <span>Aucun résultat pour <strong>&quot;{globalSearch}&quot;</strong></span>
-                </div>
-              ) : (
-                <>
-                  {/* Médecins géolocalisés */}
-                  {searchResults.medecinsGeo.length > 0 && (
-                    <div>
-                      <div className="px-3 pt-3 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                        <User className="w-3 h-3 text-teal-500" /> Médecins géolocalisés
-                      </div>
-                      {searchResults.medecinsGeo.map((m) => (
-                        <button
-                          key={`sr-doc-${m.id}`}
-                          type="button"
-                          onClick={() => handleSelectEntity('medecin-geo', m)}
-                          className="w-full text-left px-3 py-2.5 hover:bg-teal-50 dark:hover:bg-teal-950/40 flex items-center gap-3 transition-colors group"
-                        >
-                          <span
-                            className="w-7 h-7 rounded-xl flex items-center justify-center text-[10px] font-black text-white shrink-0"
-                            style={{ backgroundColor: SEGMENT_COLORS[(m.segment || 'D').toUpperCase()] || '#64748b' }}
-                          >
-                            {m.segment || 'D'}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                              Dr. {m.prenom} {m.nom}
-                            </p>
-                            <p className="text-[10px] text-slate-500 truncate">{m.specialite || 'Spécialité n/r'}{m.organisme ? ` · ${m.organisme}` : ''}</p>
-                          </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-teal-500 ml-auto shrink-0 transition-colors" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Agences concurrentes */}
-                  {searchResults.agencesList.length > 0 && (
-                    <div className={searchResults.medecinsGeo.length > 0 ? 'border-t border-slate-100 dark:border-slate-800' : ''}>
-                      <div className="px-3 pt-3 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                        <Building2 className="w-3 h-3 text-purple-500" /> Agences concurrentes
-                      </div>
-                      {searchResults.agencesList.map((a) => (
-                        <button
-                          key={`sr-ag-${a.id}`}
-                          type="button"
-                          onClick={() => handleSelectEntity('agence', a)}
-                          className="w-full text-left px-3 py-2.5 hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center gap-3 transition-colors group"
-                        >
-                          <span className="w-7 h-7 rounded-xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center shrink-0">
-                            <Building2 className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{a.nom}</p>
-                            <p className="text-[10px] text-slate-500 truncate">{a.enseigne || 'Concurrent'}{a.adresse ? ` · ${a.adresse}` : ''}</p>
-                          </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-purple-500 ml-auto shrink-0 transition-colors" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Laboratoire central VACTIS */}
-                  {searchResults.labCentral && (
-                    <div className={(searchResults.medecinsGeo.length > 0 || searchResults.agencesList.length > 0) ? 'border-t border-slate-100 dark:border-slate-800' : ''}>
-                      <div className="px-3 pt-3 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                        <MapPin className="w-3 h-3 text-emerald-500" /> Laboratoire VACTIS
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectEntity('lab-central', searchResults.labCentral)}
-                        className="w-full text-left px-3 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 flex items-center gap-3 transition-colors group"
-                      >
-                        <span className="w-7 h-7 rounded-xl bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center font-black text-teal-700 dark:text-teal-300 shrink-0 text-sm">+</span>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate">Laboratoire Central VACTIS</p>
-                          <p className="text-[10px] text-slate-500">Siège opérationnel</p>
-                        </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-teal-500 ml-auto shrink-0 transition-colors" />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Médecins sans géolocalisation */}
-                  {searchResults.medecinsNonGeo.length > 0 && (
-                    <div className="border-t border-slate-100 dark:border-slate-800">
-                      <div className="px-3 pt-3 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                        <AlertCircle className="w-3 h-3 text-amber-500" /> Sans géolocalisation
-                      </div>
-                      {searchResults.medecinsNonGeo.map((m) => (
-                        <button
-                          key={`sr-nongeo-${m.id}`}
-                          type="button"
-                          onClick={() => handleSelectEntity('medecin-non-geo', m)}
-                          className="w-full text-left px-3 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center gap-3 transition-colors group"
-                        >
-                          <span className="w-7 h-7 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
-                            <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">Dr. {m.prenom} {m.nom}</p>
-                            <p className="text-[10px] text-slate-500 truncate">{m.specialite || 'Spécialité n/r'} · Non positionné sur la carte</p>
-                          </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-amber-500 ml-auto shrink-0 transition-colors" />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
+      {/* Bannière Mode Placement Laboratoire */}
+      {laboratoryPlacementActive && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[2500] bg-slate-950/90 text-white pl-4 pr-2 py-2 rounded-2xl shadow-2xl flex items-center gap-3 text-xs border border-teal-400/40 backdrop-blur-xl">
+          <span className="w-8 h-8 rounded-xl bg-teal-500/20 flex items-center justify-center shrink-0">
+            <Cross className="w-4 h-4 text-teal-300 animate-pulse" />
+          </span>
+          <span>Cliquez sur la carte pour placer le laboratoire central</span>
+          <button
+            type="button"
+            onClick={() => setLaboratoryPlacementActive(false)}
+            className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors"
+          >
+            Annuler
+          </button>
         </div>
+      )}
 
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-          {/* Titre & Compteurs */}
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-md shadow-teal-500/25 flex items-center justify-center shrink-0">
-              <MapPin className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-black tracking-tight text-slate-950 dark:text-white flex items-center gap-2">
-                  Zone Intelligence
-                  <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/60">
-                    Marrakech
-                  </span>
-                </h1>
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                <span className="font-bold text-slate-900 dark:text-slate-200">{filteredMedecins.length}</span> médecin{filteredMedecins.length > 1 ? 's' : ''} affiché{filteredMedecins.length > 1 ? 's' : ''} sur {medecins.length} géolocalisé{medecins.length > 1 ? 's' : ''}
-                {showAgences && (
-                  <span> · <strong className="text-purple-600 dark:text-purple-400">{agences.length}</strong> agence{agences.length > 1 ? 's' : ''}</span>
-                )}
-                <span> · Couverture <strong className="text-teal-600 dark:text-teal-400">{coveragePct}%</strong></span>
-              </p>
-            </div>
-          </div>
-
-          {/* Filtres & Commandes rapides */}
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            {/* Bascule de coloration */}
-            <div className="flex items-center rounded-2xl bg-slate-100 dark:bg-slate-800/90 p-1 border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setColorCriterion('segment')}
-                className={`px-3 py-1.5 rounded-xl font-extrabold text-[11px] transition-all ${
-                  colorCriterion === 'segment'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Par Segment
-              </button>
-              <button
-                type="button"
-                onClick={() => setColorCriterion('statut')}
-                className={`px-3 py-1.5 rounded-xl font-extrabold text-[11px] transition-all ${
-                  colorCriterion === 'statut'
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Par Statut
-              </button>
-            </div>
-
-            {/* Filtres par segment A / B / C / D avec compteurs */}
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/90 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-2xs">
-              {['A', 'B', 'C', 'D'].map((seg) => {
-                const active = selectedSegments.includes(seg);
-                const color = SEGMENT_COLORS[seg];
-                const count = countsBySegment[seg] || 0;
-                return (
-                  <button
-                    key={seg}
-                    type="button"
-                    onClick={() => toggleSegmentFilter(seg)}
-                    className={`px-2.5 py-1 rounded-xl font-black text-[11px] transition-all flex items-center gap-1.5 ${
-                      active
-                        ? 'bg-white dark:bg-slate-700 shadow-xs text-slate-900 dark:text-white ring-1 ring-black/5 dark:ring-white/10'
-                        : 'opacity-40 hover:opacity-75 text-slate-500'
-                    }`}
-                    title={`Segment ${seg} : ${count} médecin(s)`}
-                  >
-                    <span className="w-2.5 h-2.5 rounded-full shadow-2xs" style={{ backgroundColor: color }} />
-                    <span>{seg}</span>
-                    <span className="text-[10px] font-bold opacity-60">({count})</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Filtre Statut */}
-            <select
-              value={selectedStatut}
-              onChange={(e) => setSelectedStatut(e.target.value)}
-              className="bg-slate-100 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 rounded-2xl px-3 py-1.5 font-bold text-xs focus:ring-2 focus:ring-teal-500 outline-none shadow-2xs cursor-pointer"
-            >
-              <option value="ALL">Tous les statuts</option>
-              <option value="PROGRESSION">Progression</option>
-              <option value="ACTIF_STABLE">Actif stable</option>
-              <option value="ONBOARDING">Onboarding</option>
-              <option value="SURVEILLANCE">Surveillance</option>
-              <option value="RETENTION">Rétention</option>
-              <option value="SILENCE_CRITIQUE">Silence critique</option>
-              <option value="A_REACTIVER">À réactiver</option>
-            </select>
-
-            {/* Toggle Afficher / Masquer Agences */}
-            <button
-              type="button"
-              onClick={() => setShowAgences((prev) => !prev)}
-              className={`px-3 py-1.5 rounded-2xl border font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs ${
-                showAgences
-                  ? 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/60 ring-1 ring-purple-400/20'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
-              }`}
-            >
-              {showAgences ? <Eye className="w-3.5 h-3.5 text-purple-600" /> : <EyeOff className="w-3.5 h-3.5" />}
-              <span>Agences ({agences.length})</span>
-            </button>
-
-            {/* Reset filtres */}
-            {(selectedSegments.length < 4 || selectedStatut !== 'ALL' || !showAgences) && (
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="p-2 rounded-2xl text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                title="Réinitialiser les filtres"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {/* Actions Admin */}
-            {isAdmin && (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => setDrawerOpen(true)}
-                  className="px-3 py-1.5 rounded-2xl text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-all flex items-center gap-1.5 shadow-2xs"
-                >
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Sans localisation</span>
-                  <span className="px-2 py-0.2 rounded-full bg-amber-200 dark:bg-amber-800/80 text-[10px] font-black">
-                    {medecinsSansCoords.length}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={openNewAgencyModal}
-                  className="px-3 py-1.5 rounded-2xl text-xs font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-xs transition-all flex items-center gap-1.5"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Ajouter agence</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLaboratoryPlacementActive(true);
-                    showToast('Cliquez sur la carte pour placer le laboratoire VACTIS.');
-                  }}
-                  className="px-3 py-1.5 rounded-2xl text-xs font-bold bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white shadow-xs transition-all flex items-center gap-1.5"
-                >
-                  <Cross className="w-3.5 h-3.5" />
-                  <span>{laboratoireLocation ? 'Modifier labo' : 'Localiser le labo'}</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* Barre de navigation rapide par quartier de Marrakech */}
-      <nav className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/70 dark:border-slate-800/80 px-4 sm:px-6 py-2 flex items-center gap-2 overflow-x-auto text-xs shrink-0 scrollbar-none z-10 transition-colors">
-        <span className="font-extrabold text-[10px] text-slate-400 uppercase tracking-widest shrink-0 flex items-center gap-1 mr-1">
-          <Compass className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-          Quartiers :
-        </span>
-        <button
-          type="button"
-          onClick={() => {
-            setActiveQuartier(null);
-            setMapTarget({ center: MARRAKECH_CENTER, zoom: DEFAULT_ZOOM, id: Date.now() });
-          }}
-          className={`px-3 py-1 rounded-xl font-black shrink-0 transition-all text-[11px] ${
-            !activeQuartier
-              ? 'bg-teal-600 text-white shadow-xs scale-102 ring-2 ring-teal-500/30'
-              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/70 dark:border-slate-700'
-          }`}
-        >
-          Vue d'ensemble
-        </button>
-        {MARRAKECH_QUARTIERS.map((q) => {
-          const isSelected = activeQuartier === q.id;
-          return (
-            <button
-              key={q.id}
-              type="button"
-              onClick={() => {
-                setActiveQuartier(q.id);
-                setMapTarget({ center: q.coords, zoom: 14.5, id: Date.now() });
-              }}
-              className={`px-3 py-1 rounded-xl font-bold shrink-0 transition-all text-[11px] ${
-                isSelected
-                  ? 'bg-teal-600 text-white shadow-xs scale-102 ring-2 ring-teal-500/30'
-                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/70 dark:border-slate-700'
-              }`}
-            >
-              {q.name}
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* Conteneur Cartographique Principal */}
-      <div className="flex-1 relative w-full h-full bg-slate-100 dark:bg-slate-950">
-        {loading ? (
-          <div className="absolute inset-0 z-30 bg-white/70 dark:bg-slate-950/70 backdrop-blur-md flex items-center justify-center">
-            <div className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-white/90 dark:bg-slate-900/90 shadow-2xl border border-slate-200 dark:border-slate-800">
-              <RefreshCw className="w-8 h-8 text-teal-600 animate-spin" />
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                Génération de la cartographie médicale...
-              </p>
-            </div>
-          </div>
-        ) : error ? (
-          <div className="absolute inset-0 z-30 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-xs">
-            <div className="p-6 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/60 rounded-3xl shadow-2xl max-w-md text-center">
-              <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
-              <h3 className="text-base font-black text-slate-900 dark:text-white mb-1">Erreur de chargement</h3>
-              <p className="text-xs text-slate-500 mb-4">{error}</p>
-              <button
-                type="button"
-                onClick={loadData}
-                className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-2xl shadow-sm transition-colors"
-              >
-                Réessayer
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {/* État vide si aucun médecin géolocalisé */}
-        {!loading && medecins.length === 0 && (
-          <div className="absolute top-6 left-6 z-[1000] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-2xl max-w-sm">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400 shrink-0">
-                <AlertCircle className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-slate-900 dark:text-white">
-                  Aucun médecin géolocalisé
-                </h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                  Votre portefeuille ne comporte pas encore de coordonnées GPS actives sur Marrakech.
-                </p>
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => setDrawerOpen(true)}
-                    className="mt-3.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-black rounded-2xl shadow-xs transition-all"
-                  >
-                    Positionner des médecins ({medecinsSansCoords.length})
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* HUD Widget : Intelligence Décisionnelle Flottante (Haut Droite) */}
-        {!loading && (
-          <div className="absolute top-4 right-4 z-[1000] flex flex-col items-end gap-2 pointer-events-none">
-            <div className="pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 shadow-xl w-64 transition-all">
-              <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-900 dark:text-white">
-                    Synthèse Zone
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setHudCollapsed((prev) => !prev)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                  title={hudCollapsed ? 'Déplier le panneau' : 'Replier le panneau'}
-                >
-                  <ChevronRight className={`w-3.5 h-3.5 transition-transform ${hudCollapsed ? 'rotate-90' : '-rotate-90'}`} />
-                </button>
-              </div>
-
-              {!hudCollapsed && (
-                <div className="space-y-3">
-                  {/* CA Mobile */}
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">
-                      CA Mobile Affiché
-                    </span>
-                    <div className="text-base font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                      {totalCaMobile.toLocaleString('fr-FR')} MAD
-                    </div>
-                  </div>
-
-                  {/* Taux de couverture */}
-                  <div>
-                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 mb-1">
-                      <span>Couverture Géo Portefeuille</span>
-                      <span className="font-black text-slate-900 dark:text-white">{coveragePct}%</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all duration-500"
-                        style={{ width: `${coveragePct}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Mini-légende des segments */}
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[10px] font-black">
-                    <span className="text-emerald-600">A : {countsBySegment.A}</span>
-                    <span className="text-sky-600">B : {countsBySegment.B}</span>
-                    <span className="text-amber-600">C : {countsBySegment.C}</span>
-                    <span className="text-rose-600">D : {countsBySegment.D}</span>
-                  </div>
-
-                  {laboratoireLocation && (
-                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5 text-[10px] text-teal-700 dark:text-teal-400 font-bold">
-                      <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
-                      <span>Laboratoire central positionné</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Sélecteur de Calques Flottant (Bas Gauche) */}
-        {!loading && (
-          <div className="absolute bottom-6 left-4 z-[1000] flex flex-col gap-2">
-            {layerSelectorOpen && (
-              <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl p-3 shadow-2xl mb-1 w-52 space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-150">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block px-2 mb-1">
-                  Style de carte
-                </span>
-                {Object.values(MAP_TILES).map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => {
-                      setActiveTileKey(t.id);
-                      setLayerSelectorOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
-                      activeTileKey === t.id
-                        ? 'bg-teal-600 text-white shadow-xs'
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
-                  >
-                    <span>{t.name}</span>
-                    {activeTileKey === t.id && <Check className="w-3.5 h-3.5 text-white" />}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setLayerSelectorOpen((prev) => !prev)}
-              className="px-3.5 py-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xl text-xs font-bold text-slate-800 dark:text-slate-200 hover:text-teal-600 flex items-center gap-2 transition-all hover:scale-102"
-              title="Changer le style de carte"
-            >
-              <Layers className="w-4 h-4 text-teal-600" />
-              <span>{activeTile.name}</span>
-            </button>
-          </div>
-        )}
-
+      {/* Carte plein écran */}
+      <div className="absolute inset-0 z-0">
         {/* Map Leaflet */}
         <MapContainer
           center={MARRAKECH_CENTER}
@@ -1304,6 +858,7 @@ export default function ZoneIntelligencePage({ navigate }) {
           maxBounds={MARRAKECH_BOUNDS}
           maxBoundsViscosity={1.0}
           scrollWheelZoom={true}
+          zoomControl={false}
           className={`w-full h-full ${activeTile.isDarkFilter ? 'vactis-map-dark' : ''}`}
           style={{ height: '100%', width: '100%' }}
         >
@@ -1313,6 +868,9 @@ export default function ZoneIntelligencePage({ navigate }) {
             url={activeTile.url}
             subdomains={activeTile.subdomains}
           />
+          {(activeTile.overlayUrls || []).map((overlayUrl) => (
+            <TileLayer key={`${activeTile.id}-${overlayUrl}`} url={overlayUrl} zIndex={2} />
+          ))}
 
           {/* Contrôleur de centrage fluide */}
           <MapController
@@ -1323,6 +881,8 @@ export default function ZoneIntelligencePage({ navigate }) {
             targetTimestamp={mapTarget?.timestamp}
           />
 
+          <MapInstanceBridge mapRef={mapRef} />
+
           {/* Gestionnaire d'événements de clic */}
           <MapEventsHandler onMapClick={handleMapClick} />
 
@@ -1331,7 +891,7 @@ export default function ZoneIntelligencePage({ navigate }) {
             <Marker
               key={`quartier-${q.id}`}
               position={q.coords}
-              icon={createQuartierLabelIcon(q.name)}
+              icon={createQuartierLabelIcon(q.name, activeQuartier === q.id, activeTile.isDarkFilter || activeTile.isSatellite)}
               interactive={false}
             />
           ))}
@@ -1530,6 +1090,757 @@ export default function ZoneIntelligencePage({ navigate }) {
             })}
         </MapContainer>
       </div>
+
+      {/* Chargement / Erreur */}
+      {loading ? (
+        <div className="absolute inset-0 z-[1500] bg-white/60 dark:bg-slate-950/70 backdrop-blur-sm flex items-center justify-center">
+          <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <RefreshCw className="w-5 h-5 text-teal-600 animate-spin" />
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              Génération de la cartographie médicale...
+            </p>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="absolute inset-0 z-[1500] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
+          <div className="p-6 bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/60 rounded-3xl shadow-2xl max-w-md text-center">
+            <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
+            <h3 className="text-base font-black text-slate-900 dark:text-white mb-1">Erreur de chargement</h3>
+            <p className="text-xs text-slate-500 mb-4">{error}</p>
+            <button
+              type="button"
+              onClick={loadData}
+              className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-2xl shadow-sm transition-colors"
+            >
+              Réessayer
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ============ PANNEAU DE COMMANDE (gauche) ============ */}
+      <aside
+        className={`absolute top-4 left-4 bottom-4 z-[1100] w-[min(340px,calc(100%-2rem))] flex flex-col rounded-3xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-white/70 dark:border-slate-800 shadow-2xl shadow-slate-900/20 transition-all duration-300 ease-out ${
+          panelOpen ? 'translate-x-0 opacity-100' : '-translate-x-[110%] opacity-0 pointer-events-none'
+        }`}
+      >
+        {/* En-tête héro */}
+        <div className="relative overflow-hidden rounded-t-3xl bg-gradient-to-br from-teal-600 via-teal-600 to-emerald-700 px-5 pt-5 pb-4 text-white shrink-0">
+          <div className="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-white/10" />
+          <div className="absolute right-10 top-20 w-24 h-24 rounded-full bg-white/5" />
+          <svg className="absolute inset-0 w-full h-full opacity-[0.07]" aria-hidden="true">
+            <defs>
+              <pattern id="zi-grid" width="18" height="18" patternUnits="userSpaceOnUse">
+                <path d="M18 0H0V18" fill="none" stroke="#fff" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#zi-grid)" />
+          </svg>
+
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
+                <MapIcon className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-lg font-black tracking-tight leading-tight">Zone Intelligence</h1>
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-teal-50/90 mt-0.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-300" />
+                  </span>
+                  <span>Marrakech</span>
+                  <span className="opacity-60">· cartographie live</span>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPanelOpen(false)}
+              className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 transition-colors shrink-0"
+              title="Masquer le panneau"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="relative grid grid-cols-3 gap-2 mt-4">
+            <div className="rounded-xl bg-white/12 border border-white/15 px-2.5 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
+              <div className="text-[10px] font-semibold text-teal-50/80">Médecins</div>
+              <div className="text-lg font-black tabular-nums leading-tight">
+                {filteredMedecins.length}
+                <span className="text-[10px] font-semibold opacity-70">/{medecins.length}</span>
+              </div>
+            </div>
+            <div className="rounded-xl border border-white/15 px-2.5 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
+              <div className="text-[10px] font-semibold text-teal-50/80">Agences</div>
+              <div className="text-lg font-black tabular-nums leading-tight">{agences.length}</div>
+            </div>
+            <div className="rounded-xl border border-white/15 px-2.5 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }}>
+              <div className="text-[10px] font-semibold text-teal-50/80">Couverture</div>
+              <div className="text-lg font-black tabular-nums leading-tight">{coveragePct}%</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Recherche globale */}
+        <div ref={searchContainerRef} className="relative z-20 px-4 pt-4 shrink-0">
+          <div className={`flex items-center gap-2 rounded-xl border transition-all px-3 py-2.5 ${
+            searchDropdownOpen
+              ? 'bg-white dark:bg-slate-800 border-teal-400 ring-4 ring-teal-400/15'
+              : 'bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 hover:border-teal-300 focus-within:border-teal-400 focus-within:ring-4 focus-within:ring-teal-400/15'
+          }`}>
+            <Search className="w-4 h-4 text-slate-400 shrink-0" />
+            <input
+              type="text"
+              placeholder="Rechercher un médecin, laboratoire ou agence…"
+              value={globalSearch}
+              onChange={(e) => {
+                setGlobalSearch(e.target.value);
+                setSearchDropdownOpen(e.target.value.trim().length > 0);
+              }}
+              onFocus={() => globalSearch.trim().length > 0 && setSearchDropdownOpen(true)}
+              className="flex-1 bg-transparent outline-none text-xs font-medium text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 min-w-0"
+            />
+            {globalSearch && (
+              <button
+                type="button"
+                onClick={() => { setGlobalSearch(''); setSearchDropdownOpen(false); }}
+                className="p-0.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {globalSearch && searchResults.total > 0 && (
+              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 shrink-0">
+                {searchResults.total}
+              </span>
+            )}
+          </div>
+          <div className="absolute left-4 right-4 top-full">
+          {/* Dropdown résultats */}
+          {searchDropdownOpen && globalSearch.trim().length > 0 && (
+            <div className="absolute top-full left-0 right-0 z-[4000] mt-1.5 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-80 overflow-y-auto">
+              {searchResults.total === 0 ? (
+                <div className="px-4 py-6 text-center text-xs text-slate-400 flex flex-col items-center gap-2">
+                  <Search className="w-6 h-6 opacity-30" />
+                  <span>Aucun résultat pour <strong>&quot;{globalSearch}&quot;</strong></span>
+                </div>
+              ) : (
+                <>
+                  {/* Médecins géolocalisés */}
+                  {searchResults.medecinsGeo.length > 0 && (
+                    <div>
+                      <div className="px-3 pt-3 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <User className="w-3 h-3 text-teal-500" /> Médecins géolocalisés
+                      </div>
+                      {searchResults.medecinsGeo.map((m) => (
+                        <button
+                          key={`sr-doc-${m.id}`}
+                          type="button"
+                          onClick={() => handleSelectEntity('medecin-geo', m)}
+                          className="w-full text-left px-3 py-2.5 hover:bg-teal-50 dark:hover:bg-teal-950/40 flex items-center gap-3 transition-colors group"
+                        >
+                          <span
+                            className="w-7 h-7 rounded-xl flex items-center justify-center text-[10px] font-black text-white shrink-0"
+                            style={{ backgroundColor: SEGMENT_COLORS[(m.segment || 'D').toUpperCase()] || '#64748b' }}
+                          >
+                            {m.segment || 'D'}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                              Dr. {m.prenom} {m.nom}
+                            </p>
+                            <p className="text-[10px] text-slate-500 truncate">{m.specialite || 'Spécialité n/r'}{m.organisme ? ` · ${m.organisme}` : ''}</p>
+                          </div>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-teal-500 ml-auto shrink-0 transition-colors" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Agences concurrentes */}
+                  {searchResults.agencesList.length > 0 && (
+                    <div className={searchResults.medecinsGeo.length > 0 ? 'border-t border-slate-100 dark:border-slate-800' : ''}>
+                      <div className="px-3 pt-3 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <Building2 className="w-3 h-3 text-purple-500" /> Agences concurrentes
+                      </div>
+                      {searchResults.agencesList.map((a) => (
+                        <button
+                          key={`sr-ag-${a.id}`}
+                          type="button"
+                          onClick={() => handleSelectEntity('agence', a)}
+                          className="w-full text-left px-3 py-2.5 hover:bg-purple-50 dark:hover:bg-purple-950/40 flex items-center gap-3 transition-colors group"
+                        >
+                          <span className="w-7 h-7 rounded-xl bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center shrink-0">
+                            <Building2 className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{a.nom}</p>
+                            <p className="text-[10px] text-slate-500 truncate">{a.enseigne || 'Concurrent'}{a.adresse ? ` · ${a.adresse}` : ''}</p>
+                          </div>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-purple-500 ml-auto shrink-0 transition-colors" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Laboratoire central VACTIS */}
+                  {searchResults.labCentral && (
+                    <div className={(searchResults.medecinsGeo.length > 0 || searchResults.agencesList.length > 0) ? 'border-t border-slate-100 dark:border-slate-800' : ''}>
+                      <div className="px-3 pt-3 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 text-emerald-500" /> Laboratoire VACTIS
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectEntity('lab-central', searchResults.labCentral)}
+                        className="w-full text-left px-3 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 flex items-center gap-3 transition-colors group"
+                      >
+                        <span className="w-7 h-7 rounded-xl bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center font-black text-teal-700 dark:text-teal-300 shrink-0 text-sm">+</span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate">Laboratoire Central VACTIS</p>
+                          <p className="text-[10px] text-slate-500">Siège opérationnel</p>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-teal-500 ml-auto shrink-0 transition-colors" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Médecins sans géolocalisation */}
+                  {searchResults.medecinsNonGeo.length > 0 && (
+                    <div className="border-t border-slate-100 dark:border-slate-800">
+                      <div className="px-3 pt-3 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <AlertCircle className="w-3 h-3 text-amber-500" /> Sans géolocalisation
+                      </div>
+                      {searchResults.medecinsNonGeo.map((m) => (
+                        <button
+                          key={`sr-nongeo-${m.id}`}
+                          type="button"
+                          onClick={() => handleSelectEntity('medecin-non-geo', m)}
+                          className="w-full text-left px-3 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/40 flex items-center gap-3 transition-colors group"
+                        >
+                          <span className="w-7 h-7 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
+                            <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">Dr. {m.prenom} {m.nom}</p>
+                            <p className="text-[10px] text-slate-500 truncate">{m.specialite || 'Spécialité n/r'} · Non positionné sur la carte</p>
+                          </div>
+                          <ChevronRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-amber-500 ml-auto shrink-0 transition-colors" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+          </div>
+        </div>
+
+        {/* Corps défilant : filtres */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 scrollbar-thin">
+          {/* Coloration */}
+          <section>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Colorer les repères</h3>
+            <div className="grid grid-cols-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+              {[
+                { key: 'segment', label: 'Par Segment' },
+                { key: 'statut', label: 'Par Statut' },
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setColorCriterion(opt.key)}
+                  className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                    colorCriterion === opt.key
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Segments */}
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Segments</h3>
+              <span className="text-[10px] font-semibold text-slate-400">{selectedSegments.length}/4 actifs</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {['A', 'B', 'C', 'D'].map((seg) => {
+                const active = selectedSegments.includes(seg);
+                const color = SEGMENT_COLORS[seg];
+                const count = countsBySegment[seg] || 0;
+                return (
+                  <button
+                    key={seg}
+                    type="button"
+                    onClick={() => toggleSegmentFilter(seg)}
+                    aria-pressed={active}
+                    title={`Segment ${seg} : ${count} médecin(s)`}
+                    className={`relative overflow-hidden p-3 rounded-2xl border text-left transition-all ${
+                      active
+                        ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md'
+                        : 'bg-slate-50 dark:bg-slate-800/30 border-dashed border-slate-200 dark:border-slate-700 opacity-50 hover:opacity-80'
+                    }`}
+                  >
+                    <span className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: color }} />
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="w-7 h-7 rounded-lg text-white text-xs font-black flex items-center justify-center shadow-sm"
+                        style={{ backgroundColor: color }}
+                      >
+                        {seg}
+                      </span>
+                      <span
+                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${active ? '' : 'border-slate-300 dark:border-slate-600'}`}
+                        style={active ? { backgroundColor: color, borderColor: color } : undefined}
+                      >
+                        {active && <Check className="w-2.5 h-2.5 text-white" strokeWidth={4} />}
+                      </span>
+                    </div>
+                    <div className="mt-2 text-xl font-black text-slate-900 dark:text-white tabular-nums leading-none">{count}</div>
+                    <div className="text-[10px] font-medium text-slate-500 mt-1">médecin{count > 1 ? 's' : ''}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Statut */}
+          <section>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Statut commercial</h3>
+            <div className="relative">
+              <select
+                value={selectedStatut}
+                onChange={(e) => setSelectedStatut(e.target.value)}
+                className="w-full appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl pl-3 pr-9 py-2.5 font-semibold text-xs focus:ring-4 focus:ring-teal-400/15 focus:border-teal-400 outline-none cursor-pointer"
+              >
+                <option value="ALL">Tous les statuts</option>
+                <option value="PROGRESSION">Progression</option>
+                <option value="ACTIF_STABLE">Actif stable</option>
+                <option value="ONBOARDING">Onboarding</option>
+                <option value="SURVEILLANCE">Surveillance</option>
+                <option value="RETENTION">Rétention</option>
+                <option value="SILENCE_CRITIQUE">Silence critique</option>
+                <option value="A_REACTIVER">À réactiver</option>
+              </select>
+              <ChevronRight className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none" />
+            </div>
+          </section>
+
+          {/* Concurrence */}
+          <section>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Concurrence</h3>
+            <button
+              type="button"
+              onClick={() => setShowAgences((prev) => !prev)}
+              aria-pressed={showAgences}
+              className="w-full flex items-center justify-between gap-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-purple-300 transition-all"
+            >
+              <span className="flex items-center gap-2.5 min-w-0">
+                <span className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-300 flex items-center justify-center shrink-0">
+                  {showAgences ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                </span>
+                <span className="text-left min-w-0">
+                  <span className="block text-xs font-bold text-slate-900 dark:text-white">Agences concurrentes</span>
+                  <span className="block text-[10px] text-slate-500">{agences.length} repère{agences.length > 1 ? 's' : ''} · {showAgences ? 'visibles' : 'masqués'}</span>
+                </span>
+              </span>
+              <span className={`w-10 h-6 rounded-full p-0.5 transition-colors shrink-0 ${showAgences ? 'bg-purple-600' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                <span className={`block w-5 h-5 rounded-full bg-white shadow transition-transform ${showAgences ? 'translate-x-4' : ''}`} />
+              </span>
+            </button>
+          </section>
+
+          {(selectedSegments.length < 4 || selectedStatut !== 'ALL' || !showAgences) && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="w-full py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-teal-700 dark:hover:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Réinitialiser les filtres
+            </button>
+          )}
+        </div>
+
+        {/* Actions administrateur */}
+        {isAdmin && (
+          <div className="shrink-0 p-4 border-t border-slate-100 dark:border-slate-800 space-y-2 rounded-b-3xl bg-slate-50/80 dark:bg-slate-900/80">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="w-full flex items-center gap-2.5 p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-amber-300 transition-all group"
+            >
+              <span className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/50 text-amber-600 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-4 h-4" />
+              </span>
+              <span className="flex-1 text-left text-xs font-bold text-slate-800 dark:text-slate-100">Sans localisation</span>
+              <span className={`min-w-[24px] text-center px-1.5 py-0.5 rounded-md text-[11px] font-black tabular-nums ${
+                medecinsSansCoords.length > 0 ? 'bg-amber-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+              }`}>
+                {medecinsSansCoords.length}
+              </span>
+              <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-amber-500 transition-colors" />
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={openNewAgencyModal}
+                className="py-2.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Ajouter agence</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLaboratoryPlacementActive(true);
+                  showToast('Cliquez sur la carte pour placer le laboratoire VACTIS.');
+                }}
+                className="py-2.5 rounded-xl text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 shadow-sm shadow-teal-600/25 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Cross className="w-3.5 h-3.5" />
+                <span>{laboratoireLocation ? 'Modifier labo' : 'Localiser le labo'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </aside>
+
+      {/* Bouton de réouverture du panneau */}
+      {!panelOpen && (
+        <button
+          type="button"
+          onClick={() => setPanelOpen(true)}
+          className="absolute top-4 left-4 z-[1100] flex items-center gap-2.5 pl-2 pr-4 py-2 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 shadow-xl hover:shadow-2xl transition-all"
+        >
+          <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 text-white flex items-center justify-center">
+            <MapIcon className="w-4 h-4" />
+          </span>
+          <span className="text-xs font-bold text-slate-800 dark:text-white">Ouvrir le panneau</span>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+        </button>
+      )}
+
+      {/* ============ BARRE DES QUARTIERS (haut, flottante) ============ */}
+      <div
+        className={`hidden md:flex absolute top-4 z-[1050] transition-all duration-300 ${
+          panelOpen ? 'left-[372px]' : 'left-[230px]'
+        } right-4 lg:right-[320px]`}
+      >
+        <nav className="flex max-w-full items-center gap-1 p-1.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 shadow-xl overflow-x-auto scrollbar-none">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveQuartier(null);
+              setMapTarget({ center: MARRAKECH_CENTER, zoom: DEFAULT_ZOOM, timestamp: Date.now() });
+            }}
+            className={`px-3 py-1.5 rounded-xl text-[11px] font-bold shrink-0 transition-all flex items-center gap-1.5 ${
+              !activeQuartier
+                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5" />
+            Vue d'ensemble
+          </button>
+          <span className="w-px h-5 bg-slate-200 dark:bg-slate-700 shrink-0 mx-0.5" />
+          {MARRAKECH_QUARTIERS.map((q) => {
+            const isSelected = activeQuartier === q.id;
+            return (
+              <button
+                key={q.id}
+                type="button"
+                onClick={() => {
+                  setActiveQuartier(q.id);
+                  setMapTarget({ center: q.coords, zoom: 14.5, timestamp: Date.now() });
+                }}
+                className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold shrink-0 transition-all ${
+                  isSelected
+                    ? 'bg-teal-600 text-white shadow-sm shadow-teal-600/30'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                {q.name}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* État vide si aucun médecin géolocalisé */}
+      {!loading && medecins.length === 0 && (
+        <div className={`absolute bottom-6 z-[1000] max-w-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-2xl transition-all duration-300 ${
+          panelOpen ? 'left-4 right-4 md:left-[372px] md:right-auto' : 'left-4 right-4 md:right-auto'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white">Aucun médecin géolocalisé</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                Votre portefeuille ne comporte pas encore de coordonnées GPS actives sur Marrakech.
+              </p>
+            </div>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(true)}
+                className="shrink-0 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl shadow-sm shadow-amber-500/25 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Navigation className="w-3.5 h-3.5" />
+                Positionner des médecins ({medecinsSansCoords.length})
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ============ SYNTHÈSE (droite) ============ */}
+        {/* HUD Widget : Intelligence Décisionnelle Flottante (Haut Droite) */}
+        {!loading && (
+          <div className="hidden lg:flex absolute top-4 right-4 z-[1050] flex-col items-end gap-2 pointer-events-none">
+            <div className="pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-2xl shadow-xl w-72 overflow-hidden transition-all">
+              <button
+                type="button"
+                onClick={() => setHudCollapsed((prev) => !prev)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                title={hudCollapsed ? 'Déplier le panneau' : 'Replier le panneau'}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-lg bg-teal-50 dark:bg-teal-950/60 flex items-center justify-center">
+                    <Activity className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  </span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Synthèse de la zone</span>
+                </span>
+                <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${hudCollapsed ? 'rotate-90' : '-rotate-90'}`} />
+              </button>
+
+              {!hudCollapsed && (
+                <div className="px-4 pb-4 space-y-4">
+                  {/* KPIs principaux */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40">
+                      <span className="text-[10px] font-semibold text-emerald-700/80 dark:text-emerald-400/80 flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3" /> CA mobile
+                      </span>
+                      <div className="mt-0.5 text-lg font-black text-emerald-700 dark:text-emerald-300 tracking-tight tabular-nums leading-tight" title={`${totalCaMobile.toLocaleString('fr-FR')} MAD`}>
+                        {formatCompactMad(totalCaMobile)}
+                        <span className="text-[10px] font-bold ml-0.5 opacity-70">MAD</span>
+                      </div>
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60">
+                      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <User className="w-3 h-3" /> Médecins
+                      </span>
+                      <div className="mt-0.5 text-lg font-black text-slate-900 dark:text-white tracking-tight tabular-nums leading-tight">
+                        {filteredMedecins.length}
+                        <span className="text-[10px] font-semibold text-slate-400 ml-1">/ {medecins.length}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Taux de couverture */}
+                  <div>
+                    <div className="flex justify-between items-baseline text-[11px] mb-1.5">
+                      <span className="font-semibold text-slate-600 dark:text-slate-300">Couverture géographique</span>
+                      <span className={`font-black tabular-nums ${coveragePct >= 80 ? 'text-emerald-600' : coveragePct >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>
+                        {coveragePct}%
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${coveragePct}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1 tabular-nums">
+                      {medecins.length} positionné{medecins.length > 1 ? 's' : ''} · {medecinsSansCoords.length} à positionner
+                    </p>
+                  </div>
+
+                  {/* Légende dynamique */}
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block mb-2">
+                      {colorCriterion === 'segment' ? 'Répartition par segment' : 'Répartition par statut'}
+                    </span>
+                    {colorCriterion === 'segment' ? (
+                      <>
+                        <div className="flex w-full h-2 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 mb-2">
+                          {medecins.length > 0 && ['A', 'B', 'C', 'D'].map((seg) => (
+                            <div
+                              key={`bar-${seg}`}
+                              style={{ width: `${(countsBySegment[seg] / medecins.length) * 100}%`, backgroundColor: SEGMENT_COLORS[seg] }}
+                            />
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-4 gap-1">
+                          {['A', 'B', 'C', 'D'].map((seg) => (
+                            <div key={`lg-${seg}`} className="flex items-center gap-1.5 text-[11px]">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: SEGMENT_COLORS[seg] }} />
+                              <span className="font-semibold text-slate-500">{seg}</span>
+                              <span className="font-bold text-slate-900 dark:text-white tabular-nums">{countsBySegment[seg]}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : countsByStatut.length === 0 ? (
+                      <p className="text-[11px] text-slate-400">Aucun médecin affiché.</p>
+                    ) : (
+                      <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
+                        {countsByStatut.map(([st, n]) => (
+                          <div key={`st-${st}`} className="flex items-center gap-2 text-[11px]">
+                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: STATUT_COLORS[st] || '#64748b' }} />
+                            <span className="flex-1 truncate text-slate-600 dark:text-slate-300">{STATUT_LABELS[st] || st}</span>
+                            <span className="font-bold text-slate-900 dark:text-white tabular-nums">{n}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Repères cartographiques */}
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                      <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: CONCURRENCE_COLOR }} />
+                      <span>Concurrents</span>
+                      <span className="font-bold text-slate-900 dark:text-white tabular-nums ml-auto">{agences.length}</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 ${laboratoireLocation ? 'text-teal-700 dark:text-teal-400' : 'text-slate-400'}`}>
+                      <span className={`w-2 h-2 rounded-full ${laboratoireLocation ? 'bg-teal-500 animate-pulse' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                      <span className="font-semibold">{laboratoireLocation ? 'Labo positionné' : 'Labo non placé'}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+      {/* ============ BASCULE RAPIDE PLAN / SATELLITE ============ */}
+      {!loading && (
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTileKey(activeTile.isSatellite ? (isDark ? 'dark' : 'osm') : 'esri_hybrid');
+            setLayerSelectorOpen(false);
+          }}
+          className="absolute bottom-8 right-[68px] z-[1050] w-[72px] h-[72px] rounded-2xl overflow-hidden border-[3px] border-white dark:border-slate-800 shadow-xl hover:scale-105 transition-transform group"
+          title={activeTile.isSatellite ? 'Passer en vue plan' : 'Passer en vue satellite'}
+        >
+          <span
+            className="absolute inset-0"
+            style={{
+              background: activeTile.isSatellite
+                ? 'linear-gradient(135deg,#f1f5f9,#d9f99d 55%,#fde68a)'
+                : 'radial-gradient(circle at 30% 30%,#65a30d,transparent 45%), radial-gradient(circle at 75% 70%,#a16207,transparent 50%), linear-gradient(135deg,#14532d,#3f6212 55%,#57534e)',
+            }}
+          />
+          {activeTile.isSatellite && (
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 72 72" aria-hidden="true">
+              <path d="M0 50 L72 22 M20 0 L34 72 M0 18 L72 40" stroke="#ffffff" strokeWidth="3" fill="none" />
+              <path d="M0 50 L72 22" stroke="#fbbf24" strokeWidth="1.5" fill="none" />
+            </svg>
+          )}
+          <span className="absolute inset-x-0 bottom-0 py-1 bg-gradient-to-t from-black/75 to-transparent text-[10px] font-bold text-white text-center flex items-center justify-center gap-1">
+            <Layers className="w-3 h-3" />
+            {activeTile.isSatellite ? 'Plan' : 'Satellite'}
+          </span>
+        </button>
+      )}
+
+      {/* ============ CONTRÔLES CARTE (bas droite) ============ */}
+      {!loading && (
+        <div className="absolute bottom-8 right-4 z-[1050] flex flex-col items-end gap-2">
+          {layerSelectorOpen && (
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-2xl p-2 shadow-2xl w-60 animate-in fade-in slide-in-from-bottom-2 duration-150">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block px-2 pt-1 pb-2">
+                Style de carte
+              </span>
+              <div className="grid grid-cols-2 gap-1.5">
+                {Object.values(MAP_TILES).map((t) => {
+                  const swatch = {
+                    osm: 'linear-gradient(135deg,#f1f5f9,#d9f99d 60%,#fde68a)',
+                    dark: 'linear-gradient(135deg,#0f172a,#1e293b 60%,#334155)',
+                    esri_streets: 'linear-gradient(135deg,#fef3c7,#fff 50%,#e2e8f0)',
+                    esri_sat: 'linear-gradient(135deg,#14532d,#3f6212 55%,#78716c)',
+                    esri_hybrid: 'linear-gradient(135deg,#14532d,#3f6212 55%,#78716c), repeating-linear-gradient(45deg,transparent 0 8px,rgba(253,224,71,.8) 8px 10px)',
+                  }[t.id];
+                  const active = activeTileKey === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTileKey(t.id);
+                        setLayerSelectorOpen(false);
+                      }}
+                      className={`p-1.5 rounded-xl border-2 text-left transition-all ${
+                        active ? 'border-teal-500 bg-teal-50 dark:bg-teal-950/40' : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                    >
+                      <span className="block h-10 rounded-lg border border-black/5" style={{ background: swatch }} />
+                      <span className="block mt-1 text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">{t.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 shadow-xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => mapRef.current?.zoomIn()}
+              className="w-10 h-10 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Zoomer"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <span className="h-px bg-slate-200 dark:bg-slate-800" />
+            <button
+              type="button"
+              onClick={() => mapRef.current?.zoomOut()}
+              className="w-10 h-10 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Dézoomer"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            <span className="h-px bg-slate-200 dark:bg-slate-800" />
+            <button
+              type="button"
+              onClick={() => {
+                setActiveQuartier(null);
+                setMapTarget({ center: MARRAKECH_CENTER, zoom: DEFAULT_ZOOM, timestamp: Date.now() });
+              }}
+              className="w-10 h-10 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              title="Recentrer sur Marrakech"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setLayerSelectorOpen((prev) => !prev)}
+            className={`w-10 h-10 rounded-2xl backdrop-blur-xl border shadow-xl flex items-center justify-center transition-all ${
+              layerSelectorOpen
+                ? 'bg-teal-600 border-teal-600 text-white'
+                : 'bg-white/95 dark:bg-slate-900/95 border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:text-teal-600'
+            }`}
+            title={`Style de carte : ${activeTile.name}`}
+          >
+            <Layers className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Panneau latéral : Médecins sans localisation (Admin) */}
       {isAdmin && drawerOpen && (

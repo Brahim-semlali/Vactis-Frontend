@@ -289,7 +289,7 @@ export default function ControlePage({ navigate }) {
   return (
     <div className="space-y-6">
       {/* Hero Section */}
-      <Card className="p-6 bg-white shadow-xs border border-slate-200">
+      <Card className="vx-hero p-6 bg-white shadow-xs border border-slate-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-3">

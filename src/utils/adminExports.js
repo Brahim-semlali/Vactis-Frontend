@@ -57,8 +57,10 @@ export function buildPrintableHtml(rows, title = 'Export') {
     const label = String(header).toLowerCase();
     return label.includes('variation') || label.includes('silence') || label.includes('urgence %') || label.includes('note');
   };
-  const headerHtml = headers.map((header) => `<th style="${isRightAligned(header) ? 'text-align:right;' : ''}">${escapeHtml(header)}</th>`).join('');
-  const bodyHtml = dataRows.map((row) => `<tr>${row.map((cell, idx) => `<td style="${isRightAligned(headers[idx]) ? 'text-align:right;' : ''}">${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
+  // L'attribut style n'est écrit que pour les colonnes alignées à droite
+  const alignAttr = (header) => (isRightAligned(header) ? ' style="text-align:right;"' : '');
+  const headerHtml = headers.map((header) => `<th${alignAttr(header)}>${escapeHtml(header)}</th>`).join('');
+  const bodyHtml = dataRows.map((row) => `<tr>${row.map((cell, idx) => `<td${alignAttr(headers[idx])}>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
 
   const columnWidths = headers.map((header) => {
     const label = String(header).toLowerCase();

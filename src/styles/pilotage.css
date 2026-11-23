@@ -1,0 +1,506 @@
+/* ============================================================
+   Design commun des pages de pilotage
+   (Rapport commercial, Lecture activité, Bridge to Goal, Suivi équipe, Dashboard Direction)
+   ============================================================ */
+
+/* ── Animations d'apparition ─────────────────────────────── */
+
+@keyframes pilotage-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes pilotage-hero-shine {
+  0% { transform: translateX(-120%) skewX(-18deg); }
+  60%, 100% { transform: translateX(260%) skewX(-18deg); }
+}
+
+/* Reflet lumineux qui balaie les en-têtes de page */
+.pilotage-hero-shine {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: pilotage-hero-shine 7s ease-in-out 0.8s infinite;
+}
+
+/* Chaque enfant direct apparaît en cascade */
+.pilotage-stagger > * {
+  animation: pilotage-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.pilotage-stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.pilotage-stagger > *:nth-child(2) { animation-delay: 0.08s; }
+.pilotage-stagger > *:nth-child(3) { animation-delay: 0.14s; }
+.pilotage-stagger > *:nth-child(4) { animation-delay: 0.2s; }
+.pilotage-stagger > *:nth-child(5) { animation-delay: 0.26s; }
+.pilotage-stagger > *:nth-child(6) { animation-delay: 0.32s; }
+.pilotage-stagger > *:nth-child(7) { animation-delay: 0.38s; }
+.pilotage-stagger > *:nth-child(8) { animation-delay: 0.44s; }
+.pilotage-stagger > *:nth-child(n + 9) { animation-delay: 0.5s; }
+
+/* Carte qui se soulève au survol */
+.pilotage-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.pilotage-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px -12px rgba(15, 23, 42, 0.18);
+}
+
+/* Bloc d'étape (Bridge to Goal, Rapport commercial) */
+.pilotage-step {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -16px rgba(15, 23, 42, 0.16);
+}
+.pilotage-step::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, #14b8a6, #06b6d4, #0ea5e9);
+  opacity: 0.85;
+}
+
+/* Pastille numérotée d'étape */
+.pilotage-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #14b8a6, #0284c7);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 900;
+  box-shadow: 0 6px 14px -6px rgba(2, 132, 199, 0.6);
+}
+
+/* ── Lecture activité : alignement sur le design commun ──── */
+
+.activite-page > * {
+  animation: pilotage-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.activite-page > *:nth-child(2) { animation-delay: 0.06s; }
+.activite-page > *:nth-child(3) { animation-delay: 0.1s; }
+.activite-page > *:nth-child(4) { animation-delay: 0.14s; }
+.activite-page > *:nth-child(5) { animation-delay: 0.18s; }
+.activite-page > *:nth-child(6) { animation-delay: 0.22s; }
+.activite-page > *:nth-child(7) { animation-delay: 0.26s; }
+.activite-page > *:nth-child(8) { animation-delay: 0.3s; }
+.activite-page > *:nth-child(n + 9) { animation-delay: 0.34s; }
+
+.activite-page {
+  gap: 1.25rem;
+}
+
+.activite-hero {
+  padding: 1.75rem 2rem;
+  border-radius: 1.5rem;
+  border: none;
+  /* Même couleur que les en-têtes des autres pages (ardoise foncé → sarcelle) */
+  background:
+    radial-gradient(90% 120% at 100% 0%, rgba(255, 255, 255, 0.12) 0%, transparent 55%),
+    linear-gradient(135deg, #1e293b 0%, #334155 50%, #0f766e 100%);
+  box-shadow: 0 18px 40px -18px rgba(15, 23, 42, 0.45);
+}
+.activite-hero::before {
+  inset: 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+  animation: pilotage-hero-shine 6s ease-in-out 0.6s infinite;
+}
+.activite-hero::after {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 0 1.6rem rgba(255, 255, 255, 0.05), 0 0 0 3.2rem rgba(255, 255, 255, 0.03);
+}
+.activite-title {
+  font-size: 1.9rem;
+  font-weight: 900;
+}
+.activite-eyebrow {
+  color: #99f6e4;
+}
+.activite-description {
+  color: rgba(226, 232, 240, 0.9);
+}
+.activite-hero-icon {
+  width: 2.9rem;
+  height: 2.9rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.activite-card-section {
+  border-radius: 1.25rem;
+  padding: 1.4rem 1.5rem 1.5rem;
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.activite-card-section:hover {
+  box-shadow: 0 18px 36px -20px rgba(15, 23, 42, 0.22);
+}
+.activite-card-section::before {
+  width: 4px;
+}
+
+.activite-section-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.activite-kpi-card,
+.activite-comp-card,
+.activite-cr-card {
+  border-radius: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.activite-kpi-card:hover,
+.activite-comp-card:hover,
+.activite-cr-card:hover,
+.activite-insight-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px -14px rgba(15, 23, 42, 0.22);
+}
+.activite-kpi-value {
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.activite-section-nav {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 20;
+  backdrop-filter: blur(10px);
+  border-radius: 999px;
+}
+.activite-section-nav a {
+  border-radius: 999px;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+.activite-section-nav a:hover {
+  transform: translateY(-1px);
+}
+
+/* ── Lecture activité : finitions visuelles ───────────────── */
+
+@keyframes pilotage-pop {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); filter: blur(2px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+/* Pastille numérotée devant chaque titre de section (1, 2, 3…) */
+.activite-page {
+  counter-reset: activite-section;
+}
+.activite-card-section {
+  counter-increment: activite-section;
+}
+.activite-card-section .activite-section-title::before {
+  content: counter(activite-section);
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 0.65rem;
+  background: linear-gradient(135deg, #334155, #0f766e);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  box-shadow: 0 6px 14px -6px rgba(15, 118, 110, 0.7);
+}
+
+/* Liseré gauche des sections aux couleurs de l'en-tête */
+.activite-card-section::before {
+  background: linear-gradient(180deg, #334155, #0f766e) !important;
+}
+
+/* Léger halo en haut des sections (mode clair uniquement) */
+html:not(.dark) .activite-card-section {
+  background-image: linear-gradient(180deg, rgba(15, 118, 110, 0.035) 0%, rgba(255, 255, 255, 0) 9rem);
+}
+
+/* Les chiffres apparaissent avec un petit zoom */
+.activite-kpi-value,
+.activite-comp-card-value,
+.activite-clickable-card-value,
+.activite-transition-value {
+  animation: pilotage-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Cartes indicateurs : liseré coloré qui apparaît au survol */
+.activite-kpi-card {
+  position: relative;
+  overflow: hidden;
+}
+.activite-kpi-card::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, #14b8a6, #0ea5e9);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.activite-kpi-card:hover::after {
+  transform: scaleX(1);
+}
+.activite-kpi-badge {
+  transition: transform 0.2s ease;
+}
+.activite-kpi-card:hover .activite-kpi-badge {
+  transform: scale(1.1) rotate(-4deg);
+}
+
+/* Carte mise en avant (fond sombre) aux couleurs de l'en-tête */
+.activite-kpi-card--dark {
+  background: linear-gradient(135deg, #1e293b 0%, #134e4a 100%) !important;
+  border-color: transparent !important;
+  box-shadow: 0 14px 30px -16px rgba(15, 118, 110, 0.7);
+}
+
+/* Encart « Lecture VACTIS » */
+.activite-info-banner {
+  border-radius: 1rem;
+  border-left: 4px solid #0f766e;
+  padding: 0.9rem 1.1rem;
+}
+
+/* Menu des sections */
+.activite-section-nav {
+  padding: 0.35rem;
+}
+.activite-section-nav a:focus-visible,
+.activite-section-nav a:active {
+  background: linear-gradient(135deg, #334155, #0f766e);
+  color: #ffffff;
+}
+
+/* Zones de graphique */
+.activite-chart-section {
+  border-top: none;
+  margin-top: 0.5rem;
+  padding: 1.1rem 1.15rem 1.2rem;
+  border-radius: 1rem;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid #eef2f6;
+}
+html.dark .activite-chart-section {
+  background: rgba(15, 23, 42, 0.45);
+  border-color: rgba(51, 65, 85, 0.6);
+}
+
+/* ── Lecture activité : refonte (en-tête, onglets, cartes, révélation) ── */
+
+/* En-tête sur deux niveaux : titre + actions, puis bande de chiffres clés */
+.activite-hero {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.5rem;
+}
+
+.activite-hero-stats {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+@media (max-width: 1024px) {
+  .activite-hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.activite-hero-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(6px);
+  animation: pilotage-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.activite-hero-stat:nth-child(2) { animation-delay: 0.08s; }
+.activite-hero-stat:nth-child(3) { animation-delay: 0.16s; }
+.activite-hero-stat:nth-child(4) { animation-delay: 0.24s; }
+.activite-hero-stat:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-2px);
+}
+
+.activite-hero-stat-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.35), rgba(14, 165, 233, 0.25));
+  color: #ccfbf1;
+}
+
+.activite-hero-stat-label {
+  margin: 0;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.activite-hero-stat-value {
+  margin: 0.15rem 0 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.activite-hero-stat-suffix {
+  margin-left: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #99f6e4;
+}
+
+/* Onglets du menu : icône + pastille qui glisse vers l'onglet actif */
+.activite-section-nav a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  isolation: isolate;
+}
+.activite-section-nav a > svg,
+.activite-section-nav a > span:not(.activite-section-nav-pill) {
+  position: relative;
+  z-index: 1;
+}
+.activite-section-nav a.is-active {
+  color: #ffffff !important;
+  background: transparent !important;
+}
+.activite-section-nav-pill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #334155, #0f766e);
+  box-shadow: 0 6px 14px -6px rgba(15, 118, 110, 0.7);
+}
+
+/* Sections : apparition quand elles entrent à l'écran */
+.activite-page--reveal > .activite-card-section {
+  animation: none;
+}
+.activite-page--reveal .activite-card-section {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1), transform 0.65s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
+}
+.activite-page--reveal .activite-card-section.is-visible {
+  opacity: 1;
+  transform: none;
+}
+/* Les cartes d'une section apparaissent en cascade une fois la section visible */
+.activite-page--reveal .activite-card-section .activite-kpi-grid > *,
+.activite-page--reveal .activite-card-section .activite-comparison-cards > * {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.activite-page--reveal .activite-card-section.is-visible .activite-kpi-grid > *,
+.activite-page--reveal .activite-card-section.is-visible .activite-comparison-cards > * {
+  animation: pilotage-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.activite-card-section.is-visible .activite-kpi-grid > *:nth-child(2),
+.activite-card-section.is-visible .activite-comparison-cards > *:nth-child(2) { animation-delay: 0.07s; }
+.activite-card-section.is-visible .activite-kpi-grid > *:nth-child(3),
+.activite-card-section.is-visible .activite-comparison-cards > *:nth-child(3) { animation-delay: 0.14s; }
+.activite-card-section.is-visible .activite-kpi-grid > *:nth-child(4),
+.activite-card-section.is-visible .activite-comparison-cards > *:nth-child(4) { animation-delay: 0.21s; }
+.activite-card-section.is-visible .activite-kpi-grid > *:nth-child(n + 5),
+.activite-card-section.is-visible .activite-comparison-cards > *:nth-child(n + 5) { animation-delay: 0.28s; }
+
+/* À l'impression, toutes les sections sont visibles même si elles n'ont pas été atteintes au défilement */
+@media print {
+  .activite-page--reveal .activite-card-section,
+  .activite-page--reveal .activite-card-section .activite-kpi-grid > *,
+  .activite-page--reveal .activite-card-section .activite-comparison-cards > * {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+/* En-têtes de section : titre plus grand, séparé du contenu */
+.activite-section-title {
+  font-size: 1.25rem;
+}
+.activite-section-header,
+.activite-comparison-header,
+.activite-flux-header {
+  padding-bottom: 0.9rem;
+  border-bottom: 1px dashed #e2e8f0;
+}
+html.dark .activite-section-header,
+html.dark .activite-comparison-header,
+html.dark .activite-flux-header {
+  border-bottom-color: #3d444d;
+}
+
+/* Cartes indicateurs teintées selon leur couleur (mode clair) */
+html:not(.dark) .activite-kpi-card:has(.activite-kpi-badge--blue) { background: linear-gradient(160deg, #f0f9ff 0%, #ffffff 65%); border-color: #bae6fd; }
+html:not(.dark) .activite-kpi-card:has(.activite-kpi-badge--green) { background: linear-gradient(160deg, #ecfdf5 0%, #ffffff 65%); border-color: #a7f3d0; }
+html:not(.dark) .activite-kpi-card:has(.activite-kpi-badge--purple) { background: linear-gradient(160deg, #f5f3ff 0%, #ffffff 65%); border-color: #ddd6fe; }
+html:not(.dark) .activite-kpi-card:has(.activite-kpi-badge--amber) { background: linear-gradient(160deg, #fffbeb 0%, #ffffff 65%); border-color: #fde68a; }
+html:not(.dark) .activite-kpi-card:has(.activite-kpi-badge--red) { background: linear-gradient(160deg, #fff1f2 0%, #ffffff 65%); border-color: #fecdd3; }
+
+/* Liseré toujours visible, dans la couleur de la carte */
+.activite-kpi-card::after { transform: scaleX(0.35); }
+.activite-kpi-card:has(.activite-kpi-badge--blue)::after { background: linear-gradient(90deg, #0ea5e9, #38bdf8); }
+.activite-kpi-card:has(.activite-kpi-badge--green)::after { background: linear-gradient(90deg, #10b981, #34d399); }
+.activite-kpi-card:has(.activite-kpi-badge--purple)::after { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+.activite-kpi-card:has(.activite-kpi-badge--amber)::after { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.activite-kpi-card:has(.activite-kpi-badge--red)::after { background: linear-gradient(90deg, #f43f5e, #fb7185); }
+.activite-kpi-card--dark::after { background: linear-gradient(90deg, #2dd4bf, #38bdf8) !important; transform: scaleX(1); }
+
+/* Encart « Lecture VACTIS » : icône en dégradé */
+.activite-info-icon {
+  background: linear-gradient(135deg, #334155, #0f766e) !important;
+  color: #ffffff !important;
+  border-radius: 0.7rem;
+}
+
+/* ── Accessibilité : pas d'animation si l'utilisateur les réduit ── */
+@media (prefers-reduced-motion: reduce) {
+  .pilotage-stagger > *,
+  .activite-page > *,
+  .activite-hero::before,
+  .pilotage-hero-shine,
+  .activite-kpi-value,
+  .activite-comp-card-value,
+  .activite-clickable-card-value,
+  .activite-transition-value,
+  .activite-hero-stat,
+  .activite-card-section .activite-kpi-grid > *,
+  .activite-card-section .activite-comparison-cards > * {
+    animation: none !important;
+  }
+  .activite-page--reveal .activite-card-section,
+  .activite-page--reveal .activite-card-section .activite-kpi-grid > *,
+  .activite-page--reveal .activite-card-section .activite-comparison-cards > * {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .pilotage-lift:hover,
+  .activite-kpi-card:hover,
+  .activite-comp-card:hover,
+  .activite-cr-card:hover,
+  .activite-insight-card:hover {
+    transform: none;
+  }
+}

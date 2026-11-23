@@ -1,0 +1,1282 @@
+/* ==========================================================================
+   VACTIS — Couche de finition du design (chargée en dernier)
+   --------------------------------------------------------------------------
+   Améliore toutes les interfaces sans modifier leur logique :
+   typographie, focus accessibles, champs, tableaux, cartes, modales,
+   squelettes de chargement, barre latérale, en-tête et pages d'authentification.
+
+   Règles d'écriture :
+   - Palette existante uniquement (sarcelle #0d9488 / #009B83, cyan #06b6d4,
+     ardoise) : aucune nouvelle couleur de marque.
+   - Sélecteurs génériques enveloppés dans :where() (spécificité nulle) pour que
+     les classes Tailwind et les styles propres à chaque page restent prioritaires.
+   - Animations de déplacement via les propriétés `translate` / `scale`
+     (et non `transform`) pour ne jamais écraser un positionnement Tailwind
+     comme `-translate-x-1/2`.
+   - Tout est neutralisé si l'utilisateur demande moins d'animations.
+   ========================================================================== */
+
+:root {
+  --vx-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --vx-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --vx-teal: #0d9488;
+  --vx-teal-deep: #0f766e;
+  --vx-cyan: #06b6d4;
+  --vx-ring: rgba(13, 148, 136, 0.18);
+  --vx-hover-tint: rgba(13, 148, 136, 0.045);
+  --vx-card-hover-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 16px 34px -18px rgba(15, 23, 42, 0.2);
+  accent-color: var(--vx-teal);
+}
+
+html.dark {
+  --vx-ring: rgba(45, 212, 191, 0.22);
+  --vx-hover-tint: rgba(45, 212, 191, 0.07);
+  --vx-card-hover-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 36px -18px rgba(0, 0, 0, 0.65);
+}
+
+/* ── 1. Typographie : une seule police de marque partout ─────────────── */
+
+:root,
+body {
+  font-family: 'Plus Jakarta Sans', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  -moz-osx-font-smoothing: grayscale;
+}
+
+main :where(table) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 2. Barres de défilement fines (mode clair ; le sombre a les siennes) ─ */
+
+html:not(.dark) {
+  scrollbar-color: rgba(100, 116, 139, 0.38) transparent;
+}
+
+html:not(.dark) ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html:not(.dark) ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 116, 139, 0.32);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(13, 148, 136, 0.55);
+}
+
+/* ── 3. Focus clavier visible et cohérent ─────────────────────────────── */
+
+:where(button, a, summary, [role='button'], [role='tab'], [role='menuitem'], [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid var(--vx-teal);
+  outline-offset: 2px;
+}
+
+/* ── 4. Champs de formulaire : transitions douces + halo sarcelle ─────── */
+
+:where(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea) {
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+:where(main, [role='dialog'], .fixed) :where(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), select, textarea):focus {
+  border-color: var(--vx-teal);
+  box-shadow: 0 0 0 3px var(--vx-ring);
+}
+
+/* ── 5. Boutons : retour tactile à l'appui ────────────────────────────── */
+
+main :where(button:not(:disabled)) {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform, scale, translate;
+  transition-duration: 0.18s;
+  transition-timing-function: ease;
+}
+
+main :where(button:not(:disabled)):active {
+  scale: 0.97;
+}
+
+/* ── 6. Cartes : légère élévation au survol ───────────────────────────── */
+
+main :where(
+  .bg-white.border.rounded-2xl,
+  .bg-white.border.rounded-3xl
+):where(:not(input, select, textarea, button, .shadow-lg, .shadow-xl, .shadow-2xl)) {
+  transition: box-shadow 0.25s var(--vx-ease-out), border-color 0.25s ease;
+}
+
+main :where(
+  .bg-white.border.rounded-2xl,
+  .bg-white.border.rounded-3xl
+):where(:not(input, select, textarea, button, .shadow-lg, .shadow-xl, .shadow-2xl)):hover {
+  box-shadow: var(--vx-card-hover-shadow);
+}
+
+/* ── 7. Tableaux : survol de ligne et en-têtes ────────────────────────── */
+
+main :where(table tbody tr) {
+  transition: background-color 0.15s ease;
+}
+
+main :where(table tbody tr:hover > td) {
+  background-color: var(--vx-hover-tint);
+}
+
+main :where(table thead th) {
+  letter-spacing: 0.02em;
+}
+
+/* ── 8. Utilitaires d'entrée « animate-in » ───────────────────────────────
+   Les modales et menus utilisent déjà ces classes (fade-in, zoom-in-95,
+   slide-in-from-…) mais le plugin qui les définit n'est pas installé :
+   on les implémente ici pour que toutes ces animations jouent enfin. */
+
+@keyframes vx-enter {
+  from {
+    opacity: var(--vx-enter-opacity, 1);
+    translate: var(--vx-enter-x, 0) var(--vx-enter-y, 0);
+    scale: var(--vx-enter-scale, 1);
+  }
+}
+
+.animate-in {
+  animation: vx-enter var(--vx-enter-duration, 0.22s) var(--vx-ease-out) both;
+}
+
+.animate-in.fade-in { --vx-enter-opacity: 0; }
+.animate-in.zoom-in-95 { --vx-enter-scale: 0.95; }
+.animate-in.zoom-in-90 { --vx-enter-scale: 0.9; }
+.animate-in.slide-in-from-top-2 { --vx-enter-y: -0.5rem; }
+.animate-in.slide-in-from-top-4 { --vx-enter-y: -1rem; }
+.animate-in.slide-in-from-bottom-2 { --vx-enter-y: 0.5rem; }
+.animate-in.slide-in-from-bottom-4 { --vx-enter-y: 1rem; }
+.animate-in.slide-in-from-right { --vx-enter-x: 100%; }
+.animate-in.slide-in-from-left { --vx-enter-x: -100%; }
+.animate-in.duration-150 { --vx-enter-duration: 0.15s; }
+.animate-in.duration-200 { --vx-enter-duration: 0.2s; }
+.animate-in.duration-250 { --vx-enter-duration: 0.25s; }
+.animate-in.duration-300 { --vx-enter-duration: 0.3s; }
+
+/* ── 9. Modales sans animation : fondu du voile + apparition du contenu ── */
+
+@keyframes vx-overlay-in {
+  from { opacity: 0; }
+}
+
+@keyframes vx-dialog-in {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+    scale: 0.97;
+  }
+}
+
+:where(.fixed.inset-0[class*='bg-slate-950/'], .fixed.inset-0[class*='bg-slate-900/'], .fixed.inset-0[class*='bg-black/']) {
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: vx-overlay-in 0.2s ease both;
+}
+
+:where(.fixed.inset-0[class*='bg-slate-950/'], .fixed.inset-0[class*='bg-slate-900/'], .fixed.inset-0[class*='bg-black/']) > :where(:not(.animate-in)) {
+  animation: vx-dialog-in 0.28s var(--vx-ease-out) both;
+}
+
+/* ── 10. Squelettes de chargement : reflet animé ──────────────────────── */
+
+@keyframes vx-shimmer {
+  to { translate: 100% 0; }
+}
+
+.vx-shimmer,
+:where(.animate-pulse.bg-slate-100, .animate-pulse.bg-slate-200) {
+  position: relative;
+  overflow: hidden;
+}
+
+.vx-shimmer::after,
+:where(.animate-pulse.bg-slate-100, .animate-pulse.bg-slate-200)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  translate: -100% 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: vx-shimmer 1.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+html.dark .vx-shimmer::after,
+html.dark :where(.animate-pulse.bg-slate-100, .animate-pulse.bg-slate-200)::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+}
+
+/* ── 11. Graphiques Recharts : infobulles soignées ────────────────────── */
+
+.recharts-default-tooltip {
+  border-radius: 12px !important;
+  border-color: rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 12px 30px -12px rgba(15, 23, 42, 0.25) !important;
+  padding: 8px 12px !important;
+  font-size: 12px;
+}
+
+.recharts-tooltip-label {
+  font-weight: 700;
+}
+
+.recharts-rectangle.recharts-tooltip-cursor {
+  fill: var(--vx-hover-tint);
+}
+
+/* ── 12. En-tête : liseré animé + barre de progression de navigation ──── */
+
+@keyframes vx-accent-flow {
+  to { background-position: 200% 0; }
+}
+
+.vx-header-accent {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--vx-teal) 20%, var(--vx-cyan) 50%, var(--vx-teal) 80%, transparent);
+  background-size: 200% 100%;
+  opacity: 0.45;
+  animation: vx-accent-flow 10s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes vx-route-progress {
+  0% { scale: 0 1; opacity: 1; }
+  70% { scale: 1 1; opacity: 1; }
+  100% { scale: 1 1; opacity: 0; }
+}
+
+.vx-route-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--vx-teal-deep), var(--vx-teal), var(--vx-cyan));
+  box-shadow: 0 0 10px rgba(13, 148, 136, 0.55);
+  animation: vx-route-progress 0.75s var(--vx-ease-out) forwards;
+  pointer-events: none;
+}
+
+.vx-header-chip {
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, scale 0.18s ease;
+}
+
+.vx-header-chip:hover {
+  box-shadow: 0 6px 16px -8px rgba(13, 148, 136, 0.45);
+  border-color: rgba(13, 148, 136, 0.35);
+}
+
+.vx-theme-toggle svg {
+  transition: rotate 0.45s var(--vx-ease-spring);
+}
+
+.vx-theme-toggle:hover svg {
+  rotate: 25deg;
+}
+
+/* ── 12 bis. Entrée en cascade des blocs de chaque page ───────────────── */
+
+@keyframes vx-block-in {
+  from { opacity: 0; translate: 0 12px; }
+}
+
+/* Spécificité nulle : toute animation déjà portée par un bloc (spinner, stagger…) reste prioritaire. */
+:where(.vx-page > :not(.pilotage-stagger):not(.activite-page) > :not(.fixed):not(.absolute):not(script):not(style)) {
+  animation: vx-block-in 0.5s var(--vx-ease-out) both;
+}
+
+:where(.vx-page > :not(.pilotage-stagger):not(.activite-page) > :nth-child(2)) { animation-delay: 0.05s; }
+:where(.vx-page > :not(.pilotage-stagger):not(.activite-page) > :nth-child(3)) { animation-delay: 0.1s; }
+:where(.vx-page > :not(.pilotage-stagger):not(.activite-page) > :nth-child(4)) { animation-delay: 0.15s; }
+:where(.vx-page > :not(.pilotage-stagger):not(.activite-page) > :nth-child(5)) { animation-delay: 0.2s; }
+:where(.vx-page > :not(.pilotage-stagger):not(.activite-page) > :nth-child(6)) { animation-delay: 0.25s; }
+:where(.vx-page > :not(.pilotage-stagger):not(.activite-page) > :nth-child(n + 7)) { animation-delay: 0.3s; }
+
+/* ── 13. Barre latérale : refonte du menu de navigation ───────────────────
+   - Chaque section a une tuile d'icône teintée (couleurs de statut de la charte).
+   - Élément actif : fond sarcelle doux + indicateur sur le rail (fini la double bordure).
+   - Libellés longs sur 2 lignes au lieu d'être coupés.
+   - Mode sombre aligné (surcharge des !important de dark-mode.css). */
+
+/* Teintes par section (palette existante : sarcelle, bleu, ambre, émeraude, ardoise) */
+.sidebar .menu-section {
+  --tone: #0d9488;
+  --tone-2: #06b6d4;
+  --tone-ink: #0f766e;
+  --tone-soft: rgba(13, 148, 136, 0.1);
+}
+.sidebar .menu-section--medecins { --tone: #0284c7; --tone-2: #0ea5e9; --tone-ink: #0369a1; --tone-soft: rgba(2, 132, 199, 0.1); }
+.sidebar .menu-section--actions { --tone: #d97706; --tone-2: #f59e0b; --tone-ink: #b45309; --tone-soft: rgba(217, 119, 6, 0.11); }
+.sidebar .menu-section--qualite { --tone: #059669; --tone-2: #10b981; --tone-ink: #047857; --tone-soft: rgba(5, 150, 105, 0.1); }
+.sidebar .menu-section--administration { --tone: #475569; --tone-2: #64748b; --tone-ink: #334155; --tone-soft: rgba(71, 85, 105, 0.1); }
+
+html.dark .sidebar .menu-section { --tone-ink: #2dd4bf; --tone-soft: rgba(45, 212, 191, 0.12); }
+html.dark .sidebar .menu-section--medecins { --tone-ink: #38bdf8; --tone-soft: rgba(56, 189, 248, 0.12); }
+html.dark .sidebar .menu-section--actions { --tone-ink: #fbbf24; --tone-soft: rgba(251, 191, 36, 0.12); }
+html.dark .sidebar .menu-section--qualite { --tone-ink: #34d399; --tone-soft: rgba(52, 211, 153, 0.12); }
+html.dark .sidebar .menu-section--administration { --tone: #6e7681; --tone-2: #9198a1; --tone-ink: #c9d1d9; --tone-soft: rgba(145, 152, 161, 0.14); }
+
+/* Fond, marque et zone défilante */
+html:not(.dark) .sidebar {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfd 60%, #f6faf9 100%);
+}
+
+.sidebar-brand {
+  border-bottom-color: transparent;
+  background-image: linear-gradient(90deg, transparent, rgba(13, 148, 136, 0.25), transparent);
+  background-size: 100% 1px;
+  background-position: bottom;
+  background-repeat: no-repeat;
+}
+
+.sidebar-brand-logo {
+  transition: scale 0.3s var(--vx-ease-out);
+}
+.sidebar-brand:hover .sidebar-brand-logo {
+  scale: 1.03;
+}
+
+.sidebar-collapse-button {
+  border-color: var(--sidebar-border);
+  background: var(--card);
+}
+.sidebar-collapse-button svg {
+  transition: translate 0.2s ease;
+}
+.sidebar-collapse-button:hover {
+  color: var(--primary-dark);
+  border-color: rgba(13, 148, 136, 0.35);
+}
+.sidebar-collapse-button:hover svg { translate: -2px 0; }
+.sidebar-collapsed .sidebar-collapse-button:hover svg { translate: 2px 0; }
+
+.sidebar-body {
+  padding: 14px 10px 12px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 18px), transparent 100%);
+}
+
+.sidebar-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 10px 12px;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+}
+.sidebar-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--sidebar-border), transparent);
+}
+
+.sidebar .sidebar-nav { gap: 4px; }
+.sidebar .menu-section { gap: 2px; }
+
+/* En-tête de section */
+.sidebar .menu-section-header {
+  position: relative;
+  gap: 11px;
+  min-height: 46px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 14px;
+  box-shadow: none;
+}
+.sidebar .menu-section-header:hover {
+  background: var(--sidebar-hover);
+}
+
+.sidebar .menu-section-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--tone-soft);
+  color: var(--tone-ink);
+  transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, scale 0.3s var(--vx-ease-spring), rotate 0.3s var(--vx-ease-spring);
+}
+.sidebar .menu-section-icon svg {
+  width: 17px;
+  height: 17px;
+}
+.sidebar .menu-section-header:hover .menu-section-icon {
+  scale: 1.07;
+  rotate: -4deg;
+}
+
+.sidebar .menu-section-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  transition: color 0.2s ease;
+}
+
+.sidebar .menu-chevron {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  transition: rotate 0.3s var(--vx-ease-out), background 0.2s ease, color 0.2s ease;
+}
+.sidebar .menu-chevron.menu-chevron-open {
+  transform: none;
+  rotate: 180deg;
+}
+.sidebar .menu-section-header:hover .menu-chevron {
+  background: var(--card);
+  color: var(--text);
+}
+
+/* Section qui contient la page active */
+.sidebar .menu-section-active,
+html.dark .sidebar .menu-section-active {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.sidebar .menu-section-active:hover,
+html.dark .sidebar .menu-section-active:hover {
+  background: var(--sidebar-hover) !important;
+}
+.sidebar .menu-section-active .menu-section-title {
+  font-weight: 700;
+  color: var(--text);
+}
+.sidebar .menu-section-active .menu-section-icon {
+  background: linear-gradient(135deg, var(--tone), var(--tone-2));
+  color: #ffffff;
+  box-shadow: 0 8px 16px -8px var(--tone);
+}
+
+/* Sous-menus : hauteur max suffisante + rail aligné sur le centre de la tuile */
+.sidebar .menu-section-content {
+  transition: max-height 0.35s var(--vx-ease-out), opacity 0.25s ease;
+}
+.sidebar .menu-section-content-open {
+  max-height: 640px;
+}
+
+.sidebar .menu-section-items {
+  position: relative;
+  gap: 2px;
+  margin: 2px 0 8px 23px;
+  padding-left: 12px;
+  border-left: 1.5px solid rgba(148, 163, 184, 0.28);
+}
+html.dark .sidebar .menu-section-items {
+  border-left-color: rgba(145, 152, 161, 0.18);
+}
+
+.sidebar .menu-subitem {
+  position: relative;
+  gap: 10px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: none;
+}
+html:not(.dark) .sidebar .menu-subitem {
+  color: #484f58;
+}
+.sidebar .menu-subitem:hover {
+  background: var(--sidebar-hover);
+}
+html:not(.dark) .sidebar .menu-subitem:hover {
+  color: var(--text);
+}
+
+.sidebar .menu-subitem-icon {
+  color: #7b8da1;
+  transition: color 0.2s ease, translate 0.2s ease;
+}
+.sidebar .menu-subitem-icon svg {
+  width: 16px;
+  height: 16px;
+}
+.sidebar .menu-subitem:hover .menu-subitem-icon {
+  color: var(--primary-dark);
+  translate: 2px 0;
+}
+html.dark .sidebar .menu-subitem:hover .menu-subitem-icon {
+  color: var(--sidebar-active-text);
+}
+
+/* Libellés longs : 2 lignes max au lieu d'une coupure « … » */
+.sidebar .menu-subitem-label {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  line-height: 1.25;
+  font-size: 0.78rem;
+  font-weight: 500;
+  transition: translate 0.2s ease;
+}
+.sidebar .menu-subitem:hover .menu-subitem-label {
+  translate: 2px 0;
+}
+
+/* Page active : fond doux + indicateur posé sur le rail + point à droite */
+@keyframes vx-nav-indicator {
+  from { scale: 1 0; opacity: 0; }
+}
+
+.sidebar .menu-subitem-active,
+html.dark .sidebar .menu-subitem-active {
+  background: var(--sidebar-active-bg) !important;
+  color: var(--sidebar-active-text) !important;
+  box-shadow: none !important;
+}
+.sidebar .menu-subitem-active .menu-subitem-label {
+  font-weight: 700;
+  padding-right: 10px;
+}
+.sidebar .menu-subitem-active .menu-subitem-icon {
+  color: var(--primary-dark);
+}
+html.dark .sidebar .menu-subitem-active .menu-subitem-icon {
+  color: var(--sidebar-active-text);
+}
+.sidebar .menu-subitem-active::before {
+  content: '';
+  position: absolute;
+  left: -14px;
+  top: 7px;
+  bottom: 7px;
+  width: 3.5px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, var(--vx-teal), var(--vx-cyan));
+  box-shadow: 0 0 10px rgba(13, 148, 136, 0.45);
+  animation: vx-nav-indicator 0.35s var(--vx-ease-out) both;
+}
+.sidebar .menu-subitem-active::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--vx-teal);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+/* Mode réduit : tuiles centrées + repère coloré sur la section active */
+.sidebar-collapsed .sidebar-body {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.sidebar.sidebar-collapsed .menu-section-header {
+  justify-content: center;
+  padding: 5px;
+}
+.sidebar.sidebar-collapsed .menu-section-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+.sidebar.sidebar-collapsed .menu-section-active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  width: 4px;
+  height: 22px;
+  margin-top: -11px;
+  border-radius: 0 4px 4px 0;
+  background: var(--tone);
+}
+
+/* Carte profil en pied de menu */
+.sidebar .sidebar-profile {
+  border-radius: 16px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, translate 0.2s ease;
+}
+.sidebar .sidebar-profile:hover {
+  translate: 0 -2px;
+}
+.sidebar span.sidebar-profile-avatar {
+  position: relative;
+  box-shadow: 0 6px 14px -6px rgba(15, 23, 42, 0.6);
+}
+.sidebar span.sidebar-profile-avatar::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #10b981;
+  border: 2px solid var(--card);
+}
+.sidebar .sidebar-profile-role {
+  margin-top: 3px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary-dark);
+}
+html.dark .sidebar .sidebar-profile-role {
+  color: var(--sidebar-active-text);
+}
+.sidebar-profile-arrow {
+  transition: translate 0.2s ease, rotate 0.25s var(--vx-ease-out);
+}
+.sidebar-profile:hover .sidebar-profile-arrow { translate: 2px 0; }
+.sidebar-profile--open .sidebar-profile-arrow { rotate: -90deg; }
+
+.sidebar-profile-menu {
+  padding: 6px;
+  border-radius: 14px;
+  animation: vx-dialog-in 0.2s var(--vx-ease-out) both;
+  transform-origin: bottom right;
+}
+.sidebar-profile-menu button {
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+/* Voile flouté derrière le menu sur mobile */
+.sidebar-backdrop {
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+
+/* ── 14. Bouton « retour en haut » avec progression de lecture ────────── */
+
+.vx-scroll-top {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 45;
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  border: 1px solid rgba(13, 148, 136, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--vx-teal-deep);
+  box-shadow: 0 12px 28px -12px rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.vx-scroll-top:hover {
+  background: var(--vx-teal);
+  color: #ffffff;
+}
+
+.vx-scroll-top svg.vx-scroll-top-ring {
+  position: absolute;
+  inset: -1px;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+  rotate: -90deg;
+  pointer-events: none;
+}
+
+.vx-scroll-top-ring circle {
+  fill: none;
+  stroke: var(--vx-teal);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.12s linear;
+}
+
+.vx-scroll-top:hover .vx-scroll-top-ring circle {
+  stroke: var(--vx-cyan);
+}
+
+html.dark .vx-scroll-top {
+  background: rgba(22, 36, 54, 0.92);
+  border-color: rgba(45, 212, 191, 0.25);
+  color: #5eead4;
+}
+
+html.dark .vx-scroll-top:hover {
+  background: #0d9488;
+  color: #ffffff;
+}
+
+@media print {
+  .vx-scroll-top,
+  .vx-route-progress,
+  .vx-header-accent {
+    display: none !important;
+  }
+}
+
+/* ── 15. Authentification ────────────────────────────────────────────────
+   Les pages Connexion / Inscription ont leurs propres feuilles : styles/auth/. */
+
+/* ── 16 bis. En-têtes de pages unifiés (.vx-hero) ─────────────────────────
+   Même dégradé que les pages de pilotage (HERO_GRADIENT : ardoise → sarcelle),
+   appliqué aux en-têtes des pages Médecins, Actions, Contrôle, Alertes,
+   Recommandations, Réclamations, Administration, Paramètres, Import/Export,
+   Compte et Rapport commercial. Textes, pastilles, tuiles et boutons sont
+   adaptés automatiquement au fond sombre. */
+
+@keyframes vx-hero-shine {
+  0% { translate: -120% 0; }
+  60%, 100% { translate: 320% 0; }
+}
+
+:root .vx-hero {
+  position: relative !important;
+  overflow: hidden;
+  isolation: isolate;
+  margin-bottom: 0 !important;
+  padding: 1.6rem 1.9rem !important;
+  border: 0 !important;
+  border-radius: 1.5rem !important;
+  background-color: #1e293b !important;
+  background-image:
+    radial-gradient(90% 140% at 100% 0%, rgba(255, 255, 255, 0.12) 0%, transparent 55%),
+    radial-gradient(60% 90% at 30% 120%, rgba(45, 212, 191, 0.22) 0%, transparent 60%),
+    linear-gradient(135deg, #1e293b 0%, #334155 50%, #0f766e 100%) !important;
+  box-shadow: 0 18px 40px -18px rgba(15, 23, 42, 0.5) !important;
+  color: #ffffff;
+}
+
+/* Reflet qui balaie l'en-tête + anneaux décoratifs */
+:root .vx-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 32%;
+  z-index: -1;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: vx-hero-shine 7s ease-in-out 0.8s infinite;
+  pointer-events: none;
+}
+
+:root .vx-hero::after {
+  content: '';
+  position: absolute;
+  right: -3.5rem;
+  top: -3.5rem;
+  width: 11rem;
+  height: 11rem;
+  z-index: -1;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 1.6rem rgba(255, 255, 255, 0.045), 0 0 0 3.2rem rgba(255, 255, 255, 0.025);
+  pointer-events: none;
+}
+
+/* Titres */
+:root .vx-hero :is(h1, h2, h3) {
+  color: #ffffff !important;
+  letter-spacing: -0.02em;
+}
+
+:root .vx-hero h1 {
+  text-shadow: 0 2px 18px rgba(15, 23, 42, 0.25);
+}
+
+/* Textes courants (hors boutons et champs) */
+:root .vx-hero :is(p, span, label, small, div):not(:where(button, select, input, textarea, a) *) {
+  color: rgba(226, 232, 240, 0.9) !important;
+}
+
+:root .vx-hero :is(p, span):is(.font-bold, .font-black, .font-extrabold, .font-semibold):not(:where(button, select, a) *) {
+  color: #ffffff !important;
+}
+
+/* Sur-titre (petites capitales) en sarcelle clair */
+:root .vx-hero :is(p, span).uppercase:not(:where(button, select, a) *) {
+  color: #99f6e4 !important;
+}
+
+/* Tuiles d'icône, pastilles et encarts → verre dépoli */
+:root .vx-hero [class*='bg-']:not(button, select, input, textarea, a, svg, svg *, :where(button, a) *) {
+  background-color: rgba(255, 255, 255, 0.13) !important;
+  background-image: none !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Pastilles d'alerte : on garde la nuance rouge */
+:root .vx-hero [class*='bg-rose-'][class]:not(button, :where(button) *) {
+  background-color: rgba(244, 63, 94, 0.22) !important;
+  border-color: rgba(253, 164, 175, 0.4) !important;
+  color: #ffe4e6 !important;
+}
+
+:root .vx-hero [class*='bg-'] svg {
+  color: inherit;
+}
+
+/* Boutons secondaires → boutons translucides */
+:root .vx-hero button {
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  background-color: rgba(255, 255, 255, 0.14) !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: background-color 0.2s ease, translate 0.2s ease, box-shadow 0.2s ease;
+}
+
+:root .vx-hero button:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.24) !important;
+  translate: 0 -1px;
+}
+
+:root .vx-hero button * {
+  color: inherit !important;
+}
+
+:root .vx-hero button [class*='bg-'] {
+  background-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+/* Bouton d'action principal (sarcelle à l'origine) → bouton blanc */
+:root .vx-hero button[class*='bg-teal-7'] {
+  border-color: transparent !important;
+  background-color: #ffffff !important;
+  color: #0f766e !important;
+  box-shadow: 0 10px 24px -10px rgba(15, 23, 42, 0.55) !important;
+}
+
+:root .vx-hero button[class*='bg-teal-7']:hover:not(:disabled) {
+  background-color: #f0fdfa !important;
+  box-shadow: 0 14px 28px -10px rgba(15, 23, 42, 0.6) !important;
+}
+
+/* Sélecteurs posés sur l'en-tête */
+:root .vx-hero select {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  color: #1e293b !important;
+}
+
+@media (max-width: 640px) {
+  :root .vx-hero {
+    padding: 1.25rem !important;
+  }
+}
+
+@media print {
+  :root .vx-hero {
+    background: none !important;
+    box-shadow: none !important;
+    color: #0f172a !important;
+  }
+  :root .vx-hero *,
+  :root .vx-hero :is(h1, h2, h3, p, span) {
+    color: #0f172a !important;
+  }
+  :root .vx-hero::before,
+  :root .vx-hero::after {
+    display: none;
+  }
+}
+
+/* ── 16 quater. Cartes indicateurs (.vx-kpi) — Médecins, Actions ────────── */
+
+.vx-kpi {
+  --k1: #0284c7;
+  --k2: #0ea5e9;
+  --ksoft: rgba(2, 132, 199, 0.12);
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.85rem;
+  min-height: 7.25rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 24px -18px rgba(15, 23, 42, 0.25);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.vx-kpi--teal { --k1: #0d9488; --k2: #06b6d4; --ksoft: rgba(13, 148, 136, 0.12); }
+.vx-kpi--emerald { --k1: #059669; --k2: #10b981; --ksoft: rgba(5, 150, 105, 0.12); }
+.vx-kpi--amber { --k1: #d97706; --k2: #f59e0b; --ksoft: rgba(217, 119, 6, 0.13); }
+.vx-kpi--red { --k1: #e11d48; --k2: #f43f5e; --ksoft: rgba(225, 29, 72, 0.12); }
+.vx-kpi--blue { --k1: #0369a1; --k2: #0284c7; --ksoft: rgba(3, 105, 161, 0.12); }
+
+/* Liseré coloré en haut */
+.vx-kpi::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--k1), var(--k2));
+}
+
+/* Halo de couleur dans le coin, qui grandit au survol */
+.vx-kpi::after {
+  content: '';
+  position: absolute;
+  right: -2.5rem;
+  bottom: -3rem;
+  width: 9rem;
+  height: 9rem;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--ksoft) 0%, transparent 70%);
+  transition: scale 0.45s var(--vx-ease-out);
+  pointer-events: none;
+}
+
+.vx-kpi:hover {
+  border-color: color-mix(in srgb, var(--k1) 35%, transparent) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 18px 34px -18px color-mix(in srgb, var(--k1) 45%, transparent);
+}
+.vx-kpi:hover::after {
+  scale: 1.45;
+}
+
+.vx-kpi-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.vx-kpi-label {
+  padding-top: 0.2rem;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.vx-kpi-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.85rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--k1), var(--k2));
+  box-shadow: 0 8px 18px -8px var(--k1);
+  transition: scale 0.35s var(--vx-ease-spring), rotate 0.35s var(--vx-ease-spring);
+}
+.vx-kpi-icon svg {
+  color: #ffffff;
+}
+.vx-kpi:hover .vx-kpi-icon {
+  scale: 1.08;
+  rotate: -6deg;
+}
+
+.vx-kpi-value {
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+
+.vx-kpi-hint {
+  margin-top: -0.4rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #94a3b8;
+  transition: color 0.2s ease;
+}
+.vx-kpi:hover .vx-kpi-hint,
+.vx-kpi--active .vx-kpi-hint {
+  color: var(--k1);
+}
+
+.vx-kpi--active {
+  background-image: linear-gradient(180deg, var(--ksoft), transparent 70%);
+}
+
+html.dark .vx-kpi-label { color: #9198a1; }
+html.dark .vx-kpi-value { color: #e6edf3; }
+html.dark .vx-kpi-hint { color: #6e7681; }
+html.dark .vx-kpi { box-shadow: 0 10px 24px -18px rgba(0, 0, 0, 0.7); }
+
+/* ── 16 quinquies. Listes déroulantes de filtres ────────────────────────── */
+
+.vx-select-chevron {
+  transition: rotate 0.25s var(--vx-ease-out), opacity 0.2s ease;
+}
+.vx-select-trigger[data-state='open'] .vx-select-chevron {
+  rotate: 180deg;
+  opacity: 0.9;
+}
+
+/* Filtre utilisé → mis en évidence en sarcelle */
+.vx-select-trigger.vx-select-active {
+  border-color: #5eead4;
+  background-color: #f0fdfa;
+  color: #115e59;
+  font-weight: 700;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+.vx-select-trigger.vx-select-active .vx-select-chevron {
+  color: #0d9488;
+  opacity: 1;
+}
+html.dark .vx-select-trigger.vx-select-active {
+  border-color: rgba(45, 212, 191, 0.55) !important;
+  background-color: rgba(20, 184, 166, 0.12) !important;
+  color: #5eead4 !important;
+}
+
+/* Liste ouverte (Radix) : apparition douce */
+[data-radix-popper-content-wrapper] > [role='listbox'] {
+  animation: vx-dialog-in 0.18s var(--vx-ease-out) both;
+  box-shadow: 0 18px 40px -16px rgba(15, 23, 42, 0.3);
+}
+
+/* ── 16 sexies. Tableaux de données (.vx-data-table) ───────────────────── */
+
+@keyframes vx-row-in {
+  from { opacity: 0; translate: 0 6px; }
+}
+
+.vx-data-table thead th {
+  white-space: nowrap;
+  height: 2.9rem;
+  background: linear-gradient(180deg, #f8fafc, #f1f5f9);
+  border-bottom: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 0.66rem !important;
+  letter-spacing: 0.09em !important;
+}
+html.dark .vx-data-table thead th {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom-color: var(--card-border, #30363d);
+  color: #9198a1;
+}
+
+/* Colonne Médecin assez large pour ne plus s'écraser sur 5 lignes */
+.vx-data-table tbody td:first-child {
+  min-width: 230px;
+}
+
+.vx-data-table tbody td {
+  vertical-align: middle;
+}
+
+/* Liseré sarcelle sur la ligne survolée */
+.vx-data-table tbody tr > td:first-child {
+  transition: box-shadow 0.2s ease;
+}
+.vx-data-table tbody tr:hover > td:first-child {
+  box-shadow: inset 3px 0 0 var(--vx-teal);
+}
+
+/* Zébrage léger (spécificité nulle : les lignes sélectionnées gardent leur fond) */
+:where(.vx-data-table tbody tr:nth-child(even)) {
+  background-color: rgba(248, 250, 252, 0.7);
+}
+html.dark :where(.vx-data-table tbody tr:nth-child(even)) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Apparition des lignes en cascade */
+.vx-data-table tbody tr {
+  animation: vx-row-in 0.4s var(--vx-ease-out) both;
+}
+.vx-data-table tbody tr:nth-child(2) { animation-delay: 0.03s; }
+.vx-data-table tbody tr:nth-child(3) { animation-delay: 0.06s; }
+.vx-data-table tbody tr:nth-child(4) { animation-delay: 0.09s; }
+.vx-data-table tbody tr:nth-child(5) { animation-delay: 0.12s; }
+.vx-data-table tbody tr:nth-child(6) { animation-delay: 0.15s; }
+.vx-data-table tbody tr:nth-child(7) { animation-delay: 0.18s; }
+.vx-data-table tbody tr:nth-child(8) { animation-delay: 0.21s; }
+.vx-data-table tbody tr:nth-child(n + 9) { animation-delay: 0.24s; }
+
+/* ── 16 ter. Fond de l'espace de travail : halo sarcelle discret ───────── */
+
+.app-shell > div > main {
+  background-image: radial-gradient(1100px 420px at 75% -12%, rgba(13, 148, 136, 0.07), transparent 65%);
+  background-repeat: no-repeat;
+}
+
+html.dark .app-shell > div > main {
+  background-image: radial-gradient(1100px 420px at 75% -12%, rgba(45, 212, 191, 0.07), transparent 65%);
+}
+
+/* ── 16. Respect de « réduire les animations » ────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* ── 17. Menu latéral : ouverture et fermeture ────────────────────────── */
+/* Largeur de la barre, libellés, flèches et sections sont animés par
+   framer-motion (Sidebar.jsx) : ces animations restent visibles même quand
+   le système demande de réduire les animations. Ici : le reste de la mise en page. */
+
+:root {
+  --vx-ease-menu: cubic-bezier(0.32, 0.72, 0, 1);
+  --vx-menu-duree: 0.42s;
+}
+
+/* framer-motion pilote largeur et déplacement : pas de transition CSS concurrente */
+.sidebar {
+  transition: box-shadow 0.3s ease;
+}
+
+.sidebar .menu-section-panel {
+  overflow: hidden;
+}
+
+/* Libellés animés en largeur : une seule ligne, sans débordement */
+.sidebar .menu-section-title,
+.sidebar .menu-chevron,
+.sidebar .sidebar-profile-meta,
+.sidebar .sidebar-profile-arrow {
+  overflow: hidden;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sidebar .menu-section-title,
+.sidebar .sidebar-profile-meta {
+  flex: 0 1 auto;
+}
+/* La flèche se cale à droite sans que le titre ait besoin de s'étirer */
+.sidebar .menu-chevron,
+.sidebar .sidebar-profile-arrow {
+  margin-left: auto;
+}
+.sidebar .menu-chevron.menu-chevron-open {
+  rotate: none;
+}
+.sidebar .sidebar-label {
+  overflow: hidden;
+}
+
+/* En-têtes de section et profil : marges qui suivent la largeur */
+.sidebar .menu-section-header {
+  transition:
+    background 0.2s ease,
+    gap var(--vx-menu-duree) var(--vx-ease-menu),
+    padding var(--vx-menu-duree) var(--vx-ease-menu),
+    transform 0.15s ease;
+}
+.sidebar.sidebar-collapsed .menu-section-header {
+  gap: 0;
+}
+.sidebar .menu-section-header:active {
+  transform: scale(0.98);
+}
+.sidebar .menu-section-icon {
+  transition:
+    background 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease,
+    width var(--vx-menu-duree) var(--vx-ease-menu),
+    height var(--vx-menu-duree) var(--vx-ease-menu),
+    scale 0.3s var(--vx-ease-spring),
+    rotate 0.3s var(--vx-ease-spring);
+}
+.sidebar .sidebar-body {
+  transition: padding var(--vx-menu-duree) var(--vx-ease-menu);
+}
+.sidebar .sidebar-profile {
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    gap var(--vx-menu-duree) var(--vx-ease-menu),
+    padding var(--vx-menu-duree) var(--vx-ease-menu);
+}
+.sidebar-collapsed .sidebar-profile {
+  gap: 0;
+  padding: 10px 11px;
+  justify-content: center;
+}
+
+
+/* Tiroir mobile : fond flouté */
+.sidebar-backdrop {
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  transition: opacity 0.32s ease;
+}
+
+/* Bouton de thème : l'icône pivote en entrant */
+@keyframes vx-theme-icon-in {
+  from { opacity: 0; rotate: -90deg; scale: 0.4; }
+}
+.vx-theme-icon {
+  animation: vx-theme-icon-in 0.45s var(--vx-ease-spring) both;
+}
+
+/* Changement de thème (View Transitions API) : le nouveau thème est révélé
+   en cercle depuis le bouton ; l'animation est pilotée par ThemeContext.jsx */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+/* Changement de thème : fondu des couleurs sur toute la page */
+/* (navigateurs sans View Transitions) */
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition:
+    background-color 0.35s ease,
+    border-color 0.35s ease,
+    color 0.25s ease,
+    fill 0.35s ease,
+    stroke 0.35s ease,
+    box-shadow 0.35s ease !important;
+  transition-delay: 0s !important;
+}
+

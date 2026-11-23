@@ -132,12 +132,14 @@ export async function getReclamations(token, { search, statut, categorie, priori
   return response.json();
 }
 
-export async function mettreAJourStatutReclamation(token, id, { statut, solution, responsable, prochaineInstruction, dateTraitement }) {
+export async function mettreAJourStatutReclamation(token, id, { statut, solution, responsable, prochaineInstruction, dateTraitement, dateEcheance }) {
   const body = { statut };
   if (solution) body.solution = solution;
   if (responsable) body.responsable = responsable;
   if (prochaineInstruction) body.prochaineInstruction = prochaineInstruction;
   if (dateTraitement) body.dateTraitement = dateTraitement;
+  // Chaîne vide = retirer l'échéance ; undefined = ne pas la modifier
+  if (dateEcheance !== undefined) body.dateEcheance = dateEcheance;
   const response = await fetch(`${API_BASE}/api/reclamations/${id}/statut`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },

@@ -10,14 +10,14 @@ const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) 
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      'flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 ring-offset-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 transition-colors shadow-2xs hover:border-slate-300',
+      'vx-select-trigger flex h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 ring-offset-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 transition-all shadow-2xs hover:border-teal-300 hover:shadow-xs data-[state=open]:border-primary data-[state=open]:ring-2 data-[state=open]:ring-primary/20',
       className
     )}
     {...props}
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <svg className="h-4 w-4 opacity-50 ml-2 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg className="vx-select-chevron h-4 w-4 opacity-50 ml-2 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="m6 9 6 6 6-6" />
       </svg>
     </SelectPrimitive.Icon>
@@ -87,7 +87,8 @@ function CustomSelect({ label, value, onChange, placeholder = 'Tous', options = 
     <div className="flex flex-col gap-1 text-left min-w-[130px] flex-1">
       {label && <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">{label}</span>}
       <Select value={selectedVal} onValueChange={handleValueChange}>
-        <SelectTrigger>
+        {/* Un filtre utilisé est mis en évidence pour voir d'un coup d'œil ce qui est filtré. */}
+        <SelectTrigger className={value ? 'vx-select-active' : undefined}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>

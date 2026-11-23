@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import VactisPilotBanner from '../../components/VactisPilotBanner';
 import { getRecommandations, creerActionRecommandation } from '../../api/vactis.js';
 
 export default function RecommandationsPage() {
@@ -137,11 +136,9 @@ export default function RecommandationsPage() {
 
   return (
     <div className="space-y-6 max-w-[1700px] mx-auto pb-12 font-sans antialiased text-slate-800 dark:text-slate-100">
-      {/* 1. Header institutionnel Pilote VACTIS */}
-      <VactisPilotBanner profil="Laboratoire d'anatomopathologie — CA et cas" />
 
       {/* 2. En-tête de la page Recommandations */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-xs">
+      <div className="vx-hero flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-6 rounded-3xl shadow-xs">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <span className="p-1.5 rounded-xl bg-cyan-50 dark:bg-cyan-950 text-cyan-600 dark:text-cyan-400">

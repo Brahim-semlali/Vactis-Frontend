@@ -106,6 +106,7 @@ export default function ReclamationsPage() {
     responsable: '',
     prochaineInstruction: '',
     dateTraitement: new Date().toISOString().split('T')[0],
+    dateEcheance: '',
   });
   const [updating, setUpdating] = useState(false);
   const [updateError, setUpdateError] = useState('');
@@ -165,6 +166,7 @@ export default function ReclamationsPage() {
       responsable: rec.responsableTraitement || rec.responsableAffecte || '',
       prochaineInstruction: rec.prochaineInstruction || '',
       dateTraitement: rec.dateResolution || new Date().toISOString().split('T')[0],
+      dateEcheance: rec.dateEcheance || '',
     });
     setUpdateError('');
     setLoadingHistorique(true);
@@ -239,6 +241,7 @@ export default function ReclamationsPage() {
         responsable: updateForm.responsable,
         prochaineInstruction: updateForm.prochaineInstruction,
         dateTraitement: updateForm.dateTraitement,
+        dateEcheance: updateForm.dateEcheance,
       });
       setSelectedReclamation(updated);
       loadReclamations();
@@ -255,7 +258,7 @@ export default function ReclamationsPage() {
   return (
     <div className="mx-auto max-w-[1600px] space-y-5 p-4 sm:p-6 md:p-8">
       {/* En-tête */}
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
+      <div className="vx-hero flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300"><ClipboardList size={20} /></span>
           <div>
@@ -742,6 +745,19 @@ export default function ReclamationsPage() {
                     placeholder="Protocole validé, ajustement technique, geste commercial..."
                     value={updateForm.solution}
                     onChange={(e) => setUpdateForm({ ...updateForm, solution: e.target.value })}
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="reclamation-echeance" className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Échéance de traitement
+                  </label>
+                  <input
+                    id="reclamation-echeance"
+                    type="date"
+                    value={updateForm.dateEcheance}
+                    onChange={(e) => setUpdateForm({ ...updateForm, dateEcheance: e.target.value })}
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   />
                 </div>

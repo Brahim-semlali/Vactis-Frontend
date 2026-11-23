@@ -1,10 +1,54 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { getMonMenu } from '../api/menu.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useTheme } from '../context/ThemeContext.jsx';
 import { MenuIcon } from './icons/MenuIcons.jsx';
 import { showcaseLogo } from './AuthLayout.jsx';
 const logo = new URL('./icons/logo.png', import.meta.url).href;
+const logoSombre = new URL('../../public/logoSombre.png', import.meta.url).href;
 import { Skeleton } from './ui/skeleton.jsx';
+
+// Courbe « naturelle » : départ rapide, arrivée très douce
+const EASE_MENU = [0.32, 0.72, 0, 1];
+
+const LISTE_VARIANTS = {
+  ouvert: { transition: { staggerChildren: 0.035, delayChildren: 0.06 } },
+  ferme: { transition: { staggerChildren: 0.02, staggerDirection: -1 } },
+};
+
+const ITEM_VARIANTS = {
+  ouvert: { opacity: 1, x: 0, transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] } },
+  ferme: { opacity: 0, x: -10, transition: { duration: 0.16, ease: 'easeIn' } },
+};
+
+const LARGEUR_OUVERTE = 272;
+const LARGEUR_REDUITE = 82;
+const TRANSITION_BARRE = { duration: 0.42, ease: EASE_MENU };
+// Libellés : ils s'effacent vite à la fermeture et réapparaissent une fois la barre élargie
+const libelle = (visible) => ({
+  animate: { opacity: visible ? 1 : 0, width: visible ? 'auto' : 0 },
+  transition: {
+    width: TRANSITION_BARRE,
+    opacity: visible ? { duration: 0.25, delay: 0.12 } : { duration: 0.12 },
+  },
+  initial: false,
+});
+
+function useEcranBureau() {
+  const requete = '(min-width: 768px)';
+  const [bureau, setBureau] = useState(
+    () => typeof window.matchMedia !== 'function' || window.matchMedia(requete).matches,
+  );
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined;
+    const media = window.matchMedia(requete);
+    const surChangement = () => setBureau(media.matches);
+    media.addEventListener('change', surChangement);
+    return () => media.removeEventListener('change', surChangement);
+  }, []);
+  return bureau;
+}
 
 function isRouteActive(activeRoute, itemRoute) {
   if (!itemRoute) return false;
@@ -27,10 +71,12 @@ function isRouteActive(activeRoute, itemRoute) {
 
 export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCollapse, mobileOpen = false, onMobileClose }) {
   const { token, username, userProfile, logout } = useAuth();
+  const { isDark } = useTheme();
   const [menu, setMenu] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const bureau = useEcranBureau();
 
   useEffect(() => {
     let cancelled = false;
@@ -84,6 +130,11 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
     setOpenSections((current) => new Set(current).add(activeSection));
   }, [activeSection]);
 
+  // Le menu du profil se referme quand la barre est réduite
+  useEffect(() => {
+    if (collapsed) setProfileMenuOpen(false);
+  }, [collapsed]);
+
   const toggleSection = (sectionId) => {
     setOpenSections((current) => {
       const next = new Set(current);
@@ -101,16 +152,25 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
         aria-hidden="true"
       />
 
-      <aside
+      <motion.aside
         className={`sidebar ${collapsed ? 'sidebar-collapsed' : ''} ${mobileOpen ? 'sidebar-mobile-open' : ''}`}
         aria-label="Sidebar principale"
+        initial={false}
+        animate={bureau
+          ? { width: collapsed ? LARGEUR_REDUITE : LARGEUR_OUVERTE, x: 0 }
+          : { width: Math.min(280, window.innerWidth * 0.82), x: mobileOpen ? '0%' : '-108%' }}
+        transition={TRANSITION_BARRE}
       >
         <div className="sidebar-brand">
           <div className={`sidebar-brand-content ${collapsed ? 'sidebar-brand-content--collapsed' : ''}`}>
-            <img
+            <motion.img
+              key={collapsed ? 'logo-reduit' : `logo-complet-${isDark ? 'sombre' : 'clair'}`}
               className={`sidebar-brand-logo ${collapsed ? 'sidebar-brand-logo--collapsed' : ''}`}
-              src={collapsed ? showcaseLogo : logo}
+              src={collapsed ? showcaseLogo : (isDark ? logoSombre : logo)}
               alt="VACTIS"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, ease: EASE_MENU }}
             />
           </div>
 
@@ -120,14 +180,35 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
             onClick={onToggleCollapse}
             aria-label={collapsed ? 'Ouvrir le menu' : 'Réduire le menu'}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d={collapsed ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'} />
-            </svg>
+            <motion.svg
+              className="sidebar-collapse-icon"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={false}
+              animate={{ rotate: collapsed ? 180 : 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+            >
+              <path d="M15 6l-6 6 6 6" />
+            </motion.svg>
           </button>
         </div>
 
         <div className="sidebar-body">
-          {!collapsed && <p className="sidebar-label">NAVIGATION</p>}
+          <motion.p
+            className="sidebar-label"
+            aria-hidden={collapsed}
+            initial={false}
+            animate={{ opacity: collapsed ? 0 : 1, height: collapsed ? 0 : 'auto' }}
+            transition={{ height: TRANSITION_BARRE, opacity: { duration: collapsed ? 0.12 : 0.25, delay: collapsed ? 0 : 0.12 } }}
+          >
+            NAVIGATION
+          </motion.p>
 
           {loading && (
             <div className="sidebar-skeletons">
@@ -154,46 +235,77 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
                   <div key={section.idMenuPrinc} className={`menu-section menu-section--${getSectionTone(section.nom)}`}>
                     <button
                       type="button"
-                      onClick={() => toggleSection(section.idMenuPrinc)}
+                      onClick={() => {
+                        if (collapsed) {
+                          // En mode réduit les sous-menus sont masqués : on rouvre le menu sur cette section.
+                          setOpenSections((current) => new Set(current).add(section.idMenuPrinc));
+                          onToggleCollapse?.();
+                          return;
+                        }
+                        toggleSection(section.idMenuPrinc);
+                      }}
                       title={collapsed ? section.nom : undefined}
                       className={`menu-section-header ${collapsed ? 'menu-section-header-collapsed' : ''} ${isSectionActive ? 'menu-section-active' : ''}`}
-                      aria-expanded={isOpen}
+                      aria-expanded={isOpen && !collapsed}
                     >
                       <span className="menu-section-icon">
                         <MenuIcon name={section.icone || section.icon} fallback={section.nom} />
                       </span>
-                      {!collapsed && <span className="menu-section-title">{section.nom}</span>}
-                      {!collapsed && (
-                        <span className={`menu-chevron ${isOpen ? 'menu-chevron-open' : ''}`} aria-hidden="true">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m6 9 6 6 6-6" />
-                          </svg>
-                        </span>
-                      )}
+                      <motion.span className="menu-section-title" {...libelle(!collapsed)}>{section.nom}</motion.span>
+                      <motion.span
+                        className="menu-chevron"
+                        aria-hidden="true"
+                        initial={false}
+                        animate={{ opacity: collapsed ? 0 : 1, width: collapsed ? 0 : 22, rotate: isOpen ? 180 : 0 }}
+                        transition={{ rotate: { duration: 0.32, ease: EASE_MENU }, width: TRANSITION_BARRE, opacity: { duration: 0.2 } }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      </motion.span>
                     </button>
 
-                    {!collapsed && (
-                      <div className={`menu-section-content ${isOpen ? 'menu-section-content-open' : ''}`}>
-                        <div className="menu-section-items">
-                          {sectionItems.map((item) => {
-                            const isActive = isRouteActive(activeRoute, item.route);
-                            return (
-                              <button
-                                key={item.idMenu}
-                                type="button"
-                                onClick={() => onNavigate(item.route)}
-                                className={`menu-subitem ${isActive ? 'menu-subitem-active' : ''}`}
-                              >
-                                <span className="menu-subitem-icon">
-                                  <MenuIcon name={item.icon || item.icone} fallback={item.label} />
-                                </span>
-                                <span className="menu-subitem-label">{item.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                    <AnimatePresence initial={false}>
+                      {isOpen && !collapsed && (
+                        <motion.div
+                          key="panneau"
+                          className="menu-section-panel"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{
+                            height: { duration: 0.36, ease: EASE_MENU },
+                            opacity: { duration: 0.24, ease: 'easeOut' },
+                          }}
+                        >
+                          <motion.div
+                            className="menu-section-items"
+                            variants={LISTE_VARIANTS}
+                            initial="ferme"
+                            animate="ouvert"
+                            exit="ferme"
+                          >
+                            {sectionItems.map((item) => {
+                              const isActive = isRouteActive(activeRoute, item.route);
+                              return (
+                                <motion.button
+                                  key={item.idMenu}
+                                  type="button"
+                                  variants={ITEM_VARIANTS}
+                                  onClick={() => onNavigate(item.route)}
+                                  className={`menu-subitem ${isActive ? 'menu-subitem-active' : ''}`}
+                                >
+                                  <span className="menu-subitem-icon">
+                                    <MenuIcon name={item.icon || item.icone} fallback={item.label} />
+                                  </span>
+                                  <span className="menu-subitem-label">{item.label}</span>
+                                </motion.button>
+                              );
+                            })}
+                          </motion.div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 );
               })}
@@ -201,10 +313,18 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
           )}
         </div>
 
-        {!collapsed && (
-          <div className="sidebar-profile-wrapper">
-            {profileMenuOpen && (
-              <div className="sidebar-profile-menu" role="menu">
+        <div className="sidebar-profile-wrapper">
+            <AnimatePresence>
+            {profileMenuOpen && !collapsed && (
+              <motion.div
+                className="sidebar-profile-menu"
+                role="menu"
+                style={{ transformOrigin: 'bottom right' }}
+                initial={{ opacity: 0, y: 8, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.96 }}
+                transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+              >
                 <button
                   type="button"
                   role="menuitem"
@@ -231,15 +351,23 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
                   </svg>
                   <span>Déconnexion</span>
                 </button>
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
             <button
               type="button"
               className={`sidebar-profile ${profileMenuOpen ? 'sidebar-profile--open' : ''} ${
                 activeRoute === '/parametres' || activeRoute === '/settings' ? 'sidebar-profile--active border-teal-500/50 bg-teal-50/50 dark:bg-teal-950/30' : ''
               }`}
-              onClick={() => setProfileMenuOpen((open) => !open)}
-              aria-expanded={profileMenuOpen}
+              onClick={() => {
+                if (collapsed) {
+                  onToggleCollapse?.();
+                  return;
+                }
+                setProfileMenuOpen((open) => !open);
+              }}
+              title={collapsed ? 'Ouvrir le menu' : undefined}
+              aria-expanded={profileMenuOpen && !collapsed}
               aria-haspopup="menu"
             >
               {userProfile?.avatar ? (
@@ -256,7 +384,7 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
                   ).toUpperCase()}
                 </span>
               )}
-              <span className="sidebar-profile-meta">
+              <motion.span className="sidebar-profile-meta" {...libelle(!collapsed)}>
                 <span className="sidebar-profile-name truncate">
                   {userProfile?.firstName
                     ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
@@ -265,12 +393,11 @@ export default function Sidebar({ activeRoute, onNavigate, collapsed, onToggleCo
                 <span className="sidebar-profile-role">
                   {userProfile?.role || 'Directeur'}
                 </span>
-              </span>
-              <span className="sidebar-profile-arrow" aria-hidden="true">›</span>
+              </motion.span>
+              <motion.span className="sidebar-profile-arrow" aria-hidden="true" {...libelle(!collapsed)}>›</motion.span>
             </button>
           </div>
-        )}
-      </aside>
+      </motion.aside>
     </>
   );
 }

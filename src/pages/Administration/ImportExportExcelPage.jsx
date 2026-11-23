@@ -130,7 +130,7 @@ export default function ImportExportExcelPage() {
 
   return (
     <section className="mx-auto w-full max-w-7xl">
-      <header className="mb-7 flex flex-col gap-3 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
+      <header className="vx-hero mb-7 flex flex-col gap-3 border-b border-slate-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em] text-teal-700">Administration</p>
           <h1 className="text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Importation et exportation Excel</h1>

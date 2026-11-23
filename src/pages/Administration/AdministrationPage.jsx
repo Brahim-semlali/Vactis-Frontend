@@ -960,7 +960,7 @@ export default function AdministrationPage({ mode = "roles" }) {
   const title = isRoles ? "Rôles" : "Users";
   return (
     <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+      <div className="vx-hero flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <div>
           <p className="text-xs font-black uppercase tracking-[.22em] text-teal-700">
             Administration
