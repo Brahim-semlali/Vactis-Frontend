@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { Activity as ActivityIcon, FileX2, LayoutGrid, MapPin, Sparkles, Stethoscope, TrendingUp, Users, Wallet, X } from 'lucide-react';
+import { AnimatedValue, fmtEntier, fmtMad } from '../../components/pilotage/PilotageUI.jsx';
 import {
   ResponsiveContainer,
   Area,
@@ -39,6 +40,7 @@ import {
   getTypeActionMeta,
   getVactisStatutMeta,
 } from './activiteLabels.js';
+import EquipeCommercialeTab from './EquipeCommercialeTab.jsx';
 
 function ActiviteMetaBadge({ meta, className = '' }) {
   const badgeRef = useRef(null);
@@ -96,15 +98,37 @@ function ActiviteMetaBadge({ meta, className = '' }) {
 
 function formatNumber(val, decimals = 0) {
   if (val === null || val === undefined || isNaN(val)) return '0';
+  // L'espace fine (U+202F) des milliers devient invisible avec un interlettrage serré :
+  // on la remplace par une espace insécable classique.
   return Number(val).toLocaleString('fr-FR', {
-    minimumFractionDigits: decimals,
+    minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
-  });
+  }).replace(/\u202f/g, '\u00a0');
+}
+
+function formatSignedPercent(val) {
+  const n = Number(val ?? 0);
+  return `${n >= 0 ? '+' : '−'}${formatNumber(Math.abs(n), 1)} %`;
 }
 
 function formatCurrency(val) {
   return `${formatNumber(val)} MAD`;
 }
+
+// Onglets principaux de la page
+const ONGLETS = [
+  { id: 'laboratoire', label: 'Activité du laboratoire' },
+  { id: 'equipe', label: 'Équipe commerciale' },
+];
+
+// Onglets du menu « Lecture rapide » : ancre, libellé et icône
+const SECTIONS_NAV = [
+  { id: 'activite-synthese', label: 'Synthèse', icon: LayoutGrid },
+  { id: 'activite-evolution', label: 'Évolution', icon: TrendingUp },
+  { id: 'activite-portefeuille', label: 'Portefeuille', icon: Users },
+  { id: 'activite-terrain', label: 'Terrain', icon: MapPin },
+  { id: 'activite-impact', label: 'Impact VACTIS', icon: Sparkles },
+];
 
 const RANG_STATUT_MAP = {
   progression: 1,
@@ -544,6 +568,13 @@ export default function LectureActivitePage() {
   const [moisList, setMoisList] = useState([]);
   const [selectedMois, setSelectedMois] = useState('');
   const [kpis, setKpis] = useState(null);
+  const [sectionActive, setSectionActive] = useState(SECTIONS_NAV[0].id);
+  const [onglet, setOnglet] = useState('laboratoire');
+  // Apparition des sections au défilement, active dès le premier rendu pour éviter
+  // qu'elles s'affichent, disparaissent puis réapparaissent à l'ouverture de la page.
+  const [revelationActive] = useState(
+    () => typeof window !== 'undefined' && typeof window.IntersectionObserver === 'function',
+  );
   const [comparaison, setComparaison] = useState(null);
   const [metriqueTab, setMetriqueTab] = useState('cas');
   const [chartType, setChartType] = useState('bar');
@@ -752,15 +783,38 @@ export default function LectureActivitePage() {
   const vsPreviousPct = activeCompData?.variationVsMPrecedentPct ?? 0;
   const vsReferencePct = activeCompData?.variationVsRefPct ?? 0;
   const getTrendLabel = (value) => value > 0 ? 'hausse' : value < 0 ? 'baisse' : 'stabilité';
+  // Les sections apparaissent quand elles entrent à l'écran, et l'onglet de la section visible s'allume.
+  // Sans IntersectionObserver (vieux navigateur, tests), tout reste affiché normalement.
+  useEffect(() => {
+    if (!revelationActive) return undefined;
+    const sections = Array.from(document.querySelectorAll('.activite-card-section'));
+    const revelation = new window.IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          revelation.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08 });
+    const suivi = new window.IntersectionObserver((entries) => {
+      const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+      if (visible?.target?.id) setSectionActive(visible.target.id);
+    }, { rootMargin: '-20% 0px -60% 0px' });
+    sections.forEach((section) => {
+      revelation.observe(section);
+      if (SECTIONS_NAV.some((item) => item.id === section.id)) suivi.observe(section);
+    });
+    return () => {
+      revelation.disconnect();
+      suivi.disconnect();
+    };
+  }, [loading, revelationActive, onglet]);
+
   const getTrendClass = (value) => value > 0 ? 'activite-insight-card--up' : value < 0 ? 'activite-insight-card--down' : 'activite-insight-card--neutral';
 
   return (
-    <motion.div
-      className="activite-page"
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-    >
+    // Pas d'animation propre ici : AppLayout anime déjà le changement de page
+    <div className={`activite-page${revelationActive ? ' activite-page--reveal' : ''}`}>
       {/* Hero Section — style ANAPAT AMANA */}
       <section className="activite-hero">
         <div className="activite-hero-inner">
@@ -823,6 +877,27 @@ export default function LectureActivitePage() {
             </button>
           </div>
         </div>
+
+        {/* Chiffres clés du mois, visibles sans faire défiler */}
+        <div className="activite-hero-stats" aria-label="Chiffres clés du mois">
+          {[
+            { label: 'CA du mois', icon: Wallet, value: kpis?.caMoisTotal, format: fmtMad },
+            { label: 'Cas du mois', icon: ActivityIcon, value: kpis?.casMoisTotal, format: fmtEntier },
+            { label: 'Médecins actifs', icon: Stethoscope, value: kpis?.medecinsAvecActivite, format: fmtEntier },
+            { label: 'Non affectés', icon: FileX2, value: kpis?.nonAffectesCount, format: fmtEntier, suffix: kpis?.nonAffectesPct != null ? `${formatNumber(kpis.nonAffectesPct, 1)} %` : null },
+          ].map(({ label, icon: Icone, value, format, suffix }) => (
+            <div key={label} className="activite-hero-stat">
+              <span className="activite-hero-stat-icon" aria-hidden="true"><Icone size={16} /></span>
+              <div>
+                <p className="activite-hero-stat-label">{label}</p>
+                <p className="activite-hero-stat-value">
+                  {loading && value == null ? '…' : <AnimatedValue value={value ?? 0} format={format} />}
+                  {suffix && <span className="activite-hero-stat-suffix">{suffix}</span>}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* Encart LECTURE VACTIS */}
@@ -840,14 +915,43 @@ export default function LectureActivitePage() {
         </div>
       </div>
 
+      <div className="mb-4 inline-flex flex-wrap gap-1 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-900" role="tablist" aria-label="Lecture activité">
+        {ONGLETS.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={onglet === id}
+            onClick={() => setOnglet(id)}
+            className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${onglet === id
+              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {onglet === 'laboratoire' && (
       <nav className="activite-section-nav" aria-label="Sections de la lecture activité">
         <span className="activite-section-nav-label">Lecture rapide</span>
-        <a href="#activite-synthese">Synthèse</a>
-        <a href="#activite-evolution">Évolution</a>
-        <a href="#activite-portefeuille">Portefeuille</a>
-        <a href="#activite-terrain">Terrain</a>
-        <a href="#activite-impact">Impact VACTIS</a>
+        {SECTIONS_NAV.map(({ id, label, icon: Icone }) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            onClick={() => setSectionActive(id)}
+            className={sectionActive === id ? 'is-active' : undefined}
+            aria-current={sectionActive === id ? 'location' : undefined}
+          >
+            {sectionActive === id && (
+              <motion.span layoutId="activite-nav-pastille" className="activite-section-nav-pill" transition={{ type: 'spring', stiffness: 380, damping: 32 }} />
+            )}
+            <Icone size={14} aria-hidden="true" />
+            <span>{label}</span>
+          </a>
+        ))}
       </nav>
+      )}
 
       {error && (
         <div className="activite-alert activite-alert--error">
@@ -856,6 +960,11 @@ export default function LectureActivitePage() {
         </div>
       )}
 
+      {onglet === 'equipe' && (
+        <EquipeCommercialeTab token={token} compteRenduTerrain={compteRenduTerrain} selectedMois={selectedMois} />
+      )}
+
+      {onglet === 'laboratoire' && (<>
       {/* Bloc 1: Qualité data - activité labo complète */}
       <section id="activite-synthese" className="activite-card-section activite-card-section--synthese">
         <div className="activite-section-header">
@@ -936,7 +1045,7 @@ export default function LectureActivitePage() {
               {loading ? '…' : formatNumber(kpis?.nonAffectesCount)}
             </div>
             <div className="activite-kpi-sub">
-              {loading ? '…' : `${kpis?.nonAffectesPct ?? 0}%`}
+              {loading ? '…' : `${formatNumber(kpis?.nonAffectesPct ?? 0, 1)} %`}
             </div>
           </div>
         </div>
@@ -1056,7 +1165,7 @@ export default function LectureActivitePage() {
                     {loading ? '…' : isCurrency ? `${val >= 0 ? '+' : ''}${formatNumber(val)} MAD` : `${val >= 0 ? '+' : ''}${formatNumber(val, 2)}`}
                   </div>
                   <div className="activite-comp-card-sub">
-                    {loading ? '…' : `${pct >= 0 ? '+' : ''}${pct}%`}
+                    {loading ? '…' : formatSignedPercent(pct)}
                   </div>
                 </div>
               );
@@ -1083,7 +1192,7 @@ export default function LectureActivitePage() {
                     {loading ? '…' : isCurrency ? `${val >= 0 ? '+' : ''}${formatNumber(val)} MAD` : `${val >= 0 ? '+' : ''}${formatNumber(val, 2)}`}
                   </div>
                   <div className="activite-comp-card-sub">
-                    {loading ? '…' : `${pct >= 0 ? '+' : ''}${pct}%`}
+                    {loading ? '…' : formatSignedPercent(pct)}
                   </div>
                 </div>
               );
@@ -1144,8 +1253,8 @@ export default function LectureActivitePage() {
               <div>
                 <h4>Points clés</h4>
                 <p>
-                  <strong>{isCurrency ? formatCurrency(currentValue) : formatNumber(currentValue)}</strong> ce mois-ci : <strong>{getTrendLabel(vsPreviousPct)} de {Math.abs(vsPreviousPct).toFixed(1)}%</strong> par rapport à M-1
-                  ({isCurrency ? formatCurrency(previousValue) : formatNumber(previousValue)}) et <strong>{getTrendLabel(vsReferencePct)} de {Math.abs(vsReferencePct).toFixed(1)}%</strong> par rapport à la référence.
+                  <strong>{isCurrency ? formatCurrency(currentValue) : formatNumber(currentValue)}</strong> ce mois-ci : <strong>{getTrendLabel(vsPreviousPct)} de {formatNumber(Math.abs(vsPreviousPct), 1)} %</strong> par rapport à M-1
+                  ({isCurrency ? formatCurrency(previousValue) : formatNumber(previousValue)}) et <strong>{getTrendLabel(vsReferencePct)} de {formatNumber(Math.abs(vsReferencePct), 1)} %</strong> par rapport à la référence.
                 </p>
               </div>
             </div>
@@ -1533,7 +1642,7 @@ export default function LectureActivitePage() {
                   </span>
                 </div>
                 <div className="activite-kpi-value">
-                  {formatNumber(actionsVactis.tauxTerrain, 1)}%
+                  {formatNumber(actionsVactis.tauxTerrain, 1)} %
                 </div>
                 <div className="activite-kpi-sub">Visites réalisées / renseignées.</div>
               </div>
@@ -1621,7 +1730,7 @@ export default function LectureActivitePage() {
               >
                 <span className="activite-cr-title">VISITES RÉALISÉES</span>
                 <div className="activite-cr-value">{formatNumber(compteRenduTerrain.visitesRealisees)}</div>
-                <div className="activite-cr-sub">Taux terrain : {formatNumber(compteRenduTerrain.tauxTerrain, 1)}% · Cliquer pour voir les détails</div>
+                <div className="activite-cr-sub">Taux terrain : {formatNumber(compteRenduTerrain.tauxTerrain, 1)} % · Cliquer pour voir les détails</div>
               </div>
 
               <div
@@ -2113,7 +2222,7 @@ export default function LectureActivitePage() {
                         <span className="activite-kpi-badge activite-kpi-badge--green"><ActiviteIcon name="chart" size={14} /></span>
                       </div>
                       <div className="activite-kpi-value" style={{ color: '#15803d' }}>
-                        {formatNumber(rapportImpact.tauxRealisation, 1)}%
+                        {formatNumber(rapportImpact.tauxRealisation, 1)} %
                       </div>
                       <div className="activite-kpi-sub" style={{ color: '#166534' }}>Réalisées / actions hors exclusions.</div>
                     </div>
@@ -2213,7 +2322,7 @@ export default function LectureActivitePage() {
                             <span className="activite-n4-table-badge">{c.totalAnalyse}</span>
                           </div>
                           <div className="activite-n4-comm-evo-sub" style={{ marginBottom: '0.4rem' }}>
-                            {c.totalAnalyse} visites VACTIS analysées : taux favorable {formatNumber(c.tauxFavorable, 1)}%
+                            {c.totalAnalyse} visites VACTIS analysées : taux favorable {formatNumber(c.tauxFavorable, 1)} %
                           </div>
 
                           {/* Bar multi-couleurs */}
@@ -2239,7 +2348,7 @@ export default function LectureActivitePage() {
                               <span style={{ color: '#f59e0b', fontWeight: 700 }}>• Non observable</span> {c.nonObservable}
                             </span>
                             <span style={{ marginLeft: 'auto', fontWeight: 700 }}>
-                              Taux favorable {formatNumber(c.tauxFavorable, 1)}%
+                              Taux favorable {formatNumber(c.tauxFavorable, 1)} %
                             </span>
                           </div>
                         </div>
@@ -2368,6 +2477,7 @@ export default function LectureActivitePage() {
           </>
         )}
       </section>
+      </>)}
 
       {/* Modal d'affichage des détails (Médecins ou Retours terrain) */}
       {selectedModalData && (() => {
@@ -2590,6 +2700,6 @@ export default function LectureActivitePage() {
           </div>
         );
       })()}
-    </motion.div>
+    </div>
   );
 }

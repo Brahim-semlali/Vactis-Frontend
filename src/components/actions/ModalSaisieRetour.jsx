@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import Portal from '../Portal.jsx';
 
-export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, isSubmitting, errorMessage = '', onClearError }) {
+export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, isSubmitting, errorMessage = '', onClearError, commerciaux = [] }) {
   const [actionRealisee, setActionRealisee] = useState(true);
   const [dateVisite, setDateVisite] = useState(
     new Date().toISOString().split('T')[0]
@@ -17,6 +17,7 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
   const [noteTerrain, setNoteTerrain] = useState('');
   const [prochaineAction, setProchaineAction] = useState('');
   const [dateProchaineAction, setDateProchaineAction] = useState('');
+  const [commercialAppui, setCommercialAppui] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen || !action) return null;
@@ -71,6 +72,7 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
       noteTerrain: noteTerrain ? parseFloat(noteTerrain) : null,
       prochaineAction,
       dateProchaineAction: dateProchaineAction || null,
+      commercialAppui: commercialAppui.trim() || null,
     });
   };
 
@@ -245,6 +247,24 @@ export default function ModalSaisieRetour({ action, isOpen, onClose, onSubmit, i
                 </div>
               </div>
             )}
+
+            <div>
+              <label htmlFor="saisie-retour-appui" className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Commercial en appui <span className="normal-case font-medium text-slate-500">(facultatif)</span>
+              </label>
+              <input
+                id="saisie-retour-appui"
+                type="text"
+                list="saisie-retour-appui-liste"
+                placeholder="Collègue venu en appui de la visite"
+                value={commercialAppui}
+                onChange={(e) => setCommercialAppui(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+              <datalist id="saisie-retour-appui-liste">
+                {commerciaux.map((c) => <option key={c} value={c} />)}
+              </datalist>
+            </div>
 
             {/* Commentaire */}
             <div>

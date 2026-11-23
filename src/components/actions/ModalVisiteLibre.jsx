@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
-export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, onSubmit, isSubmitting }) {
+export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, onSubmit, isSubmitting, commerciaux = [] }) {
   const [useExisting, setUseExisting] = useState(true);
   const [selectedMedecinId, setSelectedMedecinId] = useState('');
   
@@ -25,6 +25,8 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
   const [noteTerrain, setNoteTerrain] = useState('');
   const [prochaineAction, setProchaineAction] = useState('');
   const [dateProchaineAction, setDateProchaineAction] = useState('');
+  const [typePassage, setTypePassage] = useState('COMMERCIAL');
+  const [commercialAppui, setCommercialAppui] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen) return null;
@@ -43,27 +45,29 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
       return;
     }
 
+    const service = typePassage === 'SERVICE';
+
     if (!actionRealisee && !motifNonRealisation.trim()) {
       setErrorMsg('Le motif de non-réalisation est obligatoire.');
       return;
     }
 
-    if (qualification === 'RECLAMATION' && !commentaire.trim()) {
+    if (!service && qualification === 'RECLAMATION' && !commentaire.trim()) {
       setErrorMsg('Le commentaire est obligatoire en cas de réclamation.');
       return;
     }
 
-    if (qualification === 'DEFAVORABLE' && (!commentaire.trim() || !obstaclePrincipal)) {
+    if (!service && qualification === 'DEFAVORABLE' && (!commentaire.trim() || !obstaclePrincipal)) {
       setErrorMsg('Le commentaire et l’obstacle principal sont obligatoires pour une qualification défavorable.');
       return;
     }
 
-    if (actionRealisee && !qualification) {
+    if (!service && actionRealisee && !qualification) {
       setErrorMsg('La qualification est obligatoire après une action réalisée.');
       return;
     }
 
-    if (qualification === 'CONGE_ABSENCE' && (!dateDepart
+    if (!service && qualification === 'CONGE_ABSENCE' && (!dateDepart
       || (!dateRetourPrevue && !dateRevue)
       || (dateRetourPrevue && dateRetourPrevue < dateDepart)
       || (dateRevue && dateRevue < dateDepart))) {
@@ -80,7 +84,9 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
       dateVisite,
       actionRealisee,
       motifNonRealisation: actionRealisee ? null : motifNonRealisation,
-      qualification,
+      typePassage,
+      commercialAppui: commercialAppui.trim() || null,
+      qualification: service ? 'NON_RENSEIGNE' : qualification,
       dateDepart: qualification === 'CONGE_ABSENCE' ? dateDepart : null,
       dateRetourPrevue: qualification === 'CONGE_ABSENCE' ? (dateRetourPrevue || null) : null,
       dateRevue: qualification === 'CONGE_ABSENCE' ? (dateRevue || null) : null,
@@ -215,6 +221,39 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
             </div>
           )}
 
+          <div>
+            <label htmlFor="visite-libre-nature" className="block text-xs font-bold text-slate-700 uppercase mb-1">Nature du passage</label>
+            <select
+              id="visite-libre-nature"
+              value={typePassage}
+              onChange={(e) => setTypePassage(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-semibold"
+            >
+              <option value="COMMERCIAL">Échange commercial avec le médecin</option>
+              <option value="SERVICE">Passage de service (logistique, prélèvements…)</option>
+            </select>
+            {typePassage === 'SERVICE' && (
+              <p className="mt-1 text-xs text-slate-500">Un passage de service n'est pas qualifié et n'entre pas dans les échanges commerciaux.</p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="visite-libre-appui" className="block text-xs font-bold text-slate-700 uppercase mb-1">
+              Commercial en appui <span className="normal-case font-medium text-slate-500">(facultatif)</span>
+            </label>
+            <input
+              id="visite-libre-appui"
+              type="text"
+              list="visite-libre-appui-liste"
+              placeholder="Collègue venu en appui de la visite"
+              value={commercialAppui}
+              onChange={(e) => setCommercialAppui(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 p-2.5 bg-slate-50 font-medium focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+            <datalist id="visite-libre-appui-liste">
+              {commerciaux.map((c) => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+
           {/* Details Visite */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -238,7 +277,7 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
                 <option value="NON">Non</option>
               </select>
             </div>
-            <div>
+            {typePassage !== 'SERVICE' && <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Qualification</label>
               <select
                 value={qualification}
@@ -251,10 +290,10 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
                 <option value="RECLAMATION">Réclamation</option>
                 <option value="CONGE_ABSENCE">Congé / Absence temporaire</option>
               </select>
-            </div>
+            </div>}
           </div>
 
-          {qualification === 'CONGE_ABSENCE' && (
+          {typePassage !== 'SERVICE' && qualification === 'CONGE_ABSENCE' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-2xl bg-sky-50 border border-sky-200">
               <div>
                 <label className="block text-xs font-bold text-sky-900 uppercase mb-1">Date de départ *</label>
@@ -284,7 +323,7 @@ export default function ModalVisiteLibre({ medecinsList = [], isOpen, onClose, o
             </div>
           )}
 
-          {qualification === 'DEFAVORABLE' && (
+          {typePassage !== 'SERVICE' && qualification === 'DEFAVORABLE' && (
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Obstacle principal *</label>
               <select required value={obstaclePrincipal} onChange={(e) => setObstaclePrincipal(e.target.value)} className="w-full rounded-xl border border-rose-300 p-2.5 bg-rose-50 font-medium">

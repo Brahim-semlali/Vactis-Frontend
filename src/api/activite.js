@@ -98,3 +98,14 @@ export async function getDetailEvolution(token, mois, page = 0, taille = 20) {
   params.append('taille', taille);
   return activiteRequest(`/api/activite/impact/detail?${params.toString()}`, token);
 }
+
+// --- Onglet « Équipe commerciale » ---
+
+export async function getEquipeCommerciale(token, { debut, fin, commercial } = {}) {
+  const params = new URLSearchParams();
+  if (debut) params.append('debut', debut);
+  if (fin) params.append('fin', fin);
+  if (commercial) params.append('commercial', commercial);
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return activiteRequest(`/api/activite/equipe-commerciale${query}`, token);
+}
