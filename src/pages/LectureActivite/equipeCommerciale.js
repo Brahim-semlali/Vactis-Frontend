@@ -28,16 +28,21 @@ export function pourcentage(valeur, total) {
 export function pointsDecision(data) {
   const synthese = data?.synthese ?? {};
   const decisions = data?.decisions ?? {};
+  const baisses = data?.rapportBaisses ?? {};
   const points = [];
   const sansVisite = decisions.actionsSansVisite?.length ?? 0;
   if (sansVisite > 0) {
-    points.push(`Planifier les ${sansVisite} action(s) encore sans visite et vérifier leur commercial prioritaire.`);
+    points.push(`Vérifier les ${sansVisite} action(s) sans retour rapproché, puis planifier celles qui restent à réaliser.`);
   }
-  if (synthese.relais > 0) {
-    points.push(`Examiner les ${synthese.relais} relais et ajuster les priorités si la charge est déséquilibrée.`);
+  if (decisions.retoursDefavorables > 0) {
+    points.push(`Reprendre les ${decisions.retoursDefavorables} échange(s) défavorable(s) avec le commercial concerné.`);
   }
-  if (decisions.refusOuReclamations > 0 || decisions.baissesObservees > 0) {
-    points.push('Reprendre les médecins avec refus, réclamation ou baisse observée.');
+  if (decisions.baissesObservees > 0) {
+    const repetees = baisses.medecinsBaissesRepetees > 0 ? `, en commençant par les ${baisses.medecinsBaissesRepetees} en baisse sur plusieurs mois` : '';
+    points.push(`Revoir les médecins dont le statut a baissé${repetees}.`);
+  }
+  if (decisions.baissesMalgreFavorable > 0) {
+    points.push(`Confronter les ${decisions.baissesMalgreFavorable} retour(s) favorable(s) suivis d'une baisse aux données du laboratoire.`);
   }
   if (decisions.retoursACompleter > 0) {
     points.push(`Compléter les ${decisions.retoursACompleter} retour(s) terrain avant d'évaluer les résultats.`);
@@ -45,8 +50,31 @@ export function pointsDecision(data) {
   if (synthese.prospects > 0) {
     points.push(`Suivre les ${synthese.prospects} prospect(s) saisi(s) hors VACTIS dans Zone intelligence.`);
   }
-  if (points.length === 0) points.push('Aucun point bloquant relevé sur la période sélectionnée.');
+  if (points.length === 0) return ['Aucun point bloquant relevé sur la période sélectionnée.'];
+  points.push('Définir les priorités par médecin ou par type d’action pour organiser le prochain cycle.');
   return points;
+}
+
+/** Évolution du statut après les visites faites seul : progression, stabilité, baisse (en % des comparables). */
+export function evolutionSeul(ligne) {
+  const comparables = ligne?.comparablesSeul ?? 0;
+  const hausse = ligne?.progressionsSeul ?? 0;
+  const stable = ligne?.stablesSeul ?? 0;
+  const baisse = ligne?.baissesSeul ?? 0;
+  return {
+    comparables,
+    hausse,
+    stable,
+    baisse,
+    pctHausse: pourcentage(hausse, comparables),
+    pctStable: pourcentage(stable, comparables),
+    pctBaisse: pourcentage(baisse, comparables),
+  };
+}
+
+/** Part des échanges faits seul qualifiés favorables. */
+export function tauxFavorableSeul(ligne) {
+  return pourcentage(ligne?.retoursFavorablesSeul ?? 0, ligne?.echangesSeul ?? 0);
 }
 
 /** Nature d'un passage pour l'affichage : VACTIS, hors VACTIS ou service. */

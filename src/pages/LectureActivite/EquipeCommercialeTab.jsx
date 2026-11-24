@@ -1,40 +1,45 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { MessageSquareWarning, RefreshCw } from 'lucide-react';
+import { Info, MessageSquareWarning, RefreshCw } from 'lucide-react';
 import { getEquipeCommerciale } from '../../api/activite.js';
+import FicheContextuelleDrawer from '../../components/medecins/FicheContextuelleDrawer.jsx';
 import { getVactisStatutMeta } from './activiteLabels.js';
 import {
   bornesMois,
+  evolutionSeul,
   filtrerVisites,
   libelleMois,
   naturePassage,
   pointsDecision,
   pourcentage,
+  tauxFavorableSeul,
 } from './equipeCommerciale.js';
 
 const QUALIFICATIONS = [
   { key: 'FAVORABLE', label: 'Favorable', couleur: 'bg-emerald-500' },
   { key: 'NEUTRE', label: 'Neutre', couleur: 'bg-sky-500' },
-  { key: 'DEFAVORABLE', label: 'Refus', couleur: 'bg-amber-500' },
+  { key: 'DEFAVORABLE', label: 'Défavorable', couleur: 'bg-amber-500' },
   { key: 'RECLAMATION', label: 'Réclamation', couleur: 'bg-rose-500' },
   { key: 'CONGE_ABSENCE', label: 'Congé / absence', couleur: 'bg-violet-400' },
   { key: 'NON_RENSEIGNE', label: 'Non renseignée', couleur: 'bg-slate-400' },
 ];
 
 const EVOLUTIONS = {
-  FAVORABLE: { label: 'Progression', sub: 'Observée', badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' },
-  STABLE: { label: 'Stable', sub: 'Observée', badge: 'bg-slate-100 text-slate-700 dark:bg-slate-700/60 dark:text-slate-200' },
-  DEFAVORABLE: { label: 'Baisse', sub: 'À examiner', badge: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300' },
-  NON_OBSERVABLE: { label: 'Non observable', sub: 'M+1 non clôturé ou sans données', badge: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' },
+  FAVORABLE: { label: 'Progression', badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' },
+  STABLE: { label: 'Stable', badge: 'bg-slate-100 text-slate-700 dark:bg-slate-700/60 dark:text-slate-200' },
+  DEFAVORABLE: { label: 'Baisse', badge: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300' },
+  NON_OBSERVABLE: { label: 'Non observable', badge: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' },
 };
 
 const QUALIF_LABEL = Object.fromEntries(QUALIFICATIONS.map((q) => [q.key, q.label]));
+const AIDE_COMMUNE = 'Une visite commune compte une fois pour l’équipe et pour chacun des deux participants, sans priorité liée à l’ordre des noms.';
 
 const carte = 'rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900';
 const selectCls = 'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100';
 const thCls = 'px-3 py-2 text-left text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400';
 const tdCls = 'px-3 py-2 text-sm text-slate-700 dark:text-slate-200';
+const resumeCls = 'cursor-pointer select-none text-sm font-bold text-slate-900 dark:text-white';
 
-function Bloc({ numero, titre, sousTitre, children, id }) {
+function Etape({ numero, titre, sousTitre, children, id }) {
   return (
     <section id={id} className={`${carte} overflow-hidden`} aria-labelledby={`${id}-titre`}>
       <header className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
@@ -43,7 +48,7 @@ function Bloc({ numero, titre, sousTitre, children, id }) {
         </h2>
         {sousTitre && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{sousTitre}</p>}
       </header>
-      <div className="p-5">{children}</div>
+      <div className="space-y-5 p-5">{children}</div>
     </section>
   );
 }
@@ -52,6 +57,7 @@ function Indicateur({ label, valeur, detail, ton = 'default' }) {
   const tons = {
     default: 'text-slate-900 dark:text-white',
     alerte: 'text-rose-600 dark:text-rose-400',
+    positif: 'text-emerald-600 dark:text-emerald-400',
   };
   return (
     <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
@@ -59,6 +65,14 @@ function Indicateur({ label, valeur, detail, ton = 'default' }) {
       <p className={`mt-1 text-2xl font-bold tabular-nums ${tons[ton]}`}>{valeur ?? 0}</p>
       {detail && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{detail}</p>}
     </div>
+  );
+}
+
+function AideCommune() {
+  return (
+    <span title={AIDE_COMMUNE} className="inline-block align-[-2px] text-slate-400">
+      <Info size={14} aria-hidden="true" />
+    </span>
   );
 }
 
@@ -81,15 +95,30 @@ function formatDate(iso) {
   return new Date(`${iso}T00:00:00`).toLocaleDateString('fr-FR');
 }
 
-// ── 1 · Travail confié et terrain parcouru ─────────────────────────────────
+/** « ↑ 38 (24 %) = 42 (27 %) ↓ 78 (49 %) » sur les visites faites seul. */
+function EvolutionCompacte({ ligne }) {
+  const e = evolutionSeul(ligne);
+  if (e.comparables === 0) return <span className="text-xs text-slate-400">Aucune transition comparable</span>;
+  return (
+    <span className="whitespace-nowrap text-xs">
+      <span className="font-semibold text-emerald-700 dark:text-emerald-400">↑ {e.hausse} ({e.pctHausse} %)</span>{' '}
+      <span className="font-semibold text-slate-500">= {e.stable} ({e.pctStable} %)</span>{' '}
+      <span className="font-semibold text-rose-600 dark:text-rose-400">↓ {e.baisse} ({e.pctBaisse} %)</span>
+      <span className="block text-[11px] text-slate-400">sur {e.comparables} transition(s) comparable(s)</span>
+    </span>
+  );
+}
 
-function BlocTerrain({ data, periode, setPeriode, commercial, setCommercial, onActualiser, loading }) {
+// ── 1 · D'où vient l'activité terrain ? ─────────────────────────────────────
+
+function EtapeActivite({ data, periode, setPeriode, commercial, setCommercial, onActualiser, loading, compteRenduTerrain, selectedMois, onOuvrirMedecin }) {
   const s = data?.synthese ?? {};
   const individuel = Boolean(data?.commercial);
+  const ecartees = data?.datesEcartees ?? [];
   return (
-    <Bloc id="equipe-terrain" numero="1" titre="Le travail confié et le terrain parcouru"
-      sousTitre="Une action VACTIS peut entraîner plusieurs visites. Les passages hors VACTIS sont suivis séparément.">
-      <div className="mb-4 flex flex-wrap items-end gap-3">
+    <Etape id="equipe-activite" numero="1" titre="D’où vient l’activité terrain ?"
+      sousTitre="Historique des passages VACTIS et hors VACTIS, sans confondre échange commercial et service logistique.">
+      <div className="flex flex-wrap items-end gap-3">
         <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
           Période
           <select className={selectCls} value={periode} onChange={(e) => setPeriode(e.target.value)}>
@@ -110,230 +139,38 @@ function BlocTerrain({ data, periode, setPeriode, commercial, setCommercial, onA
           Actualiser
         </button>
       </div>
+
+      {ecartees.length > 0 && (
+        <details className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+          <summary className="cursor-pointer font-semibold">{ecartees.length} date(s) incohérente(s) écartée(s)</summary>
+          <p className="mt-1 text-xs">Ces passages ne sont comptés nulle part dans la lecture tant que leur date n’est pas corrigée.</p>
+          <ul className="mt-2 space-y-1 text-xs">
+            {ecartees.map((d) => (
+              <li key={d.retourTerrainId}>
+                <span className="font-semibold">{d.medecinNom}</span> · {d.commercial} · {d.dateVisite ? formatDate(d.dateVisite) : 'sans date'} — {d.motif}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Indicateur label="Passages réalisés" valeur={s.passagesRealises}
-          detail={`${s.passagesSaisis ?? 0} saisis · ${Math.round(s.tauxRealisation ?? 0)} % réalisés${individuel ? ` · ${s.participationsAppui ?? 0} en appui` : ''}`} />
+          detail={`${s.passagesSaisis ?? 0} saisis · ${Math.round(s.tauxRealisation ?? 0)} % réalisés`} />
         <Indicateur label="Visites VACTIS" valeur={s.visitesVactis} detail="Passages liés à une action" />
         <Indicateur label="Hors VACTIS" valeur={s.horsVactis} detail={`${s.passagesService ?? 0} passage(s) de service`} />
-        <Indicateur label="Médecins en échange" valeur={s.medecinsEnEchange} detail="Médecins connus rapprochés, services exclus" />
+        <Indicateur label="Médecins en échange" valeur={s.medecinsEnEchange} detail="Médecins connus du laboratoire, services exclus" />
         <Indicateur label="Prospects à rapprocher" valeur={s.prospects} detail="Sans dossier au laboratoire · suivi dans Zone intelligence" />
-        <Indicateur label="Relais effectués" valeur={s.relais} detail="Réalisateur différent du prioritaire" />
+        <Indicateur label="Visites communes" valeur={s.visitesCommunes}
+          detail={individuel ? `Avec un collègue · dont ${s.participationsAppui ?? 0} en appui` : 'Comptées une seule fois pour l’équipe'} />
       </div>
-    </Bloc>
+
+      <DetailPassages visites={data?.visites} compteRenduTerrain={compteRenduTerrain} selectedMois={selectedMois} onOuvrirMedecin={onOuvrirMedecin} />
+    </Etape>
   );
 }
 
-// ── 2 · Répartition par commercial ─────────────────────────────────────────
-
-function BlocRepartition({ lignes, commercialSelectionne }) {
-  return (
-    <Bloc id="equipe-repartition" numero="2" titre="Répartition par commercial"
-      sousTitre="Même période pour toute l'équipe. Les participations en appui sont comptées à part du responsable principal.">
-      {lignes.length === 0 ? (
-        <p className="text-sm text-slate-500">Aucun passage saisi sur la période.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="border-b border-slate-200 dark:border-slate-700">
-              <tr>
-                {['Commercial', 'Passages principaux', 'Participation en appui', 'VACTIS', 'Hors VACTIS', 'Services',
-                  'Médecins en échange', 'Prospects', 'Retours qualifiés', 'Refus / réclamations', 'Relais'].map((h, i) => (
-                  <th key={h} className={`${thCls} ${i > 0 ? 'text-right' : ''}`}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {lignes.map((l) => {
-                const actif = commercialSelectionne && l.commercial.toLowerCase() === commercialSelectionne.toLowerCase();
-                return (
-                  <tr key={l.commercial} className={actif ? 'bg-teal-50/60 dark:bg-teal-500/10' : undefined}>
-                    <td className={`${tdCls} font-semibold text-slate-900 dark:text-white`}>{l.commercial}</td>
-                    {[l.passagesPrincipaux, l.participationsAppui, l.visitesVactis, l.horsVactis, l.services,
-                      l.medecinsEnEchange, l.prospects, fraction(l.retoursQualifies, l.echanges), l.refusOuReclamations, l.relais]
-                      .map((v, i) => <td key={i} className={`${tdCls} text-right tabular-nums`}>{v}</td>)}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-        La répartition des tâches et les motifs diffèrent entre commerciaux : ces colonnes ne constituent pas un classement de performance.
-      </p>
-    </Bloc>
-  );
-}
-
-// ── 3 · Comparer deux commerciaux ──────────────────────────────────────────
-
-const INDICATEURS_COMPARAISON = [
-  ['Passages réalisés, responsable principal', (l) => l.passagesPrincipaux],
-  ['Participations en appui', (l) => l.participationsAppui],
-  ['Visites VACTIS', (l) => l.visitesVactis],
-  ['Hors VACTIS', (l) => l.horsVactis],
-  ['Passages de service', (l) => l.services],
-  ['Médecins en échange', (l) => l.medecinsEnEchange],
-  ['Prospects à rapprocher', (l) => l.prospects],
-  ['Retours qualifiés / échanges', (l) => fraction(l.retoursQualifies, l.echanges)],
-  ['Retours favorables / échanges', (l) => fraction(l.retoursFavorables, l.echanges)],
-  ['Refus ou réclamations', (l) => l.refusOuReclamations],
-  ['Progressions observées / comparables', (l) => fraction(l.progressions, l.comparables)],
-  ['Baisses observées', (l) => l.baisses],
-  ['Relais effectués', (l) => l.relais],
-];
-
-const LIGNE_VIDE = Object.freeze({});
-
-function BlocComparaison({ token, commerciaux, moisDisponibles }) {
-  const [a, setA] = useState('');
-  const [b, setB] = useState('');
-  const [de, setDe] = useState('');
-  const [jusqua, setJusqua] = useState('');
-  const [lignes, setLignes] = useState([]);
-  const [erreur, setErreur] = useState(null);
-
-  // Valeurs par défaut dès que les listes sont connues
-  useEffect(() => {
-    if (!a && commerciaux[0]) setA(commerciaux[0]);
-    if (!b && commerciaux[1]) setB(commerciaux[1]);
-  }, [commerciaux, a, b]);
-  useEffect(() => {
-    if (!jusqua && moisDisponibles[0]) setJusqua(moisDisponibles[0]);
-    if (!de && moisDisponibles[0]) setDe(moisDisponibles[1] ?? moisDisponibles[0]);
-  }, [moisDisponibles, de, jusqua]);
-
-  useEffect(() => {
-    if (!token || !de || !jusqua) return undefined;
-    let annule = false;
-    getEquipeCommerciale(token, bornesMois(de, jusqua))
-      .then((res) => { if (!annule) { setLignes(res?.parCommercial ?? []); setErreur(null); } })
-      .catch((err) => { if (!annule) setErreur(err.message || 'Comparaison indisponible.'); });
-    return () => { annule = true; };
-  }, [token, de, jusqua]);
-
-  const trouver = (nom) => lignes.find((l) => l.commercial.toLowerCase() === nom.toLowerCase()) ?? LIGNE_VIDE;
-  const la = trouver(a);
-  const lb = trouver(b);
-  const max = Math.max(la.passagesPrincipaux ?? 0, lb.passagesPrincipaux ?? 0, 1);
-
-  const entete = (nom, ligne, couleur) => (
-    <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-      <div className="flex items-baseline justify-between">
-        <p className="font-semibold text-slate-900 dark:text-white">{nom || '—'}</p>
-        <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{ligne.passagesPrincipaux ?? 0}</p>
-      </div>
-      <div className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
-        <div className={`h-2 rounded-full ${couleur}`} style={{ width: `${pourcentage(ligne.passagesPrincipaux ?? 0, max)}%` }} />
-      </div>
-      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-        {ligne.participationsAppui ?? 0} participation(s) en appui · {pourcentage(ligne.retoursQualifies ?? 0, ligne.echanges ?? 0)} % d'échanges qualifiés
-      </p>
-    </div>
-  );
-
-  const selecteur = (label, value, onChange, options, format = (o) => o) => (
-    <label className="flex flex-1 flex-col gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-      {label}
-      <select className={selectCls} value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map((o) => <option key={o} value={o}>{format(o)}</option>)}
-      </select>
-    </label>
-  );
-
-  return (
-    <Bloc id="equipe-comparaison" numero="3" titre="Comparer deux commerciaux"
-      sousTitre="Même période et mêmes définitions pour les deux profils. Les passages de service sont visibles sans entrer dans la couverture commerciale.">
-      {commerciaux.length < 2 ? (
-        <p className="text-sm text-slate-500">Il faut au moins deux commerciaux ayant saisi des visites pour comparer.</p>
-      ) : (
-        <>
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {selecteur('Commercial A', a, setA, commerciaux)}
-            {selecteur('Commercial B', b, setB, commerciaux)}
-            {selecteur('De', de, setDe, moisDisponibles, libelleMois)}
-            {selecteur('À', jusqua, setJusqua, moisDisponibles, libelleMois)}
-          </div>
-          {erreur && <p className="mb-3 text-sm text-rose-600" role="alert">{erreur}</p>}
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {entete(a, la, 'bg-sky-500')}
-            {entete(b, lb, 'bg-violet-500')}
-          </div>
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="border-b border-slate-200 dark:border-slate-700">
-                <tr>
-                  <th className={thCls}>Indicateur</th>
-                  <th className={`${thCls} text-right`}>{a}</th>
-                  <th className={`${thCls} text-right`}>{b}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {INDICATEURS_COMPARAISON.map(([libelle, valeur]) => (
-                  <tr key={libelle}>
-                    <td className={tdCls}>{libelle}</td>
-                    <td className={`${tdCls} text-right font-semibold tabular-nums`}>{valeur(la) ?? 0}</td>
-                    <td className={`${tdCls} text-right font-semibold tabular-nums`}>{valeur(lb) ?? 0}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="mt-3 rounded-lg bg-sky-50 p-3 text-xs text-sky-900 dark:bg-sky-500/10 dark:text-sky-200">
-            Les progressions comparent le statut du médecin le mois de la visite VACTIS et le mois suivant. Elles ne démontrent pas
-            que la visite a causé le changement. La charge confiée et les types de mission peuvent différer : utilisez cet écart pour
-            décider quoi examiner ou réattribuer, pas comme un classement automatique.
-          </p>
-        </>
-      )}
-    </Bloc>
-  );
-}
-
-// ── 4 · Qualité des échanges et évolution observée ─────────────────────────
-
-function BlocQualite({ qualifications, evolutions }) {
-  const max = Math.max(1, ...QUALIFICATIONS.map((q) => qualifications?.[q.key] ?? 0));
-  return (
-    <Bloc id="equipe-qualite" numero="4" titre="Qualité des échanges et évolution observée"
-      sousTitre="Qualification terrain et statut du médecin répondent à deux questions différentes.">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div>
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Qualification des échanges</h3>
-          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Passages de service exclus.</p>
-          <ul className="space-y-2">
-            {QUALIFICATIONS.map((q) => {
-              const v = qualifications?.[q.key] ?? 0;
-              return (
-                <li key={q.key} className="flex items-center gap-3 text-sm">
-                  <span className="w-32 shrink-0 text-slate-700 dark:text-slate-200">{q.label}</span>
-                  <span className="h-2 flex-1 rounded-full bg-slate-100 dark:bg-slate-800">
-                    <span className={`block h-2 rounded-full ${q.couleur}`} style={{ width: `${pourcentage(v, max)}%` }} />
-                  </span>
-                  <span className="w-8 text-right font-semibold tabular-nums text-slate-900 dark:text-white">{v}</span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-        <div>
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Après les visites VACTIS</h3>
-          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Statut du médecin le mois de la visite comparé au mois suivant.</p>
-          <div className="grid grid-cols-2 gap-3">
-            {Object.entries(EVOLUTIONS).map(([cle, meta]) => (
-              <Indicateur key={cle} label={meta.label} valeur={evolutions?.[cle] ?? 0} detail={meta.sub}
-                ton={cle === 'DEFAVORABLE' && evolutions?.[cle] > 0 ? 'alerte' : 'default'} />
-            ))}
-          </div>
-        </div>
-      </div>
-    </Bloc>
-  );
-}
-
-// ── 5 · Lecture détaillée ──────────────────────────────────────────────────
-
-function BlocDetail({ visites, compteRenduTerrain, selectedMois }) {
+function DetailPassages({ visites, compteRenduTerrain, selectedMois, onOuvrirMedecin }) {
   const [recherche, setRecherche] = useState('');
   const [nature, setNature] = useState('TOUS');
   const [voirReclamations, setVoirReclamations] = useState(false);
@@ -342,9 +179,9 @@ function BlocDetail({ visites, compteRenduTerrain, selectedMois }) {
   const cr = compteRenduTerrain;
 
   return (
-    <Bloc id="equipe-detail" numero="5" titre="Lecture détaillée médecin par médecin"
-      sousTitre="Chaque passage saisi, avec la qualification terrain et l'évolution observée du statut pour les visites VACTIS.">
-      <div className="mb-3 flex flex-wrap gap-3">
+    <details className="rounded-xl border border-slate-200 p-4 dark:border-slate-700" aria-label="Lecture détaillée des passages">
+      <summary className={resumeCls}>Lecture détaillée, passage par passage ({visites?.length ?? 0})</summary>
+      <div className="mt-3 mb-3 flex flex-wrap gap-3">
         <input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)}
           placeholder="Médecin, commercial, commentaire…" aria-label="Rechercher un passage"
           className={`${selectCls} min-w-[220px] flex-1`} />
@@ -370,13 +207,17 @@ function BlocDetail({ visites, compteRenduTerrain, selectedMois }) {
             ) : lignes.map((v) => (
               <tr key={v.retourTerrainId}>
                 <td className={`${tdCls} font-semibold text-slate-900 dark:text-white`}>
-                  {v.medecinNom}
+                  {v.medecinId ? (
+                    <button type="button" onClick={() => onOuvrirMedecin?.(v.medecinId)}
+                      className="text-left font-semibold text-[#009B83] hover:underline" title="Ouvrir la fiche 360° du médecin">
+                      {v.medecinNom}
+                    </button>
+                  ) : v.medecinNom}
                   {v.prospect && <span className="ml-1.5 rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">Prospect</span>}
                 </td>
                 <td className={tdCls}>
-                  {v.commercial}
-                  {v.commercialAppui && <span className="block text-xs text-slate-500">appui : {v.commercialAppui}</span>}
-                  {v.relais && <span className="block text-xs text-amber-700 dark:text-amber-400">relais de {v.commercialPrioritaire}</span>}
+                  {v.commercialAppui ? `${v.commercial} et ${v.commercialAppui}` : v.commercial}
+                  {v.commercialAppui && <span className="block text-xs text-slate-500">visite commune</span>}
                 </td>
                 <td className={tdCls}>
                   {naturePassage(v)}
@@ -424,8 +265,7 @@ function BlocDetail({ visites, compteRenduTerrain, selectedMois }) {
       {cr && (
         <div className="mt-4">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white">Rapport terrain du classeur mensuel · {libelleMois(cr.mois || selectedMois)}</h3>
-          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Indicateurs déjà présents dans l'onglet Activité du laboratoire, toute l'équipe.</p>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          <div className="mt-2 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
             <Indicateur label="Visites renseignées" valeur={cr.visitesRenseignees} />
             <Indicateur label="Visites réalisées" valeur={cr.visitesRealisees} />
             <Indicateur label="Taux terrain" valeur={`${Math.round(cr.tauxTerrain ?? 0)} %`} />
@@ -435,36 +275,333 @@ function BlocDetail({ visites, compteRenduTerrain, selectedMois }) {
           </div>
         </div>
       )}
-    </Bloc>
+    </details>
   );
 }
 
-// ── 6 · Décisions ─────────────────────────────────────────────────────────
+// ── 2 · Qu'a réalisé chaque commercial ? ────────────────────────────────────
+
+function EtapeRealisations({ data, token }) {
+  const lignes = data?.parCommercial ?? [];
+  const selection = data?.commercial?.toLowerCase();
+  return (
+    <Etape id="equipe-realisations" numero="2" titre="Réalisations et comparaison"
+      sousTitre="Vue synthétique des contributions, puis comparaison détaillée sur la période choisie.">
+      <p className="text-sm text-slate-600 dark:text-slate-300">{AIDE_COMMUNE} <AideCommune /></p>
+      {lignes.length === 0 ? (
+        <p className="text-sm text-slate-500">Aucun passage saisi sur la période.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm" aria-label="Contributions par commercial">
+            <thead className="border-b border-slate-200 dark:border-slate-700">
+              <tr>
+                <th className={thCls}>Commercial</th>
+                <th className={`${thCls} text-right`}>Visites seul</th>
+                <th className={`${thCls} text-right`}>Communes</th>
+                <th className={`${thCls} text-right`}>Échanges seul</th>
+                <th className={`${thCls} text-right`}>Retours favorables</th>
+                <th className={`${thCls} text-right`}>Évolution du statut, seul</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {lignes.map((l) => (
+                <tr key={l.commercial} className={selection === l.commercial.toLowerCase() ? 'bg-teal-50/60 dark:bg-teal-500/10' : undefined}>
+                  <td className={`${tdCls} font-semibold text-slate-900 dark:text-white`}>{l.commercial}</td>
+                  <td className={`${tdCls} text-right tabular-nums`}>{l.visitesSeul ?? 0}</td>
+                  <td className={`${tdCls} text-right tabular-nums`}>{l.visitesCommunes ?? 0}</td>
+                  <td className={`${tdCls} text-right tabular-nums`}>{l.echangesSeul ?? 0}</td>
+                  <td className={`${tdCls} text-right tabular-nums`}>{tauxFavorableSeul(l)} %</td>
+                  <td className={`${tdCls} text-right`}><EvolutionCompacte ligne={l} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        Les taux individuels portent sur les visites réalisées seul. Les visites communes et leurs résultats sont détaillés dans la comparaison.
+        La répartition des tâches diffère entre commerciaux : ce tableau n’est pas un classement de performance.
+      </p>
+      <details open className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+        <summary className={resumeCls}>Comparer deux commerciaux sur une période choisie</summary>
+        <div className="mt-4">
+          <Comparaison token={token} commerciaux={data?.commerciaux ?? []} moisDisponibles={data?.moisDisponibles ?? []} />
+        </div>
+      </details>
+    </Etape>
+  );
+}
+
+const INDICATEURS_COMPARAISON = [
+  ['Visites réalisées seul', (l) => l.visitesSeul],
+  ['Visites communes', (l) => l.visitesCommunes],
+  ['VACTIS seul', (l) => l.vactisSeul],
+  ['Hors VACTIS seul', (l) => l.horsVactisSeul],
+  ['Services seul', (l) => l.servicesSeul],
+  ['Médecins connus en échange seul', (l) => l.medecinsEnEchangeSeul],
+  ['Prospects seul', (l) => l.prospectsSeul],
+  ['Retours qualifiés / échanges seul', (l) => fraction(l.retoursQualifiesSeul, l.echangesSeul)],
+  ['Retours favorables / échanges seul', (l) => fraction(l.retoursFavorablesSeul, l.echangesSeul)],
+  ['Refus ou réclamations seul', (l) => l.refusSeul],
+  ['Progressions / comparables seul', (l) => fraction(l.progressionsSeul, l.comparablesSeul)],
+  ['Baisses seul', (l) => l.baissesSeul],
+  ['Échanges en visite commune', (l) => l.echangesCommuns],
+  ['Retours favorables en visite commune', (l) => l.retoursFavorablesCommuns],
+];
+
+const LIGNE_VIDE = Object.freeze({});
+
+function Comparaison({ token, commerciaux, moisDisponibles }) {
+  const [a, setA] = useState('');
+  const [b, setB] = useState('');
+  const [de, setDe] = useState('');
+  const [jusqua, setJusqua] = useState('');
+  const [lignes, setLignes] = useState([]);
+  const [erreur, setErreur] = useState(null);
+
+  useEffect(() => {
+    if (!a && commerciaux[0]) setA(commerciaux[0]);
+    if (!b && commerciaux[1]) setB(commerciaux[1]);
+  }, [commerciaux, a, b]);
+  useEffect(() => {
+    if (!jusqua && moisDisponibles[0]) setJusqua(moisDisponibles[0]);
+    if (!de && moisDisponibles[0]) setDe(moisDisponibles[1] ?? moisDisponibles[0]);
+  }, [moisDisponibles, de, jusqua]);
+
+  useEffect(() => {
+    if (!token || !de || !jusqua) return undefined;
+    let annule = false;
+    getEquipeCommerciale(token, bornesMois(de, jusqua))
+      .then((res) => { if (!annule) { setLignes(res?.parCommercial ?? []); setErreur(null); } })
+      .catch((err) => { if (!annule) setErreur(err.message || 'Comparaison indisponible.'); });
+    return () => { annule = true; };
+  }, [token, de, jusqua]);
+
+  if (commerciaux.length < 2) {
+    return <p className="text-sm text-slate-500">Il faut au moins deux commerciaux ayant saisi des visites pour comparer.</p>;
+  }
+
+  const trouver = (nom) => lignes.find((l) => l.commercial.toLowerCase() === nom.toLowerCase()) ?? LIGNE_VIDE;
+  const la = trouver(a);
+  const lb = trouver(b);
+  const max = Math.max(la.visitesSeul ?? 0, lb.visitesSeul ?? 0, 1);
+
+  const entete = (nom, ligne, couleur) => {
+    const e = evolutionSeul(ligne);
+    return (
+      <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+        <div className="flex items-baseline justify-between">
+          <p className="font-semibold text-slate-900 dark:text-white">{nom || '—'}</p>
+          <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{ligne.visitesSeul ?? 0} seul</p>
+        </div>
+        <div className="mt-2 h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+          <div className={`h-2 rounded-full ${couleur}`} style={{ width: `${pourcentage(ligne.visitesSeul ?? 0, max)}%` }} />
+        </div>
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+          {ligne.visitesCommunes ?? 0} visite(s) commune(s) <AideCommune /> · {tauxFavorableSeul(ligne)} % de retours favorables en solo
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Évolution observée ({e.comparables} comparable(s)) : ↑ {e.pctHausse} % · = {e.pctStable} % · ↓ {e.pctBaisse} %
+        </p>
+      </div>
+    );
+  };
+
+  const selecteur = (label, value, onChange, options, format = (o) => o) => (
+    <label className="flex flex-1 flex-col gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+      {label}
+      <select className={selectCls} value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => <option key={o} value={o}>{format(o)}</option>)}
+      </select>
+    </label>
+  );
+
+  return (
+    <section aria-label="Comparer deux commerciaux">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {selecteur('Commercial A', a, setA, commerciaux)}
+        {selecteur('Commercial B', b, setB, commerciaux)}
+        {selecteur('De', de, setDe, moisDisponibles, libelleMois)}
+        {selecteur('À', jusqua, setJusqua, moisDisponibles, libelleMois)}
+      </div>
+      {erreur && <p className="mb-3 text-sm text-rose-600" role="alert">{erreur}</p>}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {entete(a, la, 'bg-sky-500')}
+        {entete(b, lb, 'bg-violet-500')}
+      </div>
+      <div className="mt-4 overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="border-b border-slate-200 dark:border-slate-700">
+            <tr>
+              <th className={thCls}>Indicateur</th>
+              <th className={`${thCls} text-right`}>{a}</th>
+              <th className={`${thCls} text-right`}>{b}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {INDICATEURS_COMPARAISON.map(([libelle, valeur]) => (
+              <tr key={libelle}>
+                <td className={tdCls}>{libelle}</td>
+                <td className={`${tdCls} text-right font-semibold tabular-nums`}>{valeur(la) ?? 0}</td>
+                <td className={`${tdCls} text-right font-semibold tabular-nums`}>{valeur(lb) ?? 0}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 rounded-lg bg-sky-50 p-3 text-xs text-sky-900 dark:bg-sky-500/10 dark:text-sky-200">
+        Même période et mêmes définitions pour les deux profils. Les évolutions comparent le statut du médecin le mois de la visite
+        et le mois suivant : elles ne démontrent pas que la visite a causé le changement. Utilisez cet écart pour décider quoi examiner,
+        pas comme un classement automatique.
+      </p>
+    </section>
+  );
+}
+
+// ── 3 · Qu'observe-t-on après les visites ? ────────────────────────────────
+
+function ListeEvolutions({ titre, lignes, onOuvrirMedecin }) {
+  return (
+    <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+      <h3 className="text-sm font-bold text-slate-900 dark:text-white">{titre}</h3>
+      <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">Évolution observée, sans attribution causale à la visite.</p>
+      {lignes.length === 0 ? (
+        <p className="text-sm text-slate-500">Aucune sur la période.</p>
+      ) : (
+        <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
+          {lignes.map((l) => (
+            <li key={l.retourTerrainId} className="rounded-lg border border-slate-100 p-2.5 text-sm dark:border-slate-800">
+              <div className="flex items-baseline justify-between gap-2">
+                <button type="button" onClick={() => onOuvrirMedecin?.(l.medecinId)}
+                  className="text-left font-bold text-slate-900 hover:text-[#009B83] hover:underline dark:text-white">
+                  {l.medecinNom}
+                </button>
+                <span className="shrink-0 text-xs text-slate-500">{formatDate(l.dateVisite)}</span>
+              </div>
+              <p className="text-slate-700 dark:text-slate-200">{libelleStatut(l.statutAvant)} → {libelleStatut(l.statutApres)}</p>
+              <p className="text-xs text-slate-500">
+                {l.commercialAppui ? `${l.commercial} et ${l.commercialAppui}` : l.commercial} · {QUALIF_LABEL[l.qualification] ?? l.qualification}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function EtapeObservation({ data, onOuvrirMedecin }) {
+  const qualifications = data?.qualifications ?? {};
+  const evolutions = data?.evolutions ?? {};
+  const r = data?.rapportBaisses ?? {};
+  const max = Math.max(1, ...QUALIFICATIONS.map((q) => qualifications[q.key] ?? 0));
+  const comparables = r.comparables ?? 0;
+  const transitions = r.transitionsFrequentes ?? [];
+
+  return (
+    <Etape id="equipe-observation" numero="3" titre="Qu’observe-t-on après les visites ?"
+      sousTitre="Qualification des échanges et lecture équilibrée des statuts : progression, stabilité, baisse et cas non observables.">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Qualification des échanges</h3>
+          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Passages de service exclus.</p>
+          <ul className="space-y-2">
+            {QUALIFICATIONS.map((q) => {
+              const v = qualifications[q.key] ?? 0;
+              return (
+                <li key={q.key} className="flex items-center gap-3 text-sm">
+                  <span className="w-32 shrink-0 text-slate-700 dark:text-slate-200">{q.label}</span>
+                  <span className="h-2 flex-1 rounded-full bg-slate-100 dark:bg-slate-800">
+                    <span className={`block h-2 rounded-full ${q.couleur}`} style={{ width: `${pourcentage(v, max)}%` }} />
+                  </span>
+                  <span className="w-10 text-right font-semibold tabular-nums text-slate-900 dark:text-white">{v}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Statut du médecin après les visites VACTIS</h3>
+          <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Statut le mois de la visite comparé au mois suivant.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <Indicateur label="Progression" valeur={evolutions.FAVORABLE} ton="positif"
+              detail={`${pourcentage(evolutions.FAVORABLE ?? 0, comparables)} % des comparables`} />
+            <Indicateur label="Stable" valeur={evolutions.STABLE}
+              detail={`${pourcentage(evolutions.STABLE ?? 0, comparables)} % des comparables`} />
+            <Indicateur label="Baisse" valeur={evolutions.DEFAVORABLE} ton={evolutions.DEFAVORABLE > 0 ? 'alerte' : 'default'}
+              detail={`${pourcentage(evolutions.DEFAVORABLE ?? 0, comparables)} % des comparables`} />
+            <Indicateur label="Non observable" valeur={evolutions.NON_OBSERVABLE}
+              detail="Mois suivant non clôturé, statut manquant ou non classable" />
+          </div>
+        </div>
+      </div>
+
+      <div role="note" aria-label="Lecture des baisses"
+        className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+        <p className="font-bold">Lecture des baisses</p>
+        {r.baisses > 0 ? (
+          <>
+            <p className="mt-1">
+              {r.baisses} baisse(s) de statut sur {comparables} transition(s) comparable(s) ({pourcentage(r.baisses, comparables)} %),
+              concernant {r.medecinsEnBaisse} médecin(s). {r.medecinsBaissesRepetees} médecin(s) présentent une baisse sur plusieurs mois.
+            </p>
+            {r.favorablesMalgreBaisse > 0 && (
+              <p className="mt-1">
+                {r.favorablesMalgreBaisse} retour(s) de visite favorable(s) coexistent avec une baisse de statut : le ressenti terrain
+                et le recalcul d’activité demandent alors une vérification conjointe.
+              </p>
+            )}
+            {transitions.length > 0 && (
+              <p className="mt-1">
+                Transitions les plus fréquentes :{' '}
+                {transitions.map((t) => `${libelleStatut(t.statutAvant)} → ${libelleStatut(t.statutApres)} (${t.nombre})`).join(' · ')}.
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="mt-1">Aucune baisse de statut observée sur les {comparables} transition(s) comparable(s).</p>
+        )}
+        <p className="mt-2 text-xs opacity-80">
+          Une baisse décrit le passage vers un statut moins favorable dans le batch associé au mois de visite. Elle ne mesure pas à elle seule
+          l’effet du commercial.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <ListeEvolutions titre="Progressions observées" lignes={r.progressions ?? []} onOuvrirMedecin={onOuvrirMedecin} />
+        <ListeEvolutions titre="Baisses observées" lignes={r.baissesObservees ?? []} onOuvrirMedecin={onOuvrirMedecin} />
+      </div>
+    </Etape>
+  );
+}
+
+// ── 4 · Que faut-il décider ? ──────────────────────────────────────────────
 
 const ACTIONS_AFFICHEES = 8;
 
-function BlocDecisions({ data }) {
+function EtapeDecisions({ data }) {
   const d = data?.decisions ?? {};
   const actions = d.actionsSansVisite ?? [];
   const individuel = Boolean(data?.commercial);
   return (
-    <Bloc id="equipe-decisions" numero="6" titre="Décisions et suites à donner"
+    <Etape id="equipe-decisions" numero="4" titre="Décisions et suites à donner"
       sousTitre="Ces listes orientent le prochain point d'équipe ; elles ne constituent pas un jugement automatique sur les commerciaux.">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Indicateur label="Actions sans visite" valeur={actions.length}
-          detail={`Classeur actif${d.cycleActif ? ` ${libelleMois(d.cycleActif)}` : ''}, ${individuel ? 'actions attribuées' : 'toutes attributions'}`} />
-        <Indicateur label="Réclamations / refus" valeur={d.refusOuReclamations} detail="Échanges à reprendre" />
-        <Indicateur label="Baisses observées" valeur={d.baissesObservees} detail="Médecins à examiner" ton={d.baissesObservees > 0 ? 'alerte' : 'default'} />
+        <Indicateur label="Actions sans retour rapproché" valeur={actions.length}
+          detail={`Classeur actif${d.cycleActif ? ` ${libelleMois(d.cycleActif)}` : ''}`} />
+        <Indicateur label="Retours défavorables" valeur={d.retoursDefavorables} detail="Échanges à reprendre" />
+        <Indicateur label="Baisses malgré retour favorable" valeur={d.baissesMalgreFavorable}
+          detail="À vérifier avec les données du laboratoire" ton={d.baissesMalgreFavorable > 0 ? 'alerte' : 'default'} />
         <Indicateur label="Retours à compléter" valeur={d.retoursACompleter} detail="Échanges sans qualification" />
       </div>
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Actions VACTIS sans visite enregistrée</h3>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Actions du classeur actif sans retour rapproché</h3>
           <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
-            Actions du classeur actif rapprochées de toutes les visites VACTIS.{individuel ? ' Vue individuelle : seules les actions attribuées sont affichées.' : ''}
+            Actions du classeur actif rapprochées des visites VACTIS saisies.{individuel ? ' Vue individuelle : seules les actions attribuées sont affichées.' : ''}
           </p>
           {actions.length === 0 ? (
-            <p className="text-sm text-slate-500">Toutes les actions du classeur actif ont une visite.</p>
+            <p className="text-sm text-slate-500">Toutes les actions du classeur actif ont un retour.</p>
           ) : (
             <ul className="divide-y divide-slate-100 text-sm dark:divide-slate-800">
               {actions.slice(0, ACTIONS_AFFICHEES).map((a) => (
@@ -486,7 +623,7 @@ function BlocDecisions({ data }) {
           </ul>
         </div>
       </div>
-    </Bloc>
+    </Etape>
   );
 }
 
@@ -495,6 +632,7 @@ function BlocDecisions({ data }) {
 export default function EquipeCommercialeTab({ token, compteRenduTerrain, selectedMois }) {
   const [periode, setPeriode] = useState('');
   const [commercial, setCommercial] = useState('');
+  const [medecinOuvert, setMedecinOuvert] = useState(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -516,14 +654,12 @@ export default function EquipeCommercialeTab({ token, compteRenduTerrain, select
     charger();
   }, [charger]);
 
-  const commerciaux = data?.commerciaux ?? [];
-  const moisDisponibles = data?.moisDisponibles ?? [];
-
   return (
     <div className="space-y-5">
       <div className="rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-900 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200">
-        <strong>Lecture de l'équipe.</strong> Les blocs ci-dessous combinent les actions VACTIS et les visites saisies dans Actions
-        (VACTIS, hors VACTIS et passages de service). Une évolution de statut observée après une visite ne prouve pas l'effet de la visite.
+        <strong>Lecture de l’équipe en quatre étapes</strong> : d’où vient l’activité, ce qu’a réalisé chaque commercial, ce qu’on observe
+        après les visites, puis ce qu’il faut décider. Les passages de service comptent dans l’activité terrain, pas dans la couverture
+        commerciale. Une évolution de statut observée après une visite ne prouve pas l’effet de la visite.
       </div>
 
       {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700" role="alert">{error}</div>}
@@ -531,15 +667,20 @@ export default function EquipeCommercialeTab({ token, compteRenduTerrain, select
 
       {data && (
         <>
-          <BlocTerrain data={data} periode={periode} setPeriode={setPeriode} commercial={commercial}
-            setCommercial={setCommercial} onActualiser={charger} loading={loading} />
-          <BlocRepartition lignes={data.parCommercial ?? []} commercialSelectionne={data.commercial} />
-          <BlocComparaison token={token} commerciaux={commerciaux} moisDisponibles={moisDisponibles} />
-          <BlocQualite qualifications={data.qualifications} evolutions={data.evolutions} />
-          <BlocDetail visites={data.visites} compteRenduTerrain={compteRenduTerrain} selectedMois={selectedMois} />
-          <BlocDecisions data={data} />
+          <EtapeActivite data={data} periode={periode} setPeriode={setPeriode} commercial={commercial}
+            setCommercial={setCommercial} onActualiser={charger} loading={loading}
+            compteRenduTerrain={compteRenduTerrain} selectedMois={selectedMois} onOuvrirMedecin={setMedecinOuvert} />
+          <EtapeRealisations data={data} token={token} />
+          <EtapeObservation data={data} onOuvrirMedecin={setMedecinOuvert} />
+          <EtapeDecisions data={data} />
         </>
       )}
+      <FicheContextuelleDrawer
+        medecinId={medecinOuvert}
+        token={token}
+        isOpen={medecinOuvert != null}
+        onClose={() => setMedecinOuvert(null)}
+      />
     </div>
   );
 }

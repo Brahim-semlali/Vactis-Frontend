@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bornesMois, filtrerVisites, naturePassage, pointsDecision, pourcentage } from './equipeCommerciale.js';
+import { bornesMois, evolutionSeul, filtrerVisites, naturePassage, pointsDecision, pourcentage, tauxFavorableSeul } from './equipeCommerciale.js';
 
 describe('equipeCommerciale', () => {
   it('convertit une plage de mois en dates incluses, dans l’ordre', () => {
@@ -33,11 +33,22 @@ describe('equipeCommerciale', () => {
 
   it('propose des points de décision à partir des compteurs', () => {
     const points = pointsDecision({
-      synthese: { relais: 3, prospects: 2 },
-      decisions: { actionsSansVisite: [{}, {}], refusOuReclamations: 1, baissesObservees: 0, retoursACompleter: 4 },
+      synthese: { prospects: 2 },
+      decisions: { actionsSansVisite: [{}, {}], retoursDefavorables: 1, baissesObservees: 3, baissesMalgreFavorable: 2, retoursACompleter: 4 },
+      rapportBaisses: { medecinsBaissesRepetees: 1 },
     });
-    expect(points).toHaveLength(5);
-    expect(points[0]).toContain('2 action(s)');
+    expect(points).toHaveLength(7);
+    expect(points[0]).toContain('2 action(s) sans retour rapproché');
+    expect(points[2]).toContain('en commençant par les 1 en baisse sur plusieurs mois');
+    expect(points.at(-1)).toMatch(/prochain cycle/);
     expect(pointsDecision({ synthese: {}, decisions: {} })).toEqual(['Aucun point bloquant relevé sur la période sélectionnée.']);
+  });
+
+  it('répartit l’évolution des visites faites seul', () => {
+    expect(evolutionSeul({ progressionsSeul: 38, stablesSeul: 42, baissesSeul: 78, comparablesSeul: 158 }))
+      .toEqual({ comparables: 158, hausse: 38, stable: 42, baisse: 78, pctHausse: 24, pctStable: 27, pctBaisse: 49 });
+    expect(evolutionSeul({}).pctBaisse).toBe(0);
+    expect(tauxFavorableSeul({ retoursFavorablesSeul: 209, echangesSeul: 387 })).toBe(54);
+    expect(tauxFavorableSeul({ retoursFavorablesSeul: 3 })).toBe(0);
   });
 });
