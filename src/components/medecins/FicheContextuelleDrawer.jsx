@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { getFicheContextuelleApi } from '../../api/actions.js';
+import { getFiche360, telechargerFiche360Pdf } from '../../api/medecins.js';
+import Fiche360Historique from './Fiche360Historique.jsx';
+import Fiche360Reclamations from './Fiche360Reclamations.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { formatMad, formatNumber, formatPercent, formatSignedPercent } from '../../utils/indicatorFormatting.js';
 
@@ -11,6 +14,44 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedVisitId, setSelectedVisitId] = useState(null);
+  const [onglet, setOnglet] = useState('synthese');
+  const [fiche360, setFiche360] = useState(null);
+  const [chargement360, setChargement360] = useState(false);
+  const [erreur360, setErreur360] = useState(null);
+  const [pdfEnCours, setPdfEnCours] = useState(false);
+  const [erreurPdf, setErreurPdf] = useState(null);
+
+  // Nouveau médecin : retour à la synthèse, la fiche 360° sera rechargée à la demande
+  useEffect(() => {
+    setOnglet('synthese');
+    setFiche360(null);
+    setErreur360(null);
+    setErreurPdf(null);
+  }, [medecinId]);
+
+  useEffect(() => {
+    if (!isOpen || onglet === 'synthese' || fiche360 || !medecinId || !token) return undefined;
+    let annule = false;
+    setChargement360(true);
+    setErreur360(null);
+    getFiche360(token, medecinId)
+      .then((res) => { if (!annule) setFiche360(res); })
+      .catch((err) => { if (!annule) setErreur360(err.message || 'Impossible de charger la fiche 360°'); })
+      .finally(() => { if (!annule) setChargement360(false); });
+    return () => { annule = true; };
+  }, [isOpen, onglet, fiche360, medecinId, token]);
+
+  const telechargerPdf = async () => {
+    setPdfEnCours(true);
+    setErreurPdf(null);
+    try {
+      await telechargerFiche360Pdf(token, medecinId);
+    } catch (err) {
+      setErreurPdf(err.message || 'Impossible de générer le PDF');
+    } finally {
+      setPdfEnCours(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && medecinId && token) {
@@ -42,7 +83,7 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-white h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300"
+        className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer Header */}
@@ -54,30 +95,77 @@ export default function FicheContextuelleDrawer({ medecinId, token, isOpen, onCl
             </h2>
             <p className="text-xs text-slate-300">{medecin?.specialite} — {medecin?.organisme}</p>
           </div>
-          <button
-            onClick={onClose}
-            type="button"
-            className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white transition-all"
-          >
-            <X size={18} aria-hidden="true" />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={telechargerPdf}
+              disabled={pdfEnCours || !medecinId}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#009B83] px-3 py-2 text-xs font-bold text-white transition-all hover:bg-teal-600 active:scale-95 disabled:opacity-60"
+              title="Télécharger toutes les données du médecin en PDF"
+            >
+              <Download size={14} aria-hidden="true" />
+              {pdfEnCours ? 'Génération…' : 'Télécharger PDF'}
+            </button>
+            <button
+              onClick={onClose}
+              type="button"
+              aria-label="Fermer la fiche"
+              className="p-2 rounded-full bg-slate-800 text-slate-400 hover:text-white transition-all"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          </div>
         </div>
+
+        <div role="tablist" aria-label="Sections de la fiche médecin" className="flex gap-1 border-b border-slate-200 bg-slate-50 px-4 pt-2">
+          {[['synthese', 'Synthèse'], ['historique', 'Historique 360°'], ['reclamations', 'Réclamations']].map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={onglet === id}
+              onClick={() => setOnglet(id)}
+              className={`rounded-t-lg px-3 py-2 text-xs font-bold transition-colors ${onglet === id
+                ? 'bg-white text-slate-900 shadow-[0_-1px_0_#e2e8f0,1px_0_0_#e2e8f0,-1px_0_0_#e2e8f0]'
+                : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {erreurPdf && (
+          <div role="alert" className="mx-6 mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+            {erreurPdf}
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 text-slate-800">
-          {loading && (
+          {onglet !== 'synthese' && (
+            <>
+              {chargement360 && <div className="py-12 text-center text-slate-400 font-medium">Chargement de l’historique complet…</div>}
+              {erreur360 && (
+                <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl">{erreur360}</div>
+              )}
+              {fiche360 && !chargement360 && onglet === 'historique' && <Fiche360Historique fiche={fiche360} />}
+              {fiche360 && !chargement360 && onglet === 'reclamations' && <Fiche360Reclamations fiche={fiche360} />}
+            </>
+          )}
+
+          {onglet === 'synthese' && loading && (
             <div className="py-12 text-center text-slate-400 font-medium">
               Chargement des détails contextuels...
             </div>
           )}
 
-          {error && (
+          {onglet === 'synthese' && error && (
             <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl">
               {error}
             </div>
           )}
 
-          {data && !loading && (
+          {onglet === 'synthese' && data && !loading && (
             <>
               {/* Badges & Synthèse */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-wrap gap-2 items-center justify-between">

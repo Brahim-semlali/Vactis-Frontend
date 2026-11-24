@@ -9,7 +9,8 @@ import {
   YAxis,
   Tooltip,
 } from 'recharts';
-import { getMedecinByCode, getMedecinById, getMedecinEvolution, getMedecins, patchNoteInput } from '../../api/medecins.js';
+import { getMedecinByCode, getMedecinById, getMedecinEvolution, getMedecins, patchNoteInput, telechargerFiche360Pdf } from '../../api/medecins.js';
+import FicheContextuelleDrawer from '../../components/medecins/FicheContextuelleDrawer.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 import { formatMad, formatPercent, formatSignedPercent } from '../../utils/indicatorFormatting.js';
@@ -506,6 +507,21 @@ export default function MedecinsPage() {
 
   // Selection & View Mode state: 'table' or 'detail'
   const [selectedMedecin, setSelectedMedecin] = useState(null);
+  const [fiche360Ouverte, setFiche360Ouverte] = useState(false);
+  const [pdfEnCours, setPdfEnCours] = useState(false);
+  const [erreurPdf, setErreurPdf] = useState(null);
+
+  const telechargerPdfMedecin = async (medecinId) => {
+    setPdfEnCours(true);
+    setErreurPdf(null);
+    try {
+      await telechargerFiche360Pdf(token, medecinId);
+    } catch (err) {
+      setErreurPdf(err.message || 'Impossible de générer le PDF');
+    } finally {
+      setPdfEnCours(false);
+    }
+  };
   const [viewMode, setViewMode] = useState('table');
   const [medecinEvolution, setMedecinEvolution] = useState([]);
   const [loadingEvolution, setLoadingEvolution] = useState(false);
@@ -1711,6 +1727,23 @@ export default function MedecinsPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFiche360Ouverte(true)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 shadow-2xs transition-all hover:bg-slate-50 active:scale-95"
+                  >
+                    Fiche 360°
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => telechargerPdfMedecin(selectedMedecin.id)}
+                    disabled={pdfEnCours}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#009B83] px-3.5 py-2 text-xs font-bold text-white shadow-2xs transition-all hover:bg-teal-600 active:scale-95 disabled:opacity-60"
+                    title="Télécharger toutes les données du médecin en PDF"
+                  >
+                    {pdfEnCours ? 'Génération du PDF…' : 'Télécharger PDF'}
+                  </button>
+                  {erreurPdf && <span role="alert" className="text-xs font-semibold text-rose-600">{erreurPdf}</span>}
                   <Badge variant={getBadgeVariant('segment', selectedMedecin.segment)} className="px-3.5 py-1.5 text-xs">
                     {selectedMedecin.segment ? `SEGMENT ${selectedMedecin.segment}` : '—'}
                   </Badge>
@@ -1960,6 +1993,12 @@ export default function MedecinsPage() {
           )}
         </div>
       )}
+      <FicheContextuelleDrawer
+        medecinId={selectedMedecin?.id}
+        token={token}
+        isOpen={fiche360Ouverte && Boolean(selectedMedecin?.id)}
+        onClose={() => setFiche360Ouverte(false)}
+      />
     </div>
   );
 }

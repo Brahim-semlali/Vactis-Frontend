@@ -206,3 +206,35 @@ export async function postRetourTerrain(
   return data;
 }
 
+
+/** Fiche médecin 360° : identité, activité, frise, visites, actions, réclamations, dossiers. */
+export async function getFiche360(token, medecinId) {
+  const response = await fetch(`${API_BASE}/api/medecins/${medecinId}/fiche-360`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw await parseError(response);
+  return response.json();
+}
+
+/** Nom de fichier proposé par le serveur (Content-Disposition), sinon nom par défaut. */
+export function nomFichierPdf(disposition, medecinId) {
+  const correspondance = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition ?? '');
+  return correspondance ? decodeURIComponent(correspondance[1]) : `fiche-360-medecin-${medecinId}.pdf`;
+}
+
+/** Télécharge le PDF détaillé de la fiche 360° généré par le serveur. */
+export async function telechargerFiche360Pdf(token, medecinId) {
+  const response = await fetch(`${API_BASE}/api/medecins/${medecinId}/fiche-360/pdf`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw await parseError(response);
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const lien = document.createElement('a');
+  lien.href = url;
+  lien.download = nomFichierPdf(response.headers.get('Content-Disposition'), medecinId);
+  document.body.appendChild(lien);
+  lien.click();
+  lien.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
