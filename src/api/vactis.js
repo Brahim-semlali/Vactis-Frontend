@@ -14,6 +14,15 @@ async function parseError(response) {
 
 // ─── Alertes hebdomadaires ──────────────────────────────────────────────────
 
+/** Alertes de fin de cycle : celles du commercial connecté, ou de toute l'équipe pour la direction. */
+export async function getAlertesFinCycle(token) {
+  const response = await fetch(`${API_BASE}/api/alertes/fin-cycle`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw await parseError(response);
+  return response.json();
+}
+
 export async function getAlertesActives(token) {
   logger.info('Chargement des alertes actives (A_TRAITER)');
   const response = await fetch(`${API_BASE}/api/alertes`, {

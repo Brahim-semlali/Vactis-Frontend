@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import EncartClotureCycle from '../../components/alertes/EncartClotureCycle.jsx';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   Activity,
@@ -320,6 +321,8 @@ export default function DashboardDirectionPage({ navigate }) {
           <TriangleAlert aria-hidden="true" className="h-4 w-4 shrink-0" /> {error}
         </motion.div>
       )}
+
+      <EncartClotureCycle navigate={navigate} />
 
       {loading && !data && <Squelette />}
 

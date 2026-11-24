@@ -21,6 +21,10 @@ vi.mock('../../api/actions.js', () => ({
   soumettreRetourTerrainApi: vi.fn(),
   creerVisiteLibreApi: vi.fn(),
 }));
+const { finCycleMock } = vi.hoisted(() => ({ finCycleMock: { donnees: null } }));
+vi.mock('../../components/alertes/useAlertesFinCycle.js', () => ({
+  default: () => ({ donnees: finCycleMock.donnees, chargement: false, erreur: null, recharger: () => {} }),
+}));
 vi.mock('../../api/medecins.js', () => ({ getMedecinEvolution: vi.fn(), getMedecins }));
 vi.mock('../../components/actions/ModalSaisieRetour.jsx', () => ({ default: () => null }));
 vi.mock('../../components/actions/ModalVisiteLibre.jsx', () => ({ default: () => null }));
@@ -35,6 +39,7 @@ afterEach(cleanup);
 describe('ActionsPage exports', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    finCycleMock.donnees = null;
     authState.userProfile = { role: 'USER' };
     getActions.mockResolvedValue({
       items: [{
@@ -56,6 +61,31 @@ describe('ActionsPage exports', () => {
     });
     getMedecins.mockResolvedValue({ items: [] });
     getVisitesLibresApi.mockResolvedValue([]);
+  });
+
+  it('signale à partir de J-7 les actions du cycle à visiter avant la clôture', async () => {
+    finCycleMock.donnees = {
+      cycle: '2026-11', joursRestants: 4, fenetreActive: true, urgent: false,
+      alertes: [{ type: 'ACTION_NON_VISITEE', gravite: 'ATTENTION', actionId: 101 }],
+    };
+    render(<ActionsPage />);
+    await screen.findByText('visite diagnostic');
+
+    expect(screen.getByTestId('bandeau-cloture-cycle').textContent)
+      .toContain('Clôture du cycle novembre 2026 dans 4 jours : 1 action à visiter.');
+    expect(screen.getByText('À visiter avant clôture')).toBeTruthy();
+  });
+
+  it('ne signale rien avant la fenêtre de fin de cycle', async () => {
+    finCycleMock.donnees = {
+      cycle: '2026-11', joursRestants: 15, fenetreActive: false,
+      alertes: [{ type: 'ACTION_NON_VISITEE', gravite: 'ATTENTION', actionId: 101 }],
+    };
+    render(<ActionsPage />);
+    await screen.findByText('visite diagnostic');
+
+    expect(screen.queryByTestId('bandeau-cloture-cycle')).toBeNull();
+    expect(screen.queryByText('À visiter avant clôture')).toBeNull();
   });
 
   it('hides both export controls for non-admins', async () => {

@@ -16,13 +16,15 @@ vi.mock('../api/vactis.js', () => ({
   getNotificationsCount: vi.fn(),
   getNotifications: vi.fn(),
   marquerNotificationLue: vi.fn(),
+  getAlertesFinCycle: vi.fn(),
 }));
 
-import { getNotificationsCount, getNotifications, marquerNotificationLue } from '../api/vactis.js';
+import { getNotificationsCount, getNotifications, marquerNotificationLue, getAlertesFinCycle } from '../api/vactis.js';
 
 describe('NotificationDropdown Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getAlertesFinCycle.mockResolvedValue({ fenetreActive: false, alertes: [] });
   });
 
   afterEach(() => {
@@ -111,10 +113,51 @@ describe('NotificationDropdown Component', () => {
     });
   });
 
-  it('ne montre pas les notifications sans accès aux réclamations', async () => {
+  it('sans accès aux réclamations, la cloche reste visible mais ne charge pas leurs notifications', async () => {
     render(<NotificationDropdown onNavigate={vi.fn()} />);
 
-    expect(screen.queryByTestId('notification-bell-btn')).toBeNull();
+    expect(screen.getByTestId('notification-bell-btn')).toBeTruthy();
+    await waitFor(() => expect(getAlertesFinCycle).toHaveBeenCalled());
     expect(getNotificationsCount).not.toHaveBeenCalled();
+  });
+
+  it('remonte les alertes de fin de cycle à partir de J-7 et ouvre leur page', async () => {
+    const onNavigate = vi.fn();
+    getAlertesFinCycle.mockResolvedValue({
+      cycle: '2026-11',
+      joursRestants: 5,
+      fenetreActive: true,
+      urgent: false,
+      alertes: [
+        { type: 'ACTION_NON_VISITEE', gravite: 'ATTENTION', actionId: 1 },
+        { type: 'ACTION_NON_VISITEE', gravite: 'ATTENTION', actionId: 2 },
+        { type: 'RETOUR_A_QUALIFIER', gravite: 'ATTENTION', retourTerrainId: 3 },
+      ],
+    });
+
+    render(<NotificationDropdown onNavigate={onNavigate} />);
+
+    await waitFor(() => expect(screen.getByTestId('notification-badge').textContent).toBe('3'));
+    fireEvent.click(screen.getByTestId('notification-bell-btn'));
+
+    const section = await screen.findByTestId('fin-cycle-section');
+    expect(section.textContent).toContain('Clôture du cycle novembre 2026 dans 5 jours');
+    expect(section.textContent).toContain('J-5');
+    expect(section.textContent).toContain('2actions non visitées');
+
+    fireEvent.click(screen.getByText('Voir les alertes de fin de cycle →'));
+    expect(onNavigate).toHaveBeenCalledWith('/alertes-fin-cycle');
+  });
+
+  it('n’affiche pas les alertes de fin de cycle avant J-7', async () => {
+    getAlertesFinCycle.mockResolvedValue({
+      cycle: '2026-11', joursRestants: 12, fenetreActive: false,
+      alertes: [{ type: 'ACTION_NON_VISITEE', gravite: 'ATTENTION', actionId: 1 }],
+    });
+
+    render(<NotificationDropdown onNavigate={vi.fn()} />);
+
+    await waitFor(() => expect(getAlertesFinCycle).toHaveBeenCalled());
+    expect(screen.queryByTestId('notification-badge')).toBeNull();
   });
 });

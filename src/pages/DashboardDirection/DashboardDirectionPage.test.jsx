@@ -27,6 +27,10 @@ globalThis.ResizeObserver ??= ResizeObserverStub;
 vi.mock('../../context/AuthContext.jsx', () => ({
   useAuth: () => ({ token: 'test-token', userProfile: { role: 'ADMIN' } }),
 }));
+const { finCycleMock } = vi.hoisted(() => ({ finCycleMock: { donnees: null } }));
+vi.mock('../../components/alertes/useAlertesFinCycle.js', () => ({
+  default: () => ({ donnees: finCycleMock.donnees, chargement: false, erreur: null, recharger: () => {} }),
+}));
 vi.mock('../../api/direction.js', () => ({ getDashboardDirection }));
 vi.mock('../../api/activite.js', () => ({ getMoisDisponibles }));
 

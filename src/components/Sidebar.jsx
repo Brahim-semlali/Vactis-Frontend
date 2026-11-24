@@ -66,6 +66,12 @@ function isRouteActive(activeRoute, itemRoute) {
     return true;
   }
 
+  // Les alertes de fin de cycle sont un onglet de la page Alertes
+  const alertes = ['/alertes', '/alertes-hebdo', '/alertes-fin-cycle'];
+  if (alertes.includes(normalizedActive) && alertes.includes(normalizedItem)) {
+    return true;
+  }
+
   return false;
 }
 

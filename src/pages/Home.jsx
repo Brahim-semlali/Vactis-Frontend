@@ -105,6 +105,7 @@ function isRouteAllowed(route, allowedRoutes) {
   if (
     route === '/alertes' ||
     route === '/alertes-hebdo' ||
+    route === '/alertes-fin-cycle' ||
     route === '/recommandations' ||
     route === '/bridge-to-goal' ||
     route === '/rapport-commercial' ||
@@ -158,7 +159,11 @@ function resolvePageContent(activeRoute, username, navigate) {
   }
 
   if (activeRoute === '/alertes' || activeRoute === '/alertes-hebdo') {
-    return <AlertesPage />;
+    return <AlertesPage navigate={navigate} />;
+  }
+
+  if (activeRoute === '/alertes-fin-cycle') {
+    return <AlertesPage ongletInitial="fin-cycle" navigate={navigate} />;
   }
 
   if (activeRoute === '/recommandations') {
@@ -186,7 +191,7 @@ function resolvePageContent(activeRoute, username, navigate) {
   }
 
   if (activeRoute === '/suivi-equipe') {
-    return <SuiviEquipePage />;
+    return <SuiviEquipePage navigate={navigate} />;
   }
 
   if (isPublicRoute(activeRoute)) {

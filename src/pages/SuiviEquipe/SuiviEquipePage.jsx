@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import EncartClotureCycle from '../../components/alertes/EncartClotureCycle.jsx';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   CalendarDays,
@@ -444,7 +445,7 @@ function PanneauEvolution({ evolution, loading, error, onClose }) {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-export default function SuiviEquipePage() {
+export default function SuiviEquipePage({ navigate }) {
   const { token } = useAuth();
   const [filters, setFilters] = useState({ debut: '', fin: '', type: '', statut: '' });
   const [commerciaux, setCommerciaux] = useState([]);
@@ -567,6 +568,8 @@ export default function SuiviEquipePage() {
           <TriangleAlert aria-hidden="true" className="h-4 w-4" /> {error}
         </div>
       )}
+
+      <EncartClotureCycle navigate={navigate} />
 
       {loading ? <Squelette label="Chargement du suivi équipe" /> : (
         <>

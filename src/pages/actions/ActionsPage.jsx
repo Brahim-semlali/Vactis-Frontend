@@ -17,6 +17,8 @@ import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
 import ModalSaisieRetour from '../../components/actions/ModalSaisieRetour.jsx';
 import ModalVisiteLibre from '../../components/actions/ModalVisiteLibre.jsx';
 import FicheContextuelleDrawer from '../../components/medecins/FicheContextuelleDrawer.jsx';
+import useAlertesFinCycle from '../../components/alertes/useAlertesFinCycle.js';
+import { actionsAVisiter, libelleEcheance, pastilleEcheance } from '../../components/alertes/finCycle.js';
 import { formatMad, formatNumber, formatPercent, formatSignedPercent } from '../../utils/indicatorFormatting.js';
 
 // UI components shadcn/ui
@@ -569,6 +571,12 @@ function EvolutionChartCard({ data = [], loading = false }) {
 export default function ActionsPage() {
   const { token, userProfile } = useAuth();
   const isAdmin = isAdminProfile(userProfile);
+  const { donnees: finCycle, recharger: rechargerFinCycle } = useAlertesFinCycle();
+  // Actions du cycle encore sans visite, signalées seulement à partir de J-7
+  const aVisiterAvantCloture = useMemo(
+    () => (finCycle?.fenetreActive ? actionsAVisiter(finCycle) : new Set()),
+    [finCycle],
+  );
   const [filters, setFilters] = useState(FILTER_DEFAULTS);
   const [pageData, setPageData] = useState(null);
   const [onboardingMedecins, setOnboardingMedecins] = useState([]);
@@ -645,6 +653,7 @@ export default function ActionsPage() {
       setIsSaisieRetourOpen(false);
       setActionToSubmit(null);
       loadActions();
+      rechargerFinCycle();
     } catch (err) {
       setRetourErrorMessage(err.message || 'Impossible d’enregistrer le retour terrain. Vérifiez les informations et réessayez.');
     } finally {
@@ -695,6 +704,7 @@ export default function ActionsPage() {
       setIsVisiteLibreOpen(false);
       loadVisitesLibres();
       loadActions();
+      rechargerFinCycle();
     } catch (err) {
       alert(err.message || 'Erreur lors de la création de la visite libre');
     } finally {
@@ -1002,6 +1012,24 @@ export default function ActionsPage() {
         </div>
       </div>
 
+      {aVisiterAvantCloture.size > 0 && (
+        <div
+          role="status"
+          data-testid="bandeau-cloture-cycle"
+          className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${finCycle.urgent
+            ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200'
+            : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200'}`}
+        >
+          <span className="flex items-center gap-2 font-semibold">
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold text-white ${finCycle.urgent ? 'bg-rose-600' : 'bg-amber-500'}`}>
+              {pastilleEcheance(finCycle)}
+            </span>
+            {libelleEcheance(finCycle)} : {aVisiterAvantCloture.size} action{aVisiterAvantCloture.size > 1 ? 's' : ''} à visiter.
+          </span>
+          <span className="text-xs opacity-80">Repérées par le badge « À visiter avant clôture ».</span>
+        </div>
+      )}
+
       {retourSuccessMessage && (
         <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
           <span>{retourSuccessMessage}</span>
@@ -1239,6 +1267,14 @@ export default function ActionsPage() {
                                 >
                                   {formatMedecinName(action.medecin)} 🛈
                                 </div>
+                                {aVisiterAvantCloture.has(action.id) && (
+                                  <span className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-extrabold ${finCycle?.urgent
+                                    ? 'bg-rose-100 text-rose-700'
+                                    : 'bg-amber-100 text-amber-800'}`}
+                                  >
+                                    À visiter avant clôture
+                                  </span>
+                                )}
                                 <div className="text-xs text-slate-500 font-medium">
                                   {action.medecin?.specialite ?? '—'}
                                   {(action.lieuOrganisme || action.medecin?.organisme) && (
