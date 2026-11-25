@@ -59,6 +59,20 @@ export async function createControle(token, payload) {
   return response.json();
 }
 
+// Remplace les règles d'un type (Rupture, Urgence, Fiabilité, Délai d'action) par les valeurs VACTIS par défaut
+export async function reinitialiserControles(token, type) {
+  const response = await fetch(`${API_BASE}/api/controle/type/${encodeURIComponent(type)}/reinitialiser`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw await parseError(response);
+  }
+
+  return response.json();
+}
+
 export async function updateControle(token, idControle, payload) {
   const response = await fetch(`${API_BASE}/api/controle/${idControle}`, {
     method: 'PUT',

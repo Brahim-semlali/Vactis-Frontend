@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import {
   createControle,
   deleteControle,
   getControlesByType,
+  reinitialiserControles,
   updateControle,
 } from '../../api/controle.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { MenuIcon } from '../../components/icons/MenuIcons.jsx';
+import BridgeGoalSettings from './BridgeGoalSettings.jsx';
 
 // UI components shadcn/ui
 import { Card } from '../../components/ui/card.jsx';
@@ -15,13 +16,121 @@ import { Badge } from '../../components/ui/badge.jsx';
 import { Skeleton } from '../../components/ui/skeleton.jsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table.jsx';
 
-const TABS = [
-  { id: 'STATUT', label: 'Statuts', description: 'Règles de statut médecin selon la variation du CA (M vs M-1)' },
+// Plafond technique du dernier palier côté back (PaliersControle.PLAFOND) : affiché « ∞ »
+const PLAFOND = 100000;
+
+/**
+ * Configuration des onglets.
+ * - mode 'palier' : état + bornes min / max
+ * - mode 'delai'  : état + valeur (jours)
+ * - mode 'bridge' : objectifs Bridge to Goal (annuel + mensuel), hors table de règles
+ * - etats : liste fermée des états reconnus par le moteur (sinon saisie libre)
+ * - intervalleSemiOuvert : bornes [min ; max[ (la borne max est exclue, sauf pour le dernier palier)
+ */
+export const TABS = [
+  {
+    id: 'STATUT',
+    label: 'Statuts',
+    mode: 'palier',
+    description: 'Règles de statut médecin selon la variation du CA (M vs M-1)',
+    minLabel: 'Variation min (%)',
+    maxLabel: 'Variation max (%)',
+    colMin: 'Variation min',
+    colMax: 'Variation max',
+    placeholderEtat: 'Ex. Progression, Surveillance…',
+    placeholderMin: '-10',
+    placeholderMax: '20',
+    bornes: { min: -100, max: 1000 },
+    format: (v) => `${Number(v) > 0 ? '+' : ''}${Number(v)}%`,
+  },
   {
     id: 'SEGEMENTS',
     label: 'Segments',
+    mode: 'palier',
+    description: 'Règles de segmentation selon le score de valeur (Potentiel 40%, Performance 40%, Poids éco 20%)',
+    minLabel: 'Score min (sur 100)',
+    maxLabel: 'Score max (sur 100)',
+    colMin: 'Score min',
+    colMax: 'Score max',
+    placeholderEtat: 'Ex. A, B, C, D…',
+    placeholderMin: '0',
+    placeholderMax: '100',
+    bornes: { min: 0, max: 100 },
+    format: (v) => `${Number(v).toLocaleString('fr-FR')} pts`,
+  },
+  {
+    id: 'RUPTURE',
+    label: 'Rupture',
+    mode: 'palier',
+    reinitialisable: true,
+    intervalleSemiOuvert: true,
     description:
-      'Règles de segmentation selon le score de valeur (Potentiel 40%, Performance 40%, Poids éco 20%)',
+      'Niveau de rupture de rythme selon le ratio jours de silence / intervalle moyen du médecin (150 % = 1,5× son rythme habituel). Alimente les alertes hebdomadaires.',
+    etats: ['AUCUNE', 'SURVEILLANCE', 'CRITIQUE'],
+    minLabel: 'Ratio min (% de l’intervalle)',
+    maxLabel: 'Ratio max (% de l’intervalle)',
+    colMin: 'Ratio min',
+    colMax: 'Ratio max',
+    placeholderMin: '150',
+    placeholderMax: '200',
+    bornes: { min: 0, max: PLAFOND },
+    format: (v) => `${Number(v).toLocaleString('fr-FR')} % (×${(Number(v) / 100).toLocaleString('fr-FR')})`,
+  },
+  {
+    id: 'URGENCE',
+    label: 'Urgence',
+    mode: 'palier',
+    reinitialisable: true,
+    intervalleSemiOuvert: true,
+    description:
+      'Niveau d’urgence médecin selon le score d’urgence finale (0-100). Le score de risque suit les mêmes paliers, plafonné à ELEVE.',
+    etats: ['FAIBLE', 'MOYEN', 'ELEVE', 'URGENT'],
+    minLabel: 'Score min (sur 100)',
+    maxLabel: 'Score max (sur 100)',
+    colMin: 'Score min',
+    colMax: 'Score max',
+    placeholderMin: '50',
+    placeholderMax: '75',
+    bornes: { min: 0, max: 100 },
+    format: (v) => `${Number(v).toLocaleString('fr-FR')} pts`,
+  },
+  {
+    id: 'FIABILITE',
+    label: 'Fiabilité',
+    mode: 'palier',
+    reinitialisable: true,
+    intervalleSemiOuvert: true,
+    description:
+      'Fiabilité de l’historique selon le nombre de mois actifs. FIABLE exige en plus 6 mois d’ancienneté de collaboration.',
+    etats: ['NON_FIABLE', 'PARTIEL', 'FIABLE'],
+    minLabel: 'Mois actifs min',
+    maxLabel: 'Mois actifs max',
+    colMin: 'Mois min',
+    colMax: 'Mois max',
+    placeholderMin: '2',
+    placeholderMax: '3',
+    bornes: { min: 0, max: 1200 },
+    format: (v) => `${Number(v)} mois`,
+  },
+  {
+    id: 'DELAI_ACTION',
+    label: 'Délai d’action',
+    mode: 'delai',
+    reinitialisable: true,
+    description:
+      'Délai recommandé (en jours) pour traiter une action selon le niveau d’intensité du risque. SILENCE_STRATEGIQUE s’applique aux silences critiques des segments A/B.',
+    etats: ['SILENCE_STRATEGIQUE', 'CRITIQUE', 'ELEVEE', 'NORMALE'],
+    valeurLabel: 'Délai (jours)',
+    colValeur: 'Délai',
+    placeholderValeur: '7',
+    format: (v) => `${Number(v)} jour${Number(v) > 1 ? 's' : ''}`,
+  },
+  {
+    id: 'BRIDGE_GOAL',
+    label: 'Bridge to Goal',
+    mode: 'bridge',
+    description:
+      'Objectif de CA annuel et objectifs mensuels utilisés par Bridge to Goal pour mesurer l’écart à l’objectif et le gap à combler.',
   },
 ];
 
@@ -29,14 +138,14 @@ const EMPTY_FORM = {
   etat: '',
   minCA: '',
   maxCA: '',
+  valeur: '',
   actif: true,
 };
 
-function formatRuleVal(value, isSegmentTab, activeTab) {
+export function formatRuleVal(value, tab) {
   if (value === null || value === undefined || value === '') return '—';
-  if (isSegmentTab) return `${Number(value).toLocaleString('fr-FR')} pts`;
-  const num = Number(value);
-  return `${num > 0 ? '+' : ''}${num}%`;
+  if (tab.bornes && Number(value) >= PLAFOND) return '∞';
+  return tab.format(value);
 }
 
 function ControleIcon({ name, size = 18 }) {
@@ -74,6 +183,13 @@ function ControleIcon({ name, size = 18 }) {
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
         </svg>
       );
+    case 'reset':
+      return (
+        <svg {...props}>
+          <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+          <path d="M3 3v5h5" />
+        </svg>
+      );
     case 'refresh':
       return (
         <svg {...props}>
@@ -88,58 +204,110 @@ function ControleIcon({ name, size = 18 }) {
   }
 }
 
-function RuleForm({ form, onChange, onSubmit, onCancel, submitLabel, loading, isSegmentTab }) {
+const INPUT_CLASS =
+  'h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-primary focus:outline-none';
+
+function RuleForm({ form, onChange, onSubmit, onCancel, submitLabel, loading, tab, idPrefix }) {
+  const isDelai = tab.mode === 'delai';
+
   return (
     <form
-      className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end"
+      className={`grid grid-cols-1 sm:grid-cols-2 ${isDelai ? 'md:grid-cols-3' : 'md:grid-cols-4'} gap-4 items-end`}
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
       }}
     >
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold text-slate-700">État / libellé</label>
-        <input
-          type="text"
-          value={form.etat}
-          onChange={(e) => onChange({ ...form, etat: e.target.value })}
-          placeholder={isSegmentTab ? 'Ex. A, B, C, D…' : 'Ex. Progression, Surveillance…'}
-          className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-primary focus:outline-none"
-          required
-        />
+        <label htmlFor={`${idPrefix}-etat`} className="text-xs font-semibold text-slate-700">
+          {isDelai ? 'Niveau d’intensité' : 'État / libellé'}
+        </label>
+        {tab.etats ? (
+          <select
+            id={`${idPrefix}-etat`}
+            value={form.etat}
+            onChange={(e) => onChange({ ...form, etat: e.target.value })}
+            className={INPUT_CLASS}
+            required
+          >
+            <option value="" disabled>
+              Choisir…
+            </option>
+            {tab.etats.map((etat) => (
+              <option key={etat} value={etat}>
+                {etat}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            id={`${idPrefix}-etat`}
+            type="text"
+            value={form.etat}
+            onChange={(e) => onChange({ ...form, etat: e.target.value })}
+            placeholder={tab.placeholderEtat}
+            className={INPUT_CLASS}
+            required
+          />
+        )}
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold text-slate-700">
-          {isSegmentTab ? 'Score min (sur 100)' : 'Variation min (%)'}
-        </label>
-        <input
-          type="number"
-          min={isSegmentTab ? '0' : '-100'}
-          max={isSegmentTab ? '100' : '1000'}
-          value={form.minCA}
-          onChange={(e) => onChange({ ...form, minCA: e.target.value })}
-          placeholder={isSegmentTab ? '0' : '-10'}
-          className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-primary focus:outline-none"
-          required
-        />
-      </div>
+      {isDelai ? (
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`${idPrefix}-valeur`} className="text-xs font-semibold text-slate-700">
+            {tab.valeurLabel}
+          </label>
+          <input
+            id={`${idPrefix}-valeur`}
+            type="number"
+            min="1"
+            max="365"
+            value={form.valeur}
+            onChange={(e) => onChange({ ...form, valeur: e.target.value })}
+            placeholder={tab.placeholderValeur}
+            className={INPUT_CLASS}
+            required
+          />
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-1">
+            <label htmlFor={`${idPrefix}-min`} className="text-xs font-semibold text-slate-700">
+              {tab.minLabel}
+              {tab.intervalleSemiOuvert && <span className="font-normal text-slate-400"> · inclus</span>}
+            </label>
+            <input
+              id={`${idPrefix}-min`}
+              type="number"
+              min={tab.bornes.min}
+              max={tab.bornes.max}
+              value={form.minCA}
+              onChange={(e) => onChange({ ...form, minCA: e.target.value })}
+              placeholder={tab.placeholderMin}
+              className={INPUT_CLASS}
+              required
+            />
+          </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold text-slate-700">
-          {isSegmentTab ? 'Score max (sur 100)' : 'Variation max (%)'}
-        </label>
-        <input
-          type="number"
-          min={isSegmentTab ? '0' : '-100'}
-          max={isSegmentTab ? '100' : '1000'}
-          value={form.maxCA}
-          onChange={(e) => onChange({ ...form, maxCA: e.target.value })}
-          placeholder={isSegmentTab ? '100' : '20'}
-          className="h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-900 focus:ring-2 focus:ring-primary focus:outline-none"
-          required
-        />
-      </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor={`${idPrefix}-max`} className="text-xs font-semibold text-slate-700">
+              {tab.maxLabel}
+              {tab.intervalleSemiOuvert && <span className="font-normal text-slate-400"> · exclu</span>}
+            </label>
+            <input
+              id={`${idPrefix}-max`}
+              type="number"
+              min={tab.bornes.min}
+              max={tab.bornes.max}
+              value={form.maxCA}
+              onChange={(e) => onChange({ ...form, maxCA: e.target.value })}
+              placeholder={tab.placeholderMax}
+              className={INPUT_CLASS}
+              required
+            />
+          </div>
+        </>
+      )}
 
       <div className="flex items-center justify-between gap-3 h-10">
         <label className="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
@@ -176,7 +344,7 @@ function RuleForm({ form, onChange, onSubmit, onCancel, submitLabel, loading, is
   );
 }
 
-export default function ControlePage({ navigate }) {
+export default function ControlePage() {
   const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('STATUT');
   const [rules, setRules] = useState([]);
@@ -188,9 +356,18 @@ export default function ControlePage({ navigate }) {
   const [editForm, setEditForm] = useState(EMPTY_FORM);
 
   const currentTab = TABS.find((tab) => tab.id === activeTab) ?? TABS[0];
+  const isDelai = currentTab.mode === 'delai';
+  const isBridge = currentTab.mode === 'bridge';
+  const nbColonnes = isDelai ? 4 : 5;
 
   const loadRules = useCallback(async () => {
     if (!token) return;
+    // L'onglet Bridge to Goal gère ses propres données (paramètres système)
+    if (TABS.find((tab) => tab.id === activeTab)?.mode === 'bridge') {
+      setRules([]);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -209,16 +386,20 @@ export default function ControlePage({ navigate }) {
   useEffect(() => {
     setEditingId(null);
     setEditForm(EMPTY_FORM);
+    setCreateForm(EMPTY_FORM);
     loadRules();
   }, [loadRules]);
 
-  const buildPayload = (form) => ({
-    type: activeTab,
-    etat: form.etat.trim(),
-    minCA: Number(form.minCA),
-    maxCA: Number(form.maxCA),
-    actif: Boolean(form.actif),
-  });
+  const buildPayload = (form) =>
+    isDelai
+      ? { type: activeTab, etat: form.etat.trim(), valeur: Number(form.valeur), actif: Boolean(form.actif) }
+      : {
+          type: activeTab,
+          etat: form.etat.trim(),
+          minCA: Number(form.minCA),
+          maxCA: Number(form.maxCA),
+          actif: Boolean(form.actif),
+        };
 
   const handleCreate = async () => {
     if (!token) return;
@@ -243,6 +424,7 @@ export default function ControlePage({ navigate }) {
       etat: rule.etat ?? '',
       minCA: rule.minCA ?? '',
       maxCA: rule.maxCA ?? '',
+      valeur: rule.valeur ?? '',
       actif: rule.actif !== false,
     });
   };
@@ -286,6 +468,31 @@ export default function ControlePage({ navigate }) {
     }
   };
 
+  const handleReset = async () => {
+    if (!token) return;
+    if (
+      !window.confirm(
+        `Remplacer toutes les règles « ${currentTab.label} » par les règles VACTIS par défaut ?`,
+      )
+    ) {
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const data = await reinitialiserControles(token, activeTab);
+      setRules(data ?? []);
+      setEditingId(null);
+      setEditForm(EMPTY_FORM);
+    } catch (err) {
+      setError(err.message ?? 'Réinitialisation impossible');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Hero Section */}
@@ -298,38 +505,59 @@ export default function ControlePage({ navigate }) {
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-teal-700">Table contrôle</p>
-                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Règles par palier de variation & score</h1>
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Règles et paliers du moteur VACTIS</h1>
               </div>
             </div>
             <p className="text-sm text-slate-600 pt-1">{currentTab.description}</p>
             <div className="flex items-center gap-4 text-xs text-slate-400 pt-1">
-              <span>{rules.length} règle{rules.length !== 1 ? 's' : ''}</span>
-              <span>•</span>
+              {!isBridge && (
+                <>
+                  <span>{rules.length} règle{rules.length !== 1 ? 's' : ''}</span>
+                  <span>•</span>
+                </>
+              )}
               <span className="font-semibold text-slate-600">Type actif : {currentTab.label}</span>
             </div>
           </div>
 
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold text-sm transition-all shadow-md shadow-teal-700/20 disabled:opacity-50"
-            onClick={loadRules}
-            disabled={loading || saving}
-          >
-            <ControleIcon name="refresh" />
-            Rafraîchir
-          </button>
+          {!isBridge && (
+          <div className="flex flex-wrap items-center gap-2">
+            {currentTab.reinitialisable && (
+              <button
+                type="button"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/90 hover:bg-white text-slate-700 font-semibold text-sm transition-all border border-slate-200 disabled:opacity-50"
+                onClick={handleReset}
+                disabled={loading || saving}
+              >
+                <ControleIcon name="reset" />
+                Valeurs par défaut
+              </button>
+            )}
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-semibold text-sm transition-all shadow-md shadow-teal-700/20 disabled:opacity-50"
+              onClick={loadRules}
+              disabled={loading || saving}
+            >
+              <ControleIcon name="refresh" />
+              Rafraîchir
+            </button>
+          </div>
+          )}
         </div>
       </Card>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 gap-2">
+      <div className="flex border-b border-slate-200 gap-2 overflow-x-auto" role="tablist">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               type="button"
-              className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${
+              role="tab"
+              aria-selected={isActive}
+              className={`px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors -mb-px ${
                 isActive
                   ? 'border-teal-700 text-teal-700'
                   : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
@@ -343,16 +571,26 @@ export default function ControlePage({ navigate }) {
       </div>
 
       {error && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium">
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium" role="alert">
           {error}
         </div>
       )}
 
+      {isBridge ? (
+        <BridgeGoalSettings />
+      ) : (
+      <>
       {/* Add Rule Form Card */}
       <Card className="p-5 bg-white border border-slate-200 shadow-xs space-y-4">
         <div>
           <h3 className="font-bold text-slate-900 text-base">Ajouter une règle</h3>
-          <p className="text-xs text-slate-500">Nouveau palier pour les {currentTab.label.toLowerCase()}.</p>
+          <p className="text-xs text-slate-500">
+            {isDelai
+              ? 'Un délai par niveau d’intensité.'
+              : `Nouveau palier pour : ${currentTab.label.toLowerCase()}.`}
+            {currentTab.intervalleSemiOuvert &&
+              ' Les paliers vont de la borne min (incluse) à la borne max (exclue) et ne doivent pas se chevaucher.'}
+          </p>
         </div>
         <RuleForm
           form={createForm}
@@ -360,7 +598,8 @@ export default function ControlePage({ navigate }) {
           onSubmit={handleCreate}
           submitLabel={saving ? 'Enregistrement…' : 'Ajouter'}
           loading={saving}
-          isSegmentTab={activeTab === 'SEGEMENTS'}
+          tab={currentTab}
+          idPrefix="controle-creation"
         />
       </Card>
 
@@ -368,36 +607,46 @@ export default function ControlePage({ navigate }) {
       <Card className="bg-white border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-5 border-b border-slate-100">
           <h3 className="font-bold text-slate-900 text-base">Règles {currentTab.label.toLowerCase()}</h3>
-          <p className="text-xs text-slate-500">Les règles actives alimentent les filtres de l&apos;application.</p>
+          <p className="text-xs text-slate-500">
+            {currentTab.reinitialisable
+              ? 'Les règles actives sont appliquées au prochain recalcul du moteur (import ou batch). Sans règle active, les valeurs par défaut s’appliquent.'
+              : 'Les règles actives alimentent les filtres de l’application.'}
+          </p>
         </div>
 
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-slate-50/80 cursor-default">
-              <TableHead>État</TableHead>
-              <TableHead>{activeTab === 'SEGEMENTS' ? 'Score min' : 'Variation min'}</TableHead>
-              <TableHead>{activeTab === 'SEGEMENTS' ? 'Score max' : 'Variation max'}</TableHead>
+              <TableHead>{isDelai ? 'Niveau' : 'État'}</TableHead>
+              {isDelai ? (
+                <TableHead>{currentTab.colValeur}</TableHead>
+              ) : (
+                <>
+                  <TableHead>{currentTab.colMin}</TableHead>
+                  <TableHead>{currentTab.colMax}</TableHead>
+                </>
+              )}
               <TableHead>Actif</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading && (
+            {loading &&
               Array.from({ length: 4 }).map((_, idx) => (
                 <TableRow key={idx} className="hover:bg-transparent">
                   <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  {!isDelai && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}
                   <TableCell><Skeleton className="h-6 w-14 rounded-full" /></TableCell>
                   <TableCell><Skeleton className="h-8 w-16 ml-auto" /></TableCell>
                 </TableRow>
-              ))
-            )}
+              ))}
 
             {!loading && rules.length === 0 && (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={5} className="h-32 text-center text-slate-400 text-sm">
-                  Aucune règle configurée pour ce type.
+                <TableCell colSpan={nbColonnes} className="h-32 text-center text-slate-400 text-sm">
+                  Aucune règle configurée pour ce type
+                  {currentTab.reinitialisable ? ' : les valeurs VACTIS par défaut sont appliquées.' : '.'}
                 </TableCell>
               </TableRow>
             )}
@@ -406,7 +655,7 @@ export default function ControlePage({ navigate }) {
               rules.map((rule) =>
                 editingId === rule.idControle ? (
                   <TableRow key={rule.idControle} className="bg-teal-50/30">
-                    <TableCell colSpan={5} className="p-4">
+                    <TableCell colSpan={nbColonnes} className="p-4">
                       <RuleForm
                         form={editForm}
                         onChange={setEditForm}
@@ -417,7 +666,8 @@ export default function ControlePage({ navigate }) {
                         }}
                         submitLabel={saving ? 'Enregistrement…' : 'Enregistrer'}
                         loading={saving}
-                        isSegmentTab={activeTab === 'SEGEMENTS'}
+                        tab={currentTab}
+                        idPrefix={`controle-edition-${rule.idControle}`}
                       />
                     </TableCell>
                   </TableRow>
@@ -428,12 +678,20 @@ export default function ControlePage({ navigate }) {
                         {rule.etat}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-medium text-slate-800">
-                      {formatRuleVal(rule.minCA, activeTab === 'SEGEMENTS', activeTab)}
-                    </TableCell>
-                    <TableCell className="font-medium text-slate-800">
-                      {formatRuleVal(rule.maxCA, activeTab === 'SEGEMENTS', activeTab)}
-                    </TableCell>
+                    {isDelai ? (
+                      <TableCell className="font-medium text-slate-800">
+                        {formatRuleVal(rule.valeur, currentTab)}
+                      </TableCell>
+                    ) : (
+                      <>
+                        <TableCell className="font-medium text-slate-800">
+                          {formatRuleVal(rule.minCA, currentTab)}
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-800">
+                          {formatRuleVal(rule.maxCA, currentTab)}
+                        </TableCell>
+                      </>
+                    )}
                     <TableCell>
                       <Badge variant={rule.actif !== false ? 'actif' : 'muted'}>
                         {rule.actif !== false ? 'Actif' : 'Inactif'}
@@ -462,11 +720,13 @@ export default function ControlePage({ navigate }) {
                       </div>
                     </TableCell>
                   </TableRow>
-                )
+                ),
               )}
           </TableBody>
         </Table>
       </Card>
+      </>
+      )}
     </div>
   );
 }
