@@ -38,7 +38,7 @@ describe('ControlePage', () => {
     await waitFor(() => expect(api.getControlesByType).toHaveBeenCalledWith('jeton', 'STATUT'));
   });
 
-  it('charge les règles de rupture et propose uniquement les états reconnus', async () => {
+  it('charge les règles de rupture et limite la modification aux états reconnus', async () => {
     api.getControlesByType.mockImplementation(async (_t, type) =>
       type === 'RUPTURE'
         ? [{ idControle: 1, type, etat: 'CRITIQUE', minCA: 200, maxCA: 100000, actif: true }]
@@ -49,30 +49,30 @@ describe('ControlePage', () => {
 
     expect(await screen.findByText('CRITIQUE', { selector: '[class*="font-semibold"]' })).toBeTruthy();
     expect(screen.getByText('∞')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier CRITIQUE' }));
     const options = Array.from(screen.getByLabelText('État / libellé').querySelectorAll('option'))
       .map((o) => o.value)
       .filter(Boolean);
     expect(options).toEqual(['AUCUNE', 'SURVEILLANCE', 'CRITIQUE']);
   });
 
-  it('envoie un délai en jours pour l’onglet Délai d’action', async () => {
-    api.createControle.mockResolvedValue({});
+  it('n’affiche le formulaire d’ajout que pour les états libres (Statuts, Segments)', async () => {
     render(<ControlePage />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Délai d’action' }));
-    await waitFor(() => expect(api.getControlesByType).toHaveBeenCalledWith('jeton', 'DELAI_ACTION'));
+    await waitFor(() => expect(api.getControlesByType).toHaveBeenCalledWith('jeton', 'STATUT'));
+    expect(screen.getByText('Ajouter une règle')).toBeTruthy();
 
-    fireEvent.change(screen.getByLabelText('Niveau d’intensité'), { target: { value: 'CRITIQUE' } });
-    fireEvent.change(screen.getByLabelText('Délai (jours)'), { target: { value: '5' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Segments' }));
+    await waitFor(() => expect(api.getControlesByType).toHaveBeenCalledWith('jeton', 'SEGEMENTS'));
+    expect(screen.getByText('Ajouter une règle')).toBeTruthy();
 
-    await waitFor(() =>
-      expect(api.createControle).toHaveBeenCalledWith('jeton', {
-        type: 'DELAI_ACTION',
-        etat: 'CRITIQUE',
-        valeur: 5,
-        actif: true,
-      }),
-    );
+    for (const [label, type] of [['Rupture', 'RUPTURE'], ['Urgence', 'URGENCE'], ['Fiabilité', 'FIABILITE'], ['Délai d’action', 'DELAI_ACTION']]) {
+      fireEvent.click(screen.getByRole('tab', { name: label }));
+      await waitFor(() => expect(api.getControlesByType).toHaveBeenCalledWith('jeton', type));
+      expect(screen.queryByText('Ajouter une règle')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Ajouter' })).toBeNull();
+      expect(screen.getByText(/Les états sont fixes car reconnus par le moteur/)).toBeTruthy();
+    }
   });
 
   it('réinitialise un onglet aux valeurs par défaut après confirmation', async () => {
@@ -102,42 +102,56 @@ describe('ControlePage', () => {
     expect(api.getControlesByType).not.toHaveBeenCalled();
   });
 
-  it('crée un palier avec ses bornes numériques', async () => {
+  it('crée un segment avec ses bornes numériques', async () => {
     api.createControle.mockResolvedValue({});
     render(<ControlePage />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Fiabilité' }));
-    await waitFor(() => expect(api.getControlesByType).toHaveBeenCalledWith('jeton', 'FIABILITE'));
+    fireEvent.click(screen.getByRole('tab', { name: 'Segments' }));
+    await waitFor(() => expect(api.getControlesByType).toHaveBeenCalledWith('jeton', 'SEGEMENTS'));
 
-    fireEvent.change(screen.getByLabelText('État / libellé'), { target: { value: 'PARTIEL' } });
-    fireEvent.change(screen.getByLabelText(/Mois actifs min/), { target: { value: '2' } });
-    fireEvent.change(screen.getByLabelText(/Mois actifs max/), { target: { value: '4' } });
+    fireEvent.change(screen.getByLabelText('État / libellé'), { target: { value: ' A ' } });
+    fireEvent.change(screen.getByLabelText('Score min (sur 100)'), { target: { value: '75' } });
+    fireEvent.change(screen.getByLabelText('Score max (sur 100)'), { target: { value: '100' } });
     fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
 
     await waitFor(() =>
       expect(api.createControle).toHaveBeenCalledWith('jeton', {
-        type: 'FIABILITE',
-        etat: 'PARTIEL',
-        minCA: 2,
-        maxCA: 4,
+        type: 'SEGEMENTS',
+        etat: 'A',
+        minCA: 75,
+        maxCA: 100,
         actif: true,
       }),
     );
     // La liste est rechargée après la création
     await waitFor(() =>
-      expect(api.getControlesByType.mock.calls.filter(([, type]) => type === 'FIABILITE')).toHaveLength(2),
+      expect(api.getControlesByType.mock.calls.filter(([, type]) => type === 'SEGEMENTS')).toHaveLength(2),
     );
   });
 
-  it('affiche le message du back quand la règle est refusée', async () => {
-    api.createControle.mockRejectedValue(new Error('Ce palier chevauche le palier CRITIQUE [200 ; 100000['));
+  it('affiche le message du back quand une création est refusée', async () => {
+    api.createControle.mockRejectedValue(new Error('Le CA min ne peut pas dépasser le CA max'));
+    render(<ControlePage />);
+    await waitFor(() => expect(api.getControlesByType).toHaveBeenCalledWith('jeton', 'STATUT'));
+
+    fireEvent.change(screen.getByLabelText('État / libellé'), { target: { value: 'TEST' } });
+    fireEvent.change(screen.getByLabelText('Variation min (%)'), { target: { value: '50' } });
+    fireEvent.change(screen.getByLabelText('Variation max (%)'), { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
+
+    expect((await screen.findByRole('alert')).textContent).toMatch(/ne peut pas dépasser/);
+  });
+
+  it('affiche le message du back quand une modification chevauche un autre palier', async () => {
+    api.getControlesByType.mockImplementation(async (_t, type) =>
+      type === 'RUPTURE' ? [{ idControle: 2, type, etat: 'SURVEILLANCE', minCA: 150, maxCA: 200, actif: true }] : [],
+    );
+    api.updateControle.mockRejectedValue(new Error('Ce palier chevauche le palier CRITIQUE [200 ; 100000['));
     render(<ControlePage />);
     fireEvent.click(screen.getByRole('tab', { name: 'Rupture' }));
-    await waitFor(() => expect(api.getControlesByType).toHaveBeenCalledWith('jeton', 'RUPTURE'));
 
-    fireEvent.change(screen.getByLabelText('État / libellé'), { target: { value: 'SURVEILLANCE' } });
-    fireEvent.change(screen.getByLabelText(/Ratio min/), { target: { value: '150' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Modifier SURVEILLANCE' }));
     fireEvent.change(screen.getByLabelText(/Ratio max/), { target: { value: '250' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
 
     expect((await screen.findByRole('alert')).textContent).toMatch(/chevauche le palier CRITIQUE/);
   });

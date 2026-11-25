@@ -358,6 +358,9 @@ export default function ControlePage() {
   const currentTab = TABS.find((tab) => tab.id === activeTab) ?? TABS[0];
   const isDelai = currentTab.mode === 'delai';
   const isBridge = currentTab.mode === 'bridge';
+  // États fixes reconnus par le moteur (Rupture, Urgence, Fiabilité, Délai d'action) :
+  // pas de création, seuils modifiés directement dans le tableau.
+  const ajoutAutorise = !currentTab.etats;
   const nbColonnes = isDelai ? 4 : 5;
 
   const loadRules = useCallback(async () => {
@@ -580,28 +583,24 @@ export default function ControlePage() {
         <BridgeGoalSettings />
       ) : (
       <>
-      {/* Add Rule Form Card */}
-      <Card className="p-5 bg-white border border-slate-200 shadow-xs space-y-4">
-        <div>
-          <h3 className="font-bold text-slate-900 text-base">Ajouter une règle</h3>
-          <p className="text-xs text-slate-500">
-            {isDelai
-              ? 'Un délai par niveau d’intensité.'
-              : `Nouveau palier pour : ${currentTab.label.toLowerCase()}.`}
-            {currentTab.intervalleSemiOuvert &&
-              ' Les paliers vont de la borne min (incluse) à la borne max (exclue) et ne doivent pas se chevaucher.'}
-          </p>
-        </div>
-        <RuleForm
-          form={createForm}
-          onChange={setCreateForm}
-          onSubmit={handleCreate}
-          submitLabel={saving ? 'Enregistrement…' : 'Ajouter'}
-          loading={saving}
-          tab={currentTab}
-          idPrefix="controle-creation"
-        />
-      </Card>
+      {/* Add Rule Form Card : seulement pour les états libres (Statuts, Segments) */}
+      {ajoutAutorise && (
+        <Card className="p-5 bg-white border border-slate-200 shadow-xs space-y-4">
+          <div>
+            <h3 className="font-bold text-slate-900 text-base">Ajouter une règle</h3>
+            <p className="text-xs text-slate-500">Nouveau palier pour : {currentTab.label.toLowerCase()}.</p>
+          </div>
+          <RuleForm
+            form={createForm}
+            onChange={setCreateForm}
+            onSubmit={handleCreate}
+            submitLabel={saving ? 'Enregistrement…' : 'Ajouter'}
+            loading={saving}
+            tab={currentTab}
+            idPrefix="controle-creation"
+          />
+        </Card>
+      )}
 
       {/* Rules Table Card */}
       <Card className="bg-white border border-slate-200 shadow-xs overflow-hidden">
@@ -609,7 +608,11 @@ export default function ControlePage() {
           <h3 className="font-bold text-slate-900 text-base">Règles {currentTab.label.toLowerCase()}</h3>
           <p className="text-xs text-slate-500">
             {currentTab.reinitialisable
-              ? 'Les règles actives sont appliquées au prochain recalcul du moteur (import ou batch). Sans règle active, les valeurs par défaut s’appliquent.'
+              ? `Les états sont fixes car reconnus par le moteur : modifiez ${isDelai ? 'les délais' : 'les seuils'} avec le crayon.${
+                  currentTab.intervalleSemiOuvert
+                    ? ' Chaque palier va de la borne min (incluse) à la borne max (exclue), sans chevauchement.'
+                    : ''
+                } Les changements s’appliquent au prochain recalcul du moteur (import ou batch).`
               : 'Les règles actives alimentent les filtres de l’application.'}
           </p>
         </div>
@@ -646,7 +649,9 @@ export default function ControlePage() {
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={nbColonnes} className="h-32 text-center text-slate-400 text-sm">
                   Aucune règle configurée pour ce type
-                  {currentTab.reinitialisable ? ' : les valeurs VACTIS par défaut sont appliquées.' : '.'}
+                  {currentTab.reinitialisable
+                    ? ' : les valeurs VACTIS par défaut sont appliquées. Utilisez « Valeurs par défaut » pour les recréer.'
+                    : '.'}
                 </TableCell>
               </TableRow>
             )}
